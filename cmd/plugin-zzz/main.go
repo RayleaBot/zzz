@@ -19,8 +19,10 @@ func main() {
 		_, _ = os.Stderr.WriteString("游戏插件资料或数据目录不可用。\n")
 		os.Exit(1)
 	}
-	if err=application.SetManifest(assets.Manifest);err!=nil{os.Exit(1)}
-	err = rayleabot.Run(context.Background(), rayleabot.Options{Services:application.Services()}, application)
+	if err = application.SetManifest(assets.Manifest); err != nil {
+		os.Exit(1)
+	}
+	err = rayleabot.Run(context.Background(), rayleabot.Options{}, application)
 	application.Close()
 	if err != nil {
 		_, _ = os.Stderr.WriteString("游戏插件会话已结束。\n")

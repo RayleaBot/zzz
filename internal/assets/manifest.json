@@ -1209,14 +1209,5 @@
         "label": "帮助与版本"
       }
     ]
-  },
-  "services": [
-    {
-      "name": "interaction",
-      "version": 1,
-      "methods": [
-        "eligible"
-      ]
-    }
-  ]
+  }
 }
