@@ -1,0 +1,116 @@
+{
+  "id": "zzz",
+  "name": "绝区零",
+  "prefix": "绝区零",
+  "region": "prod_gf_cn",
+  "operations": [
+    {
+      "name": "zzz.profile",
+      "label": "绝区零信息",
+      "command": "绝区零信息",
+      "input": "none"
+    },
+    {
+      "name": "zzz.note",
+      "label": "绝区零实时便笺",
+      "command": "绝区零体力",
+      "input": "none"
+    },
+    {
+      "name": "zzz.characters",
+      "label": "代理人列表",
+      "command": "绝区零角色",
+      "input": "none"
+    },
+    {
+      "name": "zzz.character",
+      "label": "代理人详情",
+      "command": "绝区零面板",
+      "input": "agents"
+    },
+    {
+      "name": "zzz.buddies",
+      "label": "邦布列表",
+      "command": "绝区零邦布",
+      "input": "none"
+    },
+    {
+      "name": "zzz.challenge",
+      "label": "式舆防卫战",
+      "command": "绝区零防卫",
+      "input": "period"
+    },
+    {
+      "name": "zzz.monthly",
+      "label": "菲林月报",
+      "command": "绝区零月报",
+      "input": "year_month"
+    },
+    {
+      "name": "zzz.deadly",
+      "label": "危局强袭战",
+      "command": "绝区零危局",
+      "input": "period"
+    },
+    {
+      "name": "zzz.holo_boss",
+      "label": "拟境湮灭战",
+      "command": "绝区零拟境",
+      "input": "period"
+    },
+    {
+      "name": "zzz.tower",
+      "label": "拟真鏖战试炼",
+      "command": "绝区零爬塔",
+      "input": "none"
+    },
+    {
+      "name": "zzz.void_front",
+      "label": "临界推演",
+      "command": "绝区零推演",
+      "input": "period"
+    },
+    {
+      "name": "zzz.void_front_summary",
+      "label": "临界推演摘要",
+      "command": "绝区零推演概况",
+      "input": "none"
+    },
+    {
+      "name": "zzz.hollow_zero",
+      "label": "零号空洞",
+      "command": "绝区零零号空洞",
+      "input": "none"
+    },
+    {
+      "name": "zzz.hollow_zero_detail",
+      "label": "枯萎苗圃战绩",
+      "command": "绝区零枯萎苗圃",
+      "input": "none"
+    },
+    {
+      "name": "zzz.lost_void",
+      "label": "迷失之地",
+      "command": "绝区零迷失之地",
+      "input": "none"
+    },
+    {
+      "name": "zzz.zenkov",
+      "label": "迷宫诡域",
+      "command": "绝区零迷宫诡域",
+      "input": "none"
+    },
+    {
+      "name": "zzz.zenkov_detail",
+      "label": "迷宫诡域战绩",
+      "command": "绝区零迷宫记录",
+      "input": "none"
+    },
+    {
+      "name": "zzz.exploration",
+      "label": "区域探索",
+      "command": "绝区零探索",
+      "input": "none"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "summary",
+  "name": "绝区零查询结果",
+  "description": "角色、图鉴、便笺与记录的自适应结果图片",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 900,
+  "height": 640
+}

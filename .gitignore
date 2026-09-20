@@ -1,0 +1,7 @@
+dist/
+ui/dist/
+ui/node_modules/
+.rayleabot/
+go.work
+go.work.sum
+data/
