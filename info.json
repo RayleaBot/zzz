@@ -350,19 +350,6 @@
       }
     },
     {
-      "id": "damage",
-      "name": "绝区零伤害",
-      "description": "以明确攻击倍率进行单次伤害试算",
-      "usage": "#绝区零伤害 <角色> <攻击倍率> [UID]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "绝区零伤害"
-        ]
-      }
-    },
-    {
       "id": "build",
       "name": "绝区零计算",
       "description": "按固定参考情境自动计算代理人技能伤害",
@@ -1095,7 +1082,6 @@
         "exploration",
         "score",
         "score-rules",
-        "damage",
         "build",
         "reminder",
         "reminder-stop",
