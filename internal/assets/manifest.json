@@ -3,7 +3,7 @@
   "name": "绝区零",
   "version": "0.1.0",
   "manifest_version": "4",
-  "min_core_version": "0.7.1",
+  "min_core_version": "0.7.0",
   "license": "AGPL-3.0-only",
   "metadata": {
     "description": "绝区零独立查询、离线图鉴、公开展柜与抽卡档案",
