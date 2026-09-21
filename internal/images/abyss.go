@@ -76,6 +76,6 @@ func Abyss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Im
 	}
 	return gamekit.Image{Template: "abyss", Data: map[string]any{
 		"player": playerCard(result.Role), "begin": recordTime(data["hadal_begin_time"], clock), "end": recordTime(data["hadal_end_time"], clock),
-		"fifth": fifth, "lower": lower, "rank_command": rankCommand(context, "防卫战"),
+		"fifth": fifth, "lower": lower, "rank_note": rankNote(context),
 	}, Resources: resources.List}, true
 }

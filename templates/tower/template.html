@@ -69,7 +69,7 @@
 
   <div class="item-card">
     <ul class="notes">
-      <li>请在群内发送<span class="command">{{ .rank_command }}</span>（S1 至 S4 各自提交），以参与对应群的拟真鏖战试炼排名</li>
+      {{ with .rank_note }}{{ if .state }}<li>当前拟真鏖战试炼排名状态：{{ .state }}，可通过<span class="command">{{ .prefix }}显示/隐藏爬塔S[1-4]排名</span>切换</li>{{ else }}<li>请在群内查询<span class="command">{{ .prefix }}拟真鏖战试炼</span>，以参与对应群的拟真鏖战试炼排名</li>{{ end }}{{ end }}
     </ul>
   </div>
 </div>

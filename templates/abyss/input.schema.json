@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["player", "begin", "end", "fifth", "lower", "rank_command"],
+  "required": ["player", "begin", "end", "fifth", "lower", "rank_note"],
   "properties": {
     "player": { "type": "object" },
     "begin": { "type": "string" },
     "end": { "type": "string" },
     "fifth": { "type": ["object", "null"] },
     "lower": { "type": "array" },
-    "rank_command": { "type": "string" },
+    "rank_note": { "type": ["object", "null"] },
     "user": { "type": "object" },
     "permission": { "type": "object" },
     "group": { "type": "object" },

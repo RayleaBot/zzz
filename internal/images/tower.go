@@ -42,6 +42,6 @@ func Tower(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Im
 		return gamekit.Image{}, false
 	}
 	return gamekit.Image{Template: "tower", Data: map[string]any{
-		"player": playerCard(result.Role), "seasons": seasons, "rank_command": rankCommand(context, "爬塔S4"),
+		"player": playerCard(result.Role), "seasons": seasons, "rank_note": rankNote(context),
 	}, Resources: resources.List}, true
 }

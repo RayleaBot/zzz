@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["time", "stars", "flawless", "begin", "end", "list", "rank_command"],
+  "required": ["time", "stars", "flawless", "begin", "end", "list", "rank_note"],
   "properties": {
     "time": { "type": "string" },
     "stars": { "type": "integer" },
@@ -9,7 +9,7 @@
     "begin": { "type": "string" },
     "end": { "type": "string" },
     "list": { "type": "array" },
-    "rank_command": { "type": "string" },
+    "rank_note": { "type": ["object", "null"] },
     "render_footer": { "type": "string" }
   },
   "additionalProperties": false

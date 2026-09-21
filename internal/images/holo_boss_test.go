@@ -17,7 +17,7 @@ func TestHoloBossFollowsZZZPlugin(t *testing.T) {
 	data := map[string]any{"unlock": true, "start_time": zzzTime(1), "end_time": zzzTime(15),
 		"list": []any{boss("4", "1", "30", "312", true), boss("3", "2", "45", "8", false), boss("2", "0", "0", "0", false)}}
 	image, ok := HoloBoss(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, gamekit.QueryResult{Data: data})
-	if !ok || image.Data["time"] != "04:15" || image.Data["stars"] != 9 || image.Data["flawless"] != 1 || image.Data["rank_command"] != "%提交挑战 拟境" {
+	if !ok || image.Data["time"] != "04:15" || image.Data["stars"] != 9 || image.Data["flawless"] != 1 || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
 	list := image.Data["list"].([]any)

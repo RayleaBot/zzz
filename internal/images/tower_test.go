@@ -20,7 +20,7 @@ func TestTowerFollowsZZZPlugin(t *testing.T) {
 		},
 	}
 	image, ok := Tower(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, gamekit.QueryResult{Data: data})
-	if !ok || image.Data["rank_command"] != "%提交挑战 爬塔S4" {
+	if !ok || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
 	seasons := image.Data["seasons"].(map[string]any)

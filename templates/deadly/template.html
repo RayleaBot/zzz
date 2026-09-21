@@ -59,7 +59,7 @@
 
   <div class="item-card">
     <ul class="notes">
-      <li>请在群内发送<span class="command">{{ .rank_command }}</span>，以参与对应群的危局强袭战排名</li>
+      {{ with .rank_note }}{{ if .state }}<li>当前危局强袭战排名状态：{{ .state }}，可通过<span class="command">{{ .prefix }}显示/隐藏危局排名</span>切换</li>{{ else }}<li>请在群内查询<span class="command">{{ .prefix }}危局强袭战</span>，以参与对应群的危局强袭战排名</li>{{ end }}{{ end }}
     </ul>
   </div>
 </div>

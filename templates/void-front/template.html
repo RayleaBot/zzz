@@ -38,10 +38,10 @@
   </div>
   {{ end }}
 
-  {{ with .rank_command }}
+  {{ if .rank_note }}
   <div class="item-card">
     <ul class="notes">
-      <li>请在群内发送<span class="command">{{ . }}</span>，以参与对应群的临界推演排名</li>
+      {{ with .rank_note }}{{ if .state }}<li>当前临界推演排名状态：{{ .state }}，可通过<span class="command">{{ .prefix }}显示/隐藏推演排名</span>切换</li>{{ else }}<li>请在群内查询<span class="command">{{ .prefix }}临界推演</span>，以参与对应群的临界推演排名</li>{{ end }}{{ end }}
     </ul>
   </div>
   {{ end }}

@@ -64,7 +64,7 @@ func Deadly(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.I
 		"avatar": resources.official(data["avatar_icon"]), "nickname": gamekit.Text(data["nick_name"]),
 		"score": gamekit.Text(data["total_score"]), "rank_bg": rankBackground(percent), "rank": rankText(percent), "stars": gamekit.Text(data["total_star"]),
 		"begin": recordTime(data["start_time"], "2006.01.02"), "end": recordTime(data["end_time"], "2006.01.02"),
-		"list":         append(items("list", false), hard...),
-		"rank_command": rankCommand(context, "危局"),
+		"list":      append(items("list", false), hard...),
+		"rank_note": rankNote(context),
 	}, Resources: resources.List}, true
 }

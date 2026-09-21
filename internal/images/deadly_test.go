@@ -18,7 +18,7 @@ func TestDeadlyFollowsZZZPlugin(t *testing.T) {
 		"start_time": zzzTime(1), "end_time": zzzTime(15), "list": []any{boss("冥宁芙·双子"), boss("未知复合侵蚀体")},
 		"has_hard": true, "hard_rank_percent": json.Number("80"), "hard_list": []any{boss("绝境首领")}}
 	image, ok := Deadly(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, gamekit.QueryResult{Data: data})
-	if !ok || image.Data["rank_bg"] != 4 || image.Data["rank"] != "49.99%" || image.Data["begin"] != "2026.09.01" || image.Data["rank_command"] != "%提交挑战 危局" {
+	if !ok || image.Data["rank_bg"] != 4 || image.Data["rank"] != "49.99%" || image.Data["begin"] != "2026.09.01" || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
 	list := image.Data["list"].([]any)

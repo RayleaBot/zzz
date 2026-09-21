@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["avatar", "nickname", "score", "rank_bg", "rank", "stars", "begin", "end", "list", "rank_command"],
+  "required": ["avatar", "nickname", "score", "rank_bg", "rank", "stars", "begin", "end", "list", "rank_note"],
   "properties": {
     "avatar": { "type": "string" },
     "nickname": { "type": "string" },
@@ -12,7 +12,7 @@
     "begin": { "type": "string" },
     "end": { "type": "string" },
     "list": { "type": "array" },
-    "rank_command": { "type": "string" },
+    "rank_note": { "type": ["object", "null"] },
     "render_footer": { "type": "string" }
   },
   "additionalProperties": false

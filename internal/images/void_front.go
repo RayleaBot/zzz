@@ -64,13 +64,13 @@ func VoidFront(context gamekit.ImageContext, result gamekit.QueryResult) (gameki
 		item, _ := raw.(map[string]any)
 		stages = append(stages, stage(item))
 	}
-	// Upstream offers the group ranking only for the current period.
-	command := ""
+	// Upstream notes the group ranking only for the current period.
+	var note map[string]any
 	if gamekit.Int(context.Input["schedule_type"]) != 2 {
-		command = rankCommand(context, "临界")
+		note = rankNote(context)
 	}
 	return gamekit.Image{Template: "void-front", Data: map[string]any{
 		"player": playerCard(result.Role), "begin": recordTime(brief["start_time"], clock), "end": end,
-		"total": total, "boss": boss, "stages": stages, "rank_command": command,
+		"total": total, "boss": boss, "stages": stages, "rank_note": note,
 	}, Resources: resources.List}, true
 }

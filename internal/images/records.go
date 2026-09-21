@@ -93,8 +93,17 @@ func recordTime(value any, layout string) string {
 		gamekit.Int(fields["hour"]), gamekit.Int(fields["minute"]), gamekit.Int(fields["second"]), 0, time.UTC).Format(layout)
 }
 
-// rankCommand is the command ZZZ-Plugin's closing note names for joining the
-// group ranking; here it is this plugin's challenge submission for the mode.
-func rankCommand(context gamekit.ImageContext, mode string) string {
-	return context.Game.Prefix + "提交挑战 " + mode
+// rankNote is what ZZZ-Plugin's closing note says of the group ranking: the
+// requester's 显示 or 隐藏 state after a query in a group, otherwise "" and
+// the note asks for a query in a group. The reply prefix fills the commands
+// it names.
+func rankNote(context gamekit.ImageContext) map[string]any {
+	state := ""
+	if context.RankShown != nil {
+		state = "隐藏"
+		if *context.RankShown {
+			state = "显示"
+		}
+	}
+	return map[string]any{"state": state, "prefix": context.Game.Prefix}
 }

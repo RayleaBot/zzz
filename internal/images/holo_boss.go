@@ -79,6 +79,6 @@ func HoloBoss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 	return gamekit.Image{Template: "holo-boss", Data: map[string]any{
 		"time": clock(seconds), "stars": stars, "flawless": flawless,
 		"begin": recordTime(data["start_time"], "2006.01.02"), "end": recordTime(data["end_time"], "2006.01.02"),
-		"list": items, "rank_command": rankCommand(context, "拟境"),
+		"list": items, "rank_note": rankNote(context),
 	}, Resources: resources.List}, true
 }

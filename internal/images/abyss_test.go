@@ -48,7 +48,7 @@ func TestAbyssFollowsZZZPlugin(t *testing.T) {
 	if len(lower) != 1 || lower[0].(map[string]any)["name"] != "剧变节点第四防线" || len(lower[0].(map[string]any)["teams"].([]any)) != 2 {
 		t.Errorf("lower = %v", lower)
 	}
-	if image.Data["rank_command"] != "%提交挑战 防卫战" || image.Data["begin"] != "2026-09-01 20:05:09" {
+	if image.Data["rank_note"].(map[string]any)["state"] != "" || image.Data["begin"] != "2026-09-01 20:05:09" {
 		t.Errorf("data = %v", image.Data)
 	}
 	data["hadal_ver"] = "v1"

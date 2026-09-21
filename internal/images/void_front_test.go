@@ -21,7 +21,7 @@ func TestVoidFrontFollowsZZZPlugin(t *testing.T) {
 	}}
 	context := gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}
 	image, ok := VoidFront(context, gamekit.QueryResult{Data: data})
-	if !ok || image.Data["end"] != "超过42天" || image.Data["rank_command"] != "%提交挑战 临界" {
+	if !ok || image.Data["end"] != "超过42天" || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
 	total := image.Data["total"].(map[string]any)
@@ -36,10 +36,10 @@ func TestVoidFrontFollowsZZZPlugin(t *testing.T) {
 	if len(stages) != 2 || stages[0].(map[string]any)["score"].(map[string]any)["full"] != true || stages[1].(map[string]any)["time"] != "2026-09-12 20:05:09" {
 		t.Errorf("stages = %v", stages)
 	}
-	// Upstream offers the ranking only for the current period.
+	// Upstream notes the ranking only for the current period.
 	context.Input = map[string]any{"schedule_type": 2}
-	if image, _ := VoidFront(context, gamekit.QueryResult{Data: data}); image.Data["rank_command"] != "" {
-		t.Errorf("last period = %v", image.Data["rank_command"])
+	if image, _ := VoidFront(context, gamekit.QueryResult{Data: data}); image.Data["rank_note"].(map[string]any) != nil {
+		t.Errorf("last period = %v", image.Data["rank_note"])
 	}
 	if _, ok := VoidFront(context, gamekit.QueryResult{Data: map[string]any{}}); ok {
 		t.Error("a period without data answers in text like upstream")
