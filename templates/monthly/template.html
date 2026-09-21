@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="lh">{{ .month }}</div>
+<div class="box">
+  <div class="user-info">
+    <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+    <div class="info-bar">
+      <div class="info">
+        <div class="nickname">{{ .player.nickname }}</div>
+        <div class="label level">Lv{{ .player.level }}</div>
+        <div class="label server">{{ .player.region }}</div>
+      </div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+  </div>
+  <div class="bangboo"></div>
+  <div class="content">
+    <div class="title with-icon">收入一览</div>
+    <div class="itembox">
+      <div class="item"><div class="icon feilin"></div><div class="count">{{ .poly }}</div></div>
+      <div class="item"><div class="icon tape"></div><div class="count">{{ .tape }}</div></div>
+      <div class="item"><div class="icon boopon"></div><div class="count">{{ .boopon }}</div></div>
+    </div>
+    <div class="list">
+      <div class="title">菲林收入组成</div>
+      {{ range .sources }}
+      <div class="item">
+        <div class="info-line"><div class="name">{{ .name }}</div><div class="percent">{{ .percent }}%</div><div class="value">{{ .num }}</div></div>
+        <div class="progress"><div class="bar" style="width: {{ .percent }}%;"></div></div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+<div class="tips">
+  <ul>
+    <li>数据统计存在2小时左右延迟，请绳匠知悉</li>
+    <li>菲林收入不含充值获得菲林底片所兑换的菲林数量</li>
+  </ul>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
