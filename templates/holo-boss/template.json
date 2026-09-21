@@ -1,0 +1,11 @@
+{
+  "id": "holo-boss",
+  "name": "绝区零拟境湮灭战",
+  "description": "拟境湮灭战命令的战绩图片，布局参照 ZZZ-Plugin holoBoss",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 3000
+}

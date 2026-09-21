@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["time", "stars", "flawless", "begin", "end", "list", "rank_command"],
+  "properties": {
+    "time": { "type": "string" },
+    "stars": { "type": "integer" },
+    "flawless": { "type": "integer" },
+    "begin": { "type": "string" },
+    "end": { "type": "string" },
+    "list": { "type": "array" },
+    "rank_command": { "type": "string" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

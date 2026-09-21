@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  <div class="overview">
+    <div class="header-top"><div class="title">拟境湮灭战</div></div>
+    <div class="content">
+      <div class="col col-time"><div class="hourglass">⏳</div><div class="value">{{ .time }}</div></div>
+      <div class="col col-star"><div class="star"></div><div class="value">x{{ .stars }}</div></div>
+      <div class="col col-trophy"><div class="trophy">🏆</div><div class="value">x{{ .flawless }}</div></div>
+    </div>
+  </div>
+  <div class="tips">
+    <p>统计周期 {{ .begin }} - {{ .end }}</p>
+    <p>*总得分&amp;排名和挑战详情并非同时刷新，挑战详情存在2小时左右延迟</p>
+  </div>
+  {{ range .list }}
+  <div class="item-card">
+    {{ with .medal }}<div class="pop"><img data-render-resource="{{ . }}" alt=""></div>{{ end }}
+    <div class="cover"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+    <div class="content">
+      <div class="name">{{ .name }}{{ if .flawless }} 🏆{{ end }}</div>
+      <div class="value">
+        <div class="val">{{ .time }}</div>
+        <div class="stars">{{ range .stars }}{{ if . }}<div class="star"></div>{{ else }}<div class="star inactive"></div>{{ end }}{{ end }}</div>
+        {{ if .rank }}
+        <div class="rank-container">
+          <div class="rank-icon bg{{ .rank_bg }}"></div>
+          <div class="rank-text">{{ .rank }}</div>
+        </div>
+        {{ end }}
+      </div>
+      {{ template "team" .team }}
+    </div>
+  </div>
+  {{ end }}
+
+  <div class="item-card">
+    <ul class="notes">
+      <li>请在群内发送<span class="command">{{ .rank_command }}</span>，以参与对应群的拟境湮灭战排名</li>
+    </ul>
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "team" }}
+<div class="list">
+  {{ range .slots }}
+  {{ if . }}
+  <div class="item char">
+    {{ if .rank }}<div class="count">{{ .rank }}</div>{{ end }}
+    <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+    <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+  </div>
+  {{ else }}
+  <div class="item char"></div>
+  {{ end }}
+  {{ end }}
+</div>
+{{ end }}
