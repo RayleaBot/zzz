@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["player", "general", "list", "bars"],
+  "properties": {
+    "player": { "type": "object" },
+    "general": { "type": "array" },
+    "list": { "type": "array" },
+    "bars": { "type": "array" },
+    "user": { "type": "object" },
+    "permission": { "type": "object" },
+    "group": { "type": "object" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

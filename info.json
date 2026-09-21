@@ -90,6 +90,17 @@
       }
     },
     {
+      "id": "training",
+      "name": "练度统计",
+      "description": "全部代理人的影画、等级、技能、音擎与驱动盘评级",
+      "usage": "#练度统计 [UID]",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^练度(?:统计)?$"
+      }
+    },
+    {
       "id": "buddies",
       "name": "邦布",
       "description": "邦布列表",
@@ -1045,6 +1056,7 @@
         "profile",
         "note",
         "characters",
+        "training",
         "buddies",
         "accounts",
         "select",

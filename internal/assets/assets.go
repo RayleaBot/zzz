@@ -55,5 +55,5 @@ func dataFile(name string) []byte {
 
 // Kit is everything the shared game library needs from this plugin.
 func Kit() gamekit.Assets {
-	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Panel: images.Panel, Gacha: images.Gacha}
+	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Queries: images.Queries(), Panel: images.Panel, Gacha: images.Gacha}
 }

@@ -1,0 +1,11 @@
+{
+  "id": "training",
+  "name": "绝区零练度统计",
+  "description": "练度统计命令的图片，布局参照 ZZZ-Plugin proficiency",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}

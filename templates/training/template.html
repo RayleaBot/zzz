@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+  <div class="user-info">
+    <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+    <div class="info-bar">
+      <div class="info">
+        <div class="nickname">{{ .player.nickname }}</div>
+        <div class="label level">Lv{{ .player.level }}</div>
+        <div class="label server">{{ .player.region }}</div>
+      </div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+  </div>
+<div class="general-info">
+  {{ range .general }}<div class="item"><div class="value">{{ .value }}</div><div class="label">{{ .label }}</div></div>{{ end }}
+</div>
+<div class="special-title">
+  <div class="bg-content">Avatar List</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  <div class="content">练度统计</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+</div>
+<div class="list">
+  {{ range .list }}
+  <div class="item skew {{ .rarity }}">
+    <div class="content">
+      <div class="tag skew ranks r{{ .rank }}"><div class="content">{{ .rank }}影</div></div>
+      <div class="tag skew level r{{ .level_rank }}"><div class="content">Lv{{ .level }}</div></div>
+      <div class="element-icon {{ .element }}"></div>
+      <div class="avatar skew"><div class="content"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div></div>
+      <div class="skills">{{ range .skills }}<div class="skill">{{ . }}</div>{{ end }}</div>
+      <div class="weapon skew"><div class="content">{{ with .weapon }}<img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="">{{ end }}</div></div>
+      <div class="weapon_info">
+        {{ with .weapon }}
+        <div class="base"><div class="rarity-icon {{ .rarity }}"></div><div class="name">{{ .name }}</div></div>
+        <div class="tags">
+          <div class="tag skew r{{ .star }}"><div class="content">{{ .star }}精</div></div>
+          <div class="tag skew r{{ .level_rank }}"><div class="content">Lv{{ .level }}</div></div>
+        </div>
+        {{ else }}
+        <div class="empty">未装配</div>
+        {{ end }}
+      </div>
+      <div class="equip skew">
+        <div class="content {{ .comment }}"><div>驱动盘</div>{{ with .comment }}<div class="comment">{{ . }}</div>{{ end }}</div>
+      </div>
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

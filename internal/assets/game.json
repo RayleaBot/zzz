@@ -23,6 +23,12 @@
       "input": "none"
     },
     {
+      "name": "zzz.training",
+      "label": "练度统计",
+      "command": "练度统计",
+      "input": "none"
+    },
+    {
       "name": "zzz.character",
       "label": "代理人详情",
       "command": "面板",

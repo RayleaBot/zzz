@@ -5,6 +5,7 @@ package images
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	gamekit "github.com/RayleaBot/game-plugin-kit"
@@ -12,7 +13,13 @@ import (
 
 // Builders lists the image builders by the operation they draw.
 func Builders() map[string]gamekit.ImageBuilder {
-	return map[string]gamekit.ImageBuilder{"zzz.note": Note, "zzz.challenge": Abyss, "zzz.deadly": Deadly, "zzz.holo_boss": HoloBoss, "zzz.void_front": VoidFront, "zzz.tower": Tower, "zzz.profile": Card, "zzz.characters": Card}
+	return map[string]gamekit.ImageBuilder{"zzz.note": Note, "zzz.challenge": Abyss, "zzz.deadly": Deadly, "zzz.holo_boss": HoloBoss, "zzz.void_front": VoidFront, "zzz.tower": Tower, "zzz.profile": Card, "zzz.characters": Card, "zzz.training": Training}
+}
+
+// Queries lists the commands that run another operation's query: 练度统计
+// draws on the agent list.
+func Queries() map[string]func(time.Time) string {
+	return map[string]func(time.Time) string{"zzz.training": func(time.Time) string { return "zzz.characters" }}
 }
 
 // regionNames are the server names the official role list shows.
