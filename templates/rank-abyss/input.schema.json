@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["rows", "prefix", "bars"],
+  "properties": {
+    "rows": { "type": "array" },
+    "prefix": { "type": "string" },
+    "bars": { "type": "array" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

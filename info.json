@@ -331,6 +331,39 @@
       }
     },
     {
+      "id": "query-rank",
+      "name": "深渊排名",
+      "description": "本群成员在群内查询过的式舆防卫战、危局强袭战（含绝境）、拟境湮灭战、临界推演与拟真鏖战试炼排名",
+      "usage": "%深渊排名 / %危局排名 / %绝境排名 / %拟境排名 / %推演排名 / %爬塔S1排名",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭|强袭战|拟境湮灭战|拟境|湮灭|湮灭战|临界推演|临界|推演|绝境|(?:危局|强袭|强袭战|危局强袭战)绝境|绝境(?:危局|强袭|强袭战|危局强袭战)|爬塔 ?[Ss][1-4]|拟真鏖战试炼|鏖战试炼[：:]?(?:末路|荣耀|狂澜))排名$"
+      }
+    },
+    {
+      "id": "query-rank-help",
+      "name": "爬塔排名",
+      "description": "列出可查询的拟真鏖战试炼排名",
+      "usage": "%爬塔排名",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:爬塔|鏖战)排名$"
+      }
+    },
+    {
+      "id": "query-rank-switch",
+      "name": "显示深渊排名",
+      "description": "在本群排名中显示或隐藏自己的 UID，不写玩法时设置全部排名",
+      "usage": "%显示深渊排名 / %隐藏危局排名 / %隐藏排名",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:显示|展示|开启|打开|on|启用|启动|隐藏|取消显示|关闭|关掉|off|禁用|停止)(?:式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭|强袭战|拟境湮灭战|拟境|湮灭|湮灭战|临界推演|临界|推演|爬塔S1|爬塔S2|爬塔S3|爬塔 s1|爬塔 s2|爬塔 s3|爬塔s1|爬塔s2|爬塔s3)?(?:群内?)?排名$"
+      }
+    },
+    {
       "id": "rank",
       "name": "排行",
       "description": "查看本群主动提交的装备评分排行",
@@ -1163,6 +1196,9 @@
       "id": "rank",
       "title": "排名",
       "commands": [
+        "query-rank",
+        "query-rank-help",
+        "query-rank-switch",
         "rank",
         "challenge-submit",
         "challenge-rank",

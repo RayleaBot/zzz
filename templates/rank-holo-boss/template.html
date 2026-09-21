@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+<div class="special-title">
+  <div class="bg-content">HOLO BOSS RANK</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  <div class="content">拟境湮灭战排名</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+</div>
+{{ range .rows }}
+<div class="record">
+  <div class="user-info">
+    <div class="avatar">{{ with .player.avatar }}<img data-render-resource="{{ . }}" alt="Avatar">{{ end }}</div>
+    <div class="info-bar">
+      <div class="info"><div class="nickname">{{ .player.nickname }}</div></div>
+      <div class="info"><div class="label level">Lv{{ .player.level }}</div><div class="label server">{{ .player.region }}</div></div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+    <div class="result">
+      <div class="value"><div class="label">总用时</div><div class="value">{{ .time }}</div></div>
+      <div class="rank"><div class="label">星级</div><div class="value">{{ .stars }}</div></div>
+      <div class="no-injured"><div class="label">无伤</div><div class="value">{{ .flawless }}</div></div>
+    </div>
+  </div>
+  {{ range .teams }}
+  <div class="item-card">
+    {{ with . }}
+    {{ with .pop }}<div class="pop"><img data-render-resource="{{ . }}" alt=""></div>{{ end }}
+    <div class="content">
+      <div class="name">{{ .name }}{{ if .flawless }} 🏆{{ end }}</div>
+      <div class="value">
+        <div class="val">{{ .time }}</div>
+        <div class="stars">{{ range .stars }}{{ if . }}<div class="star"></div>{{ else }}<div class="star inactive"></div>{{ end }}{{ end }}</div>
+      </div>
+      {{ template "team" .team }}
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+<div class="notes-container">
+  <ul class="notes">
+    <li>请在群内查询<span class="command">{{ $.prefix }}拟境湮灭战</span>，以参与对应群的拟境湮灭战排名</li>
+    <li>排名依据：1.星数（更多优先） 2.三间用时总和（更少优先） 3.无伤间数（更多优先） 4.战绩记录时间（更早优先）</li>
+  </ul>
+</div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "team" }}
+<div class="list">
+  {{ range .slots }}
+  <div class="char-container">
+    {{ if . }}<div class="item char">{{ if .rank }}<div class="count">{{ .rank }}</div>{{ end }}<div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div><div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div></div>{{ else }}<div class="item char"></div>{{ end }}
+  </div>
+  {{ end }}
+  {{ if .bangboo }}
+  <div class="bangboo-container">
+    {{ with .buddy }}<div class="item bangboo"><div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div><div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div></div>{{ else }}<div class="item bangboo"></div>{{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ end }}

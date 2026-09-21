@@ -1,0 +1,11 @@
+{
+  "id": "rank-tower-s1",
+  "name": "绝区零拟真鏖战试炼排名",
+  "description": "拟真鏖战试炼排名命令的图片，布局参照 ZZZ-Plugin rank/climbingTower/s1",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 900,
+  "height": 6000
+}

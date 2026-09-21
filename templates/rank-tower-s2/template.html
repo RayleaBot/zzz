@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+<div class="special-title">
+  <div class="bg-content">CLIMBING TOWER (S2) RANK</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  <div class="content">鏖战试炼：末路排名</div>
+  <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+</div>
+{{ range .rows }}
+<div class="record">
+  <div class="user-info">
+    <div class="avatar">{{ with .player.avatar }}<img data-render-resource="{{ . }}" alt="Avatar">{{ end }}</div>
+    <div class="info-bar">
+      <div class="info"><div class="nickname">{{ .player.nickname }}</div></div>
+      <div class="info"><div class="label level">Lv{{ .player.level }}</div><div class="label server">{{ .player.region }}</div></div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+    <div class="result">
+      <div class="value"><div class="label">层数</div><div class="max-floor">{{ .floor }}</div></div>
+      <div class="value"><div class="label">无伤通关</div><div class="no-damage-count">{{ .flawless }}</div></div>
+      <img{{ with .medal }} data-render-resource="{{ . }}"{{ end }} alt="Medal" class="medal-icon">
+    </div>
+  </div>
+
+</div>
+{{ end }}
+<div class="notes-container">
+  <ul class="notes">
+    <li>请在群内查询<span class="command">{{ $.prefix }}拟真鏖战试炼</span>，以参与对应群的鏖战试炼：末路（爬塔 S2）排名</li>
+  </ul>
+</div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

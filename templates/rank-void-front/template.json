@@ -1,0 +1,11 @@
+{
+  "id": "rank-void-front",
+  "name": "绝区零临界推演排名",
+  "description": "临界推演排名命令的图片，布局参照 ZZZ-Plugin rank/voidFrontBattle",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 2400,
+  "height": 6000
+}

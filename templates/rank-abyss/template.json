@@ -1,0 +1,11 @@
+{
+  "id": "rank-abyss",
+  "name": "绝区零式舆防卫战排名",
+  "description": "式舆防卫战排名命令的图片，布局参照 ZZZ-Plugin rank/abyss",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 2400,
+  "height": 6000
+}

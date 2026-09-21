@@ -1,0 +1,11 @@
+{
+  "id": "rank-holo-boss",
+  "name": "绝区零拟境湮灭战排名",
+  "description": "拟境湮灭战排名命令的图片，布局参照 ZZZ-Plugin rank/holoBoss",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 2200,
+  "height": 6000
+}

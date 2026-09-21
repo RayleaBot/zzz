@@ -1,0 +1,11 @@
+{
+  "id": "rank-tower-s2",
+  "name": "绝区零鏖战试炼：末路排名",
+  "description": "鏖战试炼：末路排名命令的图片，布局参照 ZZZ-Plugin rank/climbingTower/s2",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1000,
+  "height": 6000
+}
