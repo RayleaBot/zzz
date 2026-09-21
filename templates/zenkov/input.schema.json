@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["player", "title", "maps", "rank"],
+  "properties": {
+    "player": { "type": "object" },
+    "title": { "type": "string" },
+    "maps": { "type": "array" },
+    "rank": { "type": "object" },
+    "season": { "type": "object" },
+    "weekly": { "type": "object" },
+    "collection": { "type": "object" },
+    "detail": { "type": "boolean" },
+    "records": { "type": "array" },
+    "user": { "type": "object" },
+    "permission": { "type": "object" },
+    "group": { "type": "object" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

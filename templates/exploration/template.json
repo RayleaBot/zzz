@@ -1,0 +1,11 @@
+{
+  "id": "exploration",
+  "name": "绝区零区域收集",
+  "description": "探索命令的图片，布局参照 ZZZ-Plugin explorationDetail",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 2000,
+  "height": 4000
+}

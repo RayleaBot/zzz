@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card{{ if .detail }} container{{ end }}">
+  {{ template "player" . }}
+  <div class="hollow-zero-header"><div class="hollow-zero-title">{{ .title }}</div></div>
+
+  {{ with .season }}
+  <div class="section-container season-card">
+    <div class="info__left">
+      <div class="season-badge">SEASON {{ .id }}</div>
+      <div class="season-level-num">{{ .level }}</div>
+      <div class="season-level-label">赛季等级</div>
+    </div>
+    <div class="info__right">
+      {{ if .unlocked }}
+      <div class="info__right__top">
+        <div class="season-progress-text">赛季委托</div>
+        <div class="season-phase-row">
+          <div class="season-phase">阶段{{ .stage }}</div>
+          <div class="season-phase-progress"><span>{{ .quest }}</span><span class="text-light">/{{ .quest_max }}</span></div>
+        </div>
+        <div class="coins-progress-row">
+          <div class="coins-progress-text"><img data-render-resource="zenkov-images-icon-season-coins" alt="" class="icon-fund"><span class="inner-text">获取上限</span></div>
+          <div class="coins-val">{{ .coin }}</div>
+        </div>
+      </div>
+      {{ else }}
+      <div class="info__right__top"><div class="status-badge locked"><span>未解锁</span></div></div>
+      {{ end }}
+      <div class="info__right__bottom">
+        <div class="season-left-text"><span class="inner-text">第{{ .id }}赛季委托</span></div>
+        <div class="season-left-time">{{ .refresh }}</div>
+      </div>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ with .weekly }}
+  <div class="section-container">
+    <div class="section-header">
+      <div class="section-title">周常委托</div>
+      <div class="weekly-time-left">本周剩余时间：{{ .refresh }}</div>
+    </div>
+    <div class="weekly-progress-bar-row"><span class="progress-label">进度</span><span class="progress-value">{{ .duty }}</span></div>
+    <div class="weekly-stats-list">
+      <div class="stats-line"><span class="stats-label">累计带出</span><span class="stats-value"><img data-render-resource="zenkov-images-icon-fund" alt="" class="icon-fund-sm">{{ .value }}</span></div>
+      <div class="stats-line"><span class="stats-label">Z级贵重物品获取次数</span><span class="stats-value">{{ .big_red }}</span></div>
+      <div class="stats-line"><span class="stats-label">百万撤离次数</span><span class="stats-value">{{ .millions }}</span></div>
+    </div>
+  </div>
+  {{ end }}
+
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">地图-高危模式</div></div>
+    <div class="map-table-header">
+      <span class="header-col col-name">地图</span>
+      <span class="header-col col-leave">撤离率</span>
+      <span class="header-col col-price">最高带出</span>
+    </div>
+    <div class="map-list">
+      {{ range .maps }}
+      <div class="map-item{{ if not .unlocked }} locked{{ end }}">
+        <div class="map-name">{{ .name }}</div>
+        {{ if .unlocked }}<div class="map-leave">{{ .leave }}</div><div class="map-price">{{ .price }}</div>{{ else }}<div class="map-locked-tips">未解锁</div>{{ end }}
+      </div>
+      {{ end }}
+    </div>
+    <div class="rank-row">
+      <span class="rank-label">本赛季最高排名：</span>
+      {{ if .rank.percent }}
+      <div class="rank-container"><div class="rank-icon bg{{ .rank.background }}"></div><div class="rank-text">{{ .rank.percent }}</div></div>
+      {{ else if .rank.top }}
+      <span class="rank-value-top">{{ .rank.top }}</span>
+      {{ else }}
+      <span class="rank-value">-</span>
+      {{ end }}
+    </div>
+  </div>
+
+  {{ with .collection }}
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">珍品图鉴</div></div>
+    {{ with .medals }}
+    <div class="collection-sub-section">
+      <div class="sub-header"><span class="sub-title">勋章墙</span><span class="sub-progress">{{ .progress }}</span></div>
+      <div class="medal-list">
+        {{ range .list }}<div class="medal-item{{ if not .unlocked }} locked{{ end }}" title="{{ .name }}"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="{{ .name }}" class="medal-icon"></div>{{ end }}
+      </div>
+    </div>
+    {{ end }}
+    {{ with .goods }}
+    <div class="collection-sub-section">
+      <div class="sub-header"><span class="sub-title">收藏展示</span><span class="sub-progress">{{ .progress }}</span></div>
+      <div class="goods-grid">
+        {{ range .list }}
+        <div class="goods-item{{ if not .unlocked }} locked{{ end }}" title="{{ .name }}">
+          <div class="goods-icon-wrap"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="{{ .name }}" class="goods-icon"></div>
+          {{ with .number }}<div class="goods-count">{{ . }}</div>{{ end }}
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  {{ if .detail }}
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">探索记录</div></div>
+    <div class="records-list">
+      {{ range .records }}
+      <div class="records-list__record">
+        <div class="records-list__record__hd">
+          <div class="map-name">{{ .map }}</div>
+          <div class="record-time">{{ .start }}</div>
+          <div class="difficulty{{ if .hell }} hell{{ end }}"><div class="diff-tag">{{ .difficulty }}</div></div>
+        </div>
+        <div class="records-list__record__bd">
+          <div class="record-row row-top">
+            <div class="row-left">
+              <div class="result-text {{ if .success }}success{{ else }}failed{{ end }}"><span class="result-label">{{ if .success }}撤离成功{{ else }}撤离失败{{ end }}</span></div>
+              <div class="game-duration"><span class="duration-label">探索时长：</span><span class="duration-val">{{ .duration }}</span></div>
+            </div>
+            <div class="row-right">
+              <div class="coins-wrapper"><img data-render-resource="zenkov-images-icon-fund" alt="" class="icon-fund"><div class="coins-text">{{ .value }}</div></div>
+            </div>
+          </div>
+          <div class="record-row row-bottom">
+            <div class="row-left">
+              <div class="role-list">
+                {{ range .agents }}
+                <div class="role-card">
+                  <div class="avatar-wrap"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} class="avatar-img" alt=""></div>
+                  {{ if .rank }}<div class="rank-badge">{{ .rank }}</div>{{ end }}
+                </div>
+                {{ end }}
+              </div>
+            </div>
+            <div class="row-right">
+              <div class="gains-box">
+                <div class="gains-list__desc">调查收获</div>
+                <div class="gains-list__wrapper">
+                  {{ range .items }}<div class="gain-card {{ .class }}" title="{{ .title }}"><div class="gain-card__inner"><div class="gain-icon"{{ with .icon }} data-render-resource="{{ . }}"{{ end }}></div></div></div>{{ end }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}

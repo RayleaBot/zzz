@@ -1,0 +1,11 @@
+{
+  "id": "zenkov",
+  "name": "绝区零迷宫诡域",
+  "description": "迷宫诡域与迷宫记录命令的图片，布局参照 ZZZ-Plugin zenkov 的 index 与 detail",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1180,
+  "height": 4000
+}

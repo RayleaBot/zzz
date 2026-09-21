@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+  {{ if .areas }}
+  <div class="exploration-container">
+    <div class="exploration-header"><div class="exploration-title">区域收集</div></div>
+    <div class="area-list">
+      {{ range .areas }}
+      <div class="area-group">
+        <div class="area-header"><span class="area-name">{{ .name }}</span><span class="area-progress">{{ .progress }}%</span></div>
+        {{ if .maps }}
+        <div class="subarea-grid">
+          {{ range .maps }}
+          <div class="subarea-item">
+            <div class="subarea-left">
+              <div class="subarea-icon"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="{{ .name }}"></div>
+              <div class="subarea-progress">{{ .progress }}%</div>
+            </div>
+            <div class="subarea-right">
+              {{ range .collections }}
+              <div class="collection-item">
+                <div class="collection-icon"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="{{ .name }}"></div>
+                <div class="collection-count">{{ .count }}</div>
+              </div>
+              {{ end }}
+            </div>
+          </div>
+          {{ end }}
+        </div>
+        {{ end }}
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ else }}
+  <div class="empty-state"><p>暂无探索详情数据</p></div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}
