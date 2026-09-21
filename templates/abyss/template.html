@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+  <div class="tips">
+    <p>统计周期 {{ .begin }} - {{ .end }}</p>
+  </div>
+
+  {{ with .fifth }}
+  <div class="layer-container">
+    <div class="layer-header">
+      <div class="header-top">
+        <div class="title-section">
+          <h3 class="layer-title">剧变节点第五防线</h3>
+          <div class="total-score-section">
+            {{ if .max_score }}<div class="max-score-icon score150000"></div>{{ else }}<div class="total-score">{{ .score }}</div>{{ end }}
+            <div class="rank-container">
+              <div class="rank-icon bg{{ .rank_bg }}"></div>
+              <div class="rank-text">{{ .rank }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="rating-icon rating-icon {{ .rating }}"></div>
+      </div>
+      <div class="header-bottom">
+        {{ with .time }}<div class="challenge-time">通关时间：{{ . }}</div>{{ end }}
+        {{ with .battle_time }}<div class="total-battle-time">总通关时长：{{ . }}</div>{{ end }}
+      </div>
+    </div>
+    <div class="layer-content">
+      {{ range $room := .rooms }}
+      <div class="item-card">
+        <div class="item-rating rating-icon {{ $room.rating }}"></div>
+        <div class="cover"><img{{ with $room.monster }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+        <div class="content">
+          <div class="team team-icon team0{{ $room.no }}"></div>
+          <div class="value">
+            {{ if $room.max_score }}<div class="max-score-icon score50000"></div>{{ else }}<div class="val">{{ $room.score }}</div>{{ end }}
+          </div>
+          <div class="time">通关时间：{{ $room.time }}</div>
+          <div class="buffer">增益：{{ $room.buff }}</div>
+          {{ template "team" $room.team }}
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+
+  {{ range .lower }}
+  <div class="layer-container lower-layer-container">
+    <div class="layer-header lower-header">
+      <div class="rating-icon {{ .rating }}"></div>
+      <div class="header-top">
+        <div class="title-section"><h3 class="layer-title">{{ .name }}</h3></div>
+      </div>
+      <div class="header-bottom">
+        <div class="challenge-time">通关时间：{{ .time }}</div>
+      </div>
+    </div>
+    <div class="lower-layer-content">
+      {{ range .teams }}
+      <div class="lower-item-card">
+        <div class="content">
+          <div class="team team-icon team0{{ .no }}"></div>
+          {{ template "team" .team }}
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+
+  <div class="item-card">
+    <ul class="notes">
+      <li>请在群内发送<span class="command">{{ .rank_command }}</span>，以参与对应群的式舆防卫战排名</li>
+    </ul>
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}
+{{ define "team" }}
+<div class="list">
+  {{ range .slots }}
+  {{ if . }}
+  <div class="item char">
+    {{ if .rank }}<div class="count">{{ .rank }}</div>{{ end }}
+    <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+    <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+  </div>
+  {{ else }}
+  <div class="item char"></div>
+  {{ end }}
+  {{ end }}
+  {{ with .buddy }}
+  <div class="item bangboo">
+    <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+    <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}

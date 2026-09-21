@@ -40,4 +40,4 @@
 
 ## 图片模板
 
-`templates/note/` 按 ZZZ-Plugin 的 note 模板改写；`templates/panel/` 与 `templates/gacha/` 的样式由 ZZZ-Plugin 的 common/style、common/layout、panel/card 与 gachalog 样式转换而来，抽卡分析的统计、UP 判定与欧非评级同上游 anaylizeGachaLog（均为 AGPL-3.0，见 `LICENSES/ZZZ-Plugin-AGPL-3.0.txt`）。图片地址改为宿主渲染资源；角色、音擎、邦布与驱动盘图与上游一样出图时从 ZZZeroUID 镜像按需下载，抽卡分析的代理人方形头像从官方图片地址按需下载（上游的最后一级来源），名称按 ZZZ-Plugin 的映射表换算。上游三个 SVG 属性图标不是可接受的渲染资源，不显示。模板用到的图片与字体不随插件分发，由管理员通过“素材更新”在运行时从上游仓库下载。
+`templates/note/` 按 ZZZ-Plugin 的 note 模板改写；`templates/panel/`、`templates/gacha/` 与 `templates/abyss/` 的样式由 ZZZ-Plugin 的 common/style、common/layout、panel/card、gachalog 与 abyss 样式转换而来，抽卡分析的统计、UP 判定与欧非评级同上游 anaylizeGachaLog（均为 AGPL-3.0，见 `LICENSES/ZZZ-Plugin-AGPL-3.0.txt`）。图片地址改为宿主渲染资源；角色、音擎、邦布与驱动盘图与上游一样出图时从 ZZZeroUID 镜像按需下载，抽卡分析的代理人方形头像从官方图片地址按需下载（上游的最后一级来源），名称按 ZZZ-Plugin 的映射表换算。上游三个 SVG 属性图标不是可接受的渲染资源，不显示。战绩里的代理人、邦布、首领与增益图是官方图片地址，首次出图时按需缓存到“官方图片缓存”。上游战绩末尾提示的是它自己的群排名开关，这里改为提示本插件的“提交挑战”命令。模板用到的图片与字体不随插件分发，由管理员通过“素材更新”在运行时从上游仓库下载。

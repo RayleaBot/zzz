@@ -1,0 +1,11 @@
+{
+  "id": "abyss",
+  "name": "绝区零式舆防卫战",
+  "description": "式舆防卫战命令的战绩图片，布局参照 ZZZ-Plugin abyss",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}

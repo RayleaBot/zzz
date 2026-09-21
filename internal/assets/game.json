@@ -146,6 +146,13 @@
       ]
     },
     {
+      "id": "mihoyo",
+      "name": "官方图片缓存",
+      "mirrors": [
+        "https://"
+      ]
+    },
+    {
       "id": "zzz-atlas",
       "name": "Atlas 绝区零图鉴",
       "archives": [
