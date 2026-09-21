@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" data-render-resource="page-bg">
+  <div class="card" data-render-resource="card-frame">
+    <div class="user-info">
+      <div class="avatar" data-render-resource="avatar-frame">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+      <div class="info-bar">
+        <div class="info">
+          <div class="nickname">{{ .player.nickname }}</div>
+          <div class="label level">Lv{{ .player.level }}</div>
+          <div class="label server">{{ .player.region }}</div>
+        </div>
+        <div class="uid" data-render-resource="uid-frame">UID {{ .player.uid }}</div>
+      </div>
+    </div>
+    <div class="special-title">
+      <div class="bg-content">STAMINA</div>
+      <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="content">电池电量</div>
+      <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div class="battery" data-render-resource="battery-bg">
+      <div class="icon" data-render-resource="battery-icon-frame"><img data-render-resource="battery-icon" alt=""></div>
+      <div class="info">
+        <div class="bvalue">
+          <div class="title">电量</div>
+          <div class="value"><span class="big">{{ .energy.current }}</span>/{{ .energy.max }}</div>
+        </div>
+        <div class="bleft">
+          <div class="title">剩余</div>
+          <div class="value">{{ .energy.rest }}</div>
+        </div>
+        <div class="texture" data-render-resource="battery-bar-frame">
+          <div class="bar"><div class="progress" style="width: {{ .energy.percent }}%;"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="special-title">
+      <div class="bg-content">ACTIVE</div>
+      <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="content">每日情况</div>
+      <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+    <div class="active-list">
+      {{ range .activities }}
+      <div class="active">
+        <div class="status" data-render-resource="{{ if .finished }}status-done{{ else }}status-open{{ end }}"></div>
+        <div class="title">{{ .title }}</div>
+        <div class="value">{{ .value }}{{ if .sub }}<span class="sub">{{ .sub }}</span>{{ end }}</div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
