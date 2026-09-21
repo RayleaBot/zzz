@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+
+  {{ with .seasons.s1 }}
+  <div class="season-container s1">
+    <div class="season-header">
+      <div class="season-title">拟真鏖战试炼</div>
+      <div class="medal-icon"><img{{ with .medal }} data-render-resource="{{ . }}"{{ end }} alt="S1徽章"></div>
+    </div>
+    <div class="season-content">
+      <div class="layer-info"><span class="label">层数</span><span class="value">{{ .layer }}</span></div>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ with .seasons.s2 }}
+  <div class="season-container s2">
+    <div class="season-header">
+      <div class="season-title">鏖战试炼：末路</div>
+      <div class="medal-icon"><img{{ with .medal }} data-render-resource="{{ . }}"{{ end }} alt="S2徽章"></div>
+    </div>
+    <div class="season-content">
+      <div class="layer-info"><span class="label">层数</span><span class="value">{{ .layer }}</span></div>
+      <div class="mvp-info"><span class="label">无伤通关</span><span class="value">{{ .mvp }}</span></div>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ with .seasons.s3 }}
+  <div class="season-container s3">
+    <div class="season-header">
+      <div class="season-title">鏖战试炼：荣耀</div>
+      <div class="medal-icon"><img{{ with .medal }} data-render-resource="{{ . }}"{{ end }} alt="S3徽章"></div>
+    </div>
+    {{ template "scored" . }}
+  </div>
+  {{ end }}
+
+  {{ with .seasons.s4 }}
+  <div class="season-container s4">
+    <div class="season-header">
+      <h3 class="season-title">鏖战试炼：狂澜</h3>
+      <div class="medal-icon"><img{{ with .medal }} data-render-resource="{{ . }}"{{ end }} alt="S4徽章"></div>
+    </div>
+    {{ template "scored" . }}
+    {{ if .agents }}
+    <div class="boss-row boss-team-row">
+      <div class="list">
+        {{ range .agents }}
+        <div class="item char">
+          <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+          <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+          <div class="c-info">
+            <div class="score">{{ .score }}</div>
+            <div class="rank">{{ .rank }}</div>
+          </div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <div class="item-card">
+    <ul class="notes">
+      <li>请在群内发送<span class="command">{{ .rank_command }}</span>（S1 至 S4 各自提交），以参与对应群的拟真鏖战试炼排名</li>
+    </ul>
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}
+{{ define "scored" }}
+<div class="season-content">
+  <div class="layer-info"><span class="label">层数</span><span class="value">{{ .layer }}</span></div>
+  <div class="score-info"><span class="label">分数</span><span class="value">{{ .score }}</span></div>
+</div>
+<div class="mvp-section">
+  <div class="mvp-info"><span class="label">无伤通关</span><span class="value">{{ .mvp }}</span></div>
+  <div class="rank-info"><span class="label">排名</span><span class="value">{{ .rank }}</span></div>
+</div>
+{{ end }}

@@ -1,0 +1,11 @@
+{
+  "id": "tower",
+  "name": "绝区零拟真鏖战试炼",
+  "description": "爬塔命令的战绩图片，布局参照 ZZZ-Plugin climbingTower",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1000,
+  "height": 3000
+}
