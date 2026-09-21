@@ -71,12 +71,6 @@
       "input": "period"
     },
     {
-      "name": "zzz.void_front_summary",
-      "label": "临界推演摘要",
-      "command": "推演概况",
-      "input": "none"
-    },
-    {
       "name": "zzz.hollow_zero",
       "label": "零号空洞",
       "command": "零号空洞",
