@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["avatar", "nickname", "score", "rank_bg", "rank", "stars", "begin", "end", "list", "rank_command"],
+  "properties": {
+    "avatar": { "type": "string" },
+    "nickname": { "type": "string" },
+    "score": { "type": "string" },
+    "rank_bg": { "type": "integer" },
+    "rank": { "type": "string" },
+    "stars": { "type": "string" },
+    "begin": { "type": "string" },
+    "end": { "type": "string" },
+    "list": { "type": "array" },
+    "rank_command": { "type": "string" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

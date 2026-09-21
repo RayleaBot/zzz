@@ -1,0 +1,11 @@
+{
+  "id": "deadly",
+  "name": "绝区零危局强袭战",
+  "description": "危局强袭战命令的战绩图片，布局参照 ZZZ-Plugin deadly",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}
