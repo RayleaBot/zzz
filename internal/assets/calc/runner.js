@@ -88,3 +88,19 @@ function runBuild(record,_weapons,input){
  if(input.candidate_weapon||input.candidate_equipment||input.conditions){const next=input.candidate_weapon||original.selected;if(next.id&&!zzzPromotions(next.level,true).includes(next.promote))throw Error('weapon.promote');const nextGear=input.candidate_equipment?zzzGear(input.candidate_equipment):gear;candidate=zzzScenario(info,input,nextGear,next,original.promote,core,original.properties,input.conditions)}
  return {source:'simulation',version:'zzz-fb66219cec-reference-v1',character_id:record.id,character:record.name,enemy_level:input.enemy_level,baseline,candidate};
 }
+// Drive disc scoring follows ZZZ-Plugin: Score.getFinalWeight picks the rule,
+// Score.main rates each disc, and the Equip and avatar getters grade them.
+function runScore(record,_weapons,input){
+ if(typeof scoreRule!=='undefined')scoreFnc[record.id]=scoreRule.default;
+ const partner=record.data.partner,avatar=new AvatarProperties();
+ Object.assign(avatar,{id:Number(record.id),rank:input.rank,element_type:Number(partner.ElementType),avatar_profession:Number(partner.WeaponType),properties:input.properties});
+ const [title,weight]=ZZZScore.getFinalWeight(avatar);
+ const pieces=input.equipment.map(disc=>{
+  const equip={equipment_type:disc.slot,level:disc.level,rarity:disc.rarity,main_properties:[{property_id:Number(disc.main)}],properties:disc.sub.map(s=>({property_id:Number(s.id),count:getEquipPropertyEnhanceCount(s.id,s.value)}))};
+  const score=ZZZScore.main(equip,weight);
+  if(!Number.isFinite(score))throw Error('score.nonfinite');
+  return {slot:disc.slot,score,grade:new EquipGrade(score).comment};
+ });
+ Object.assign(avatar,{equip:pieces,scoreWeight:weight});
+ return {title,pieces,total:avatar.equip_score,grade:avatar.equip_comment};
+}

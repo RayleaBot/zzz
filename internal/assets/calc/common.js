@@ -2003,6 +2003,47 @@ class AvatarProperties {
             EnergyRegen: get('sprecover')
         };
     }
+    get equip_score() {
+        var _a;
+        if (!((_a = this.equip) === null || _a === void 0 ? void 0 : _a.length))
+            return 0;
+        if (this.scoreWeight) {
+            let score = 0;
+            for (const equip of this.equip) {
+                score += equip.score || 0;
+            }
+            return score;
+        }
+        return 0;
+    }
+    get equip_comment() {
+        const score = this.equip_score;
+        if (score < 80) {
+            return 'C';
+        }
+        if (score < 120) {
+            return 'B';
+        }
+        if (score < 160) {
+            return 'A';
+        }
+        if (score < 180) {
+            return 'S';
+        }
+        if (score < 200) {
+            return 'SS';
+        }
+        if (score < 220) {
+            return 'SSS';
+        }
+        if (score < 280) {
+            return 'ACE';
+        }
+        if (score >= 280) {
+            return 'MAX';
+        }
+        return 'C';
+    }
 }
 exports.AvatarProperties = AvatarProperties;
 
@@ -2111,5 +2152,506 @@ function debug(...args) {
         return;
     logger.debug(...args);
 }
+
+return exports;})();
+const {rarityEnum,professionEnum}=runtime;
+const {idToName,nameToId}=property;
+const scoreFnc={};
+const char={aliasToId:name=>characterAliases[name]??null,idToData:id=>referenceMaps.PartnerId2Data[id]};
+const {baseValueData,formatScoreWeight,getEquipPropertyEnhanceCount}=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getEquipPropertyEnhanceCount = exports.baseValueData = void 0;
+exports.formatScoreWeight = formatScoreWeight;
+exports.baseValueData = getMapData('EquipBaseValue');
+const elementType2propId = (elementType) => [31503, 31603, 31703, 31803, 32303, 31903][elementType - 200];
+function formatScoreWeight(oriScoreWeight, charID) {
+    var _a;
+    if (!oriScoreWeight)
+        return false;
+    if (Array.isArray(oriScoreWeight))
+        return oriScoreWeight;
+    if (typeof oriScoreWeight !== 'object')
+        return false;
+    const weight = {};
+    for (const propName in oriScoreWeight) {
+        if (!oriScoreWeight[propName] && oriScoreWeight[propName] !== 0)
+            continue;
+        let propID;
+        if (charID && propName === '属性伤害加成') {
+            propID = elementType2propId(+((_a = char.idToData(charID)) === null || _a === void 0 ? void 0 : _a.ElementType));
+        }
+        else {
+            propID = +propName || nameToId(propName);
+        }
+        if (!propID)
+            continue;
+        weight[propID] = oriScoreWeight[propName];
+    }
+    ;
+    return weight;
+}
+/**
+ * 获取词条强化次数
+ * @param propertyID 属性id
+ * @param value 属性值
+ */
+const getEquipPropertyEnhanceCount = (propertyID, value) => {
+    const baseValue = exports.baseValueData[propertyID];
+    const numericValue = +value.replace('%', '');
+    return Math.trunc(numericValue / baseValue - 1 || 0);
+};
+exports.getEquipPropertyEnhanceCount = getEquipPropertyEnhanceCount;
+
+return exports;})();
+const ZZZScore=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const equipScore = getMapData('EquipScore', false);
+for (const charName in equipScore) {
+    const charID = +charName || char.aliasToId(charName);
+    if (!charID) {
+        logger.warn(`驱动盘评分：未找到角色${charName}的角色ID`);
+        delete equipScore[charName];
+        continue;
+    }
+    equipScore[charID] = equipScore[charName];
+    delete equipScore[charName];
+}
+/** 主词条可能属性 */
+const mainStats = getMapData('EquipMainStats');
+/** 副词条可能属性 */
+const subStats = Object.keys(baseValueData).map(Number);
+class Score {
+    constructor(equip, weight) {
+        this.equip = equip;
+        this.weight = weight;
+        this.partition = this.equip.equipment_type;
+        this.userMainStat = this.equip.main_properties[0].property_id;
+    }
+    debug(...args) {
+        if (!settings.getConfig('config').score_debug_log)
+            return;
+        logger.debug(...args);
+    }
+    /** 等级系数 */
+    get_level_multiplier() {
+        return (0.25 + +this.equip.level * 0.05) || 1;
+    }
+    /** 品质系数 */
+    get_rarity_multiplier() {
+        switch (rarityEnum[this.equip.rarity]) {
+            case rarityEnum.S:
+                return 1;
+            case rarityEnum.A:
+                return 2 / 3;
+            case rarityEnum.B:
+                return 1 / 3;
+            default:
+                return 1;
+        }
+    }
+    /** 理论最大词条数 */
+    get_max_count() {
+        /** 权重最大的4个副词条 */
+        const subMaxStats = subStats
+            .filter(p => p !== this.userMainStat && this.weight[p])
+            .sort((a, b) => this.weight[b] - this.weight[a]).slice(0, 4);
+        if (!subMaxStats.length)
+            return 0;
+        this.debug(`[${this.partition}号位]理论副词条：` + subMaxStats.map(idToName).reduce((a, p, i) => a + `${p}*${this.weight[subMaxStats[i]].toFixed(2)} `, ''));
+        let count = this.weight[subMaxStats[0]] * 6; // 权重最大副词条强化五次
+        subMaxStats.slice(1).forEach(p => count += this.weight[p] || 0); // 其他词条各计入一次
+        this.debug(`[${this.partition}号位]理论词条数：${logger.blue(count)}`);
+        return count;
+    }
+    /** 实际词条数 */
+    get_actual_count() {
+        let count = 0;
+        for (const prop of this.equip.properties) {
+            const propID = prop.property_id;
+            const weight = this.weight[propID];
+            if (weight) {
+                this.debug(`[${this.partition}号位]实际副词条：${idToName(propID)} ${logger.green(prop.count + 1)}*${weight}`);
+                count += weight * (prop.count + 1);
+            }
+        }
+        this.debug(`[${this.partition}号位]实际词条数：${logger.blue(count)}`);
+        return count;
+    }
+    /** 计算驱动盘得分 */
+    get_score() {
+        const rarity_multiplier = this.get_rarity_multiplier();
+        const level_multiplier = this.get_level_multiplier();
+        const actual_count = this.get_actual_count();
+        const max_count = this.get_max_count();
+        if (max_count === 0)
+            return 0;
+        // 123号位
+        if (this.partition <= 3) {
+            const min_score = 12 * level_multiplier * rarity_multiplier;
+            if (actual_count === 0) {
+                // 1…1个有效副词条都没有吗？真是拿你没办法呢~给点主词条的分吧~❤️杂鱼~❤️杂鱼~❤️
+                return min_score;
+            }
+            const score = actual_count / max_count * level_multiplier * rarity_multiplier * 55;
+            this.debug(`[${this.partition}号位] ${logger.magenta(`${actual_count} / ${max_count} * ${level_multiplier} * ${rarity_multiplier} * 55 = ${score}`)}`);
+            return Math.max(score, min_score);
+        }
+        // 456号位
+        const mainMaxStat = mainStats[this.partition]
+            .filter(p => this.weight[p])
+            .sort((a, b) => this.weight[b] - this.weight[a])[0];
+        const mainScore = mainMaxStat ? 12 * (this.weight[this.userMainStat] || 0) / this.weight[mainMaxStat] : 12;
+        const subScore = actual_count / max_count * 43;
+        const score = (mainScore + subScore) * level_multiplier * rarity_multiplier;
+        this.debug(`[${this.partition}号位] ${logger.magenta(`(${mainScore} + ${subScore}) * ${level_multiplier} * ${rarity_multiplier} = ${score}`)}`);
+        return score;
+    }
+    static main(equip, weight) {
+        try {
+            return new Score(equip, weight).get_score();
+        }
+        catch (err) {
+            logger.error('角色驱动盘评分计算错误：', err);
+            return 0;
+        }
+    }
+    static getFinalWeight(avatar) {
+        var _a;
+        let def_weight = equipScore[avatar.id];
+        // 无预设权重（新角色），选择相应基本规则
+        if (!def_weight) {
+            switch (avatar.avatar_profession) {
+                case professionEnum.强攻:
+                    def_weight = ['主C·双爆'];
+                    break;
+                case professionEnum.击破:
+                    def_weight = ['冲击·双爆', '冲击·攻击', '冲击·异常'];
+                    break;
+                case professionEnum.异常:
+                    def_weight = ['主C·异常', '辅助·异常'];
+                    break;
+                case professionEnum.支援:
+                case professionEnum.防护:
+                    def_weight = ['辅助·双爆', '辅助·异常'];
+                    break;
+                case professionEnum.命破:
+                    def_weight = ['命破·双爆'];
+                    break;
+                case professionEnum.锋御:
+                    def_weight = ['锋御·双爆'];
+                    break;
+            }
+        }
+        /** 选择第一个符合条件的规则，若皆不符合则选择第一个有效规则 */
+        const delRules = (rules) => {
+            var _a, _b;
+            if (rules.length === 1) {
+                rule_name = rules[0];
+                final_weight = (_a = predefinedWeights[rules[0]]) === null || _a === void 0 ? void 0 : _a.value;
+            }
+            else {
+                for (const name of rules) {
+                    if ((_b = predefinedWeights[name]) === null || _b === void 0 ? void 0 : _b.rule(avatar)) {
+                        rule_name = name;
+                        final_weight = predefinedWeights[name].value;
+                        break;
+                    }
+                }
+                if (!final_weight) {
+                    for (const name of rules) {
+                        if (predefinedWeights[name]) {
+                            rule_name = name;
+                            final_weight = predefinedWeights[name].value;
+                            break;
+                        }
+                    }
+                }
+            }
+            final_weight = { ...final_weight };
+        };
+        let rule_name = '默认', final_weight;
+        if (Array.isArray(def_weight)) {
+            delRules(def_weight);
+        }
+        else if (def_weight === null || def_weight === void 0 ? void 0 : def_weight.rules) {
+            const { rules, ...rest } = def_weight;
+            delRules(rules);
+            if (Object.keys(rest).length) {
+                rule_name += '·改';
+                Object.assign(final_weight, rest);
+            }
+        }
+        else {
+            final_weight = def_weight;
+        }
+        // console.log(avatar.name_mi18n, 'default_final_weight', final_weight)
+        final_weight = formatScoreWeight(final_weight, avatar.id);
+        const calc_weight = scoreFnc[avatar.id] && scoreFnc[avatar.id](avatar);
+        if (calc_weight) {
+            rule_name = calc_weight[0];
+            final_weight = { ...final_weight, ...formatScoreWeight(calc_weight[1], avatar.id) };
+        }
+        // 小生命、小攻击、小防御动态映射为大生命、大攻击、大防御相对于基础属性的等效权重
+        for (const [small, big, name] of [[11103, 11102, 'HP'], [12103, 12102, 'ATK'], [13103, 13102, 'DEF']]) {
+            if (final_weight[big]) {
+                (_a = final_weight[small]) !== null && _a !== void 0 ? _a : (final_weight[small] = +(baseValueData[small] * 100 / (baseValueData[big] * avatar.base_properties[name]) * final_weight[big]).toFixed(2));
+            }
+        }
+        // console.log(avatar.name_mi18n, rule_name, final_weight)
+        return [rule_name, final_weight];
+    }
+}
+exports.default = Score;
+/** 预设权重规则 */
+const predefinedWeights = {
+    主C·双爆: {
+        rule: (avatar) => {
+            const { ATK, CRITRate, CRITDMG, AnomalyMastery, AnomalyProficiency } = avatar.initial_properties;
+            return ATK > 2400 && CRITRate * 2 + CRITDMG >= 2.2 && AnomalyMastery < 150 && AnomalyProficiency < 200;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 1,
+            "暴击伤害": 1,
+            "穿透率": 1,
+            "穿透值": 0.25,
+            "能量自动回复": 0,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    主C·异常: {
+        rule: (avatar) => {
+            const { ATK, CRITRate, CRITDMG, AnomalyMastery, AnomalyProficiency } = avatar.initial_properties;
+            if (CRITRate * 2 + CRITDMG >= 2)
+                return false;
+            if (ATK < 2400)
+                return false;
+            if (AnomalyMastery >= 180 && AnomalyProficiency >= 200)
+                return true;
+            if (AnomalyMastery >= 120 && AnomalyProficiency >= 300)
+                return true;
+            if (AnomalyMastery >= 150 && AnomalyProficiency >= 250)
+                return true;
+            return false;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 0,
+            "暴击伤害": 0,
+            "穿透率": 1,
+            "穿透值": 0.25,
+            "能量自动回复": 0,
+            "异常精通": 1,
+            "异常掌控": 1,
+            "属性伤害加成": 1
+        }
+    },
+    命破·双爆: {
+        rule: (avatar) => {
+            return true;
+        },
+        value: {
+            "生命值百分比": 0.5,
+            "攻击力百分比": 0.25,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 1,
+            "暴击伤害": 1,
+            "穿透率": 0,
+            "穿透值": 0,
+            "能量自动回复": 0,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    锋御·双爆: {
+        rule: () => true,
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0,
+            "防御力百分比": 1,
+            "冲击力": 0,
+            "暴击率": 1,
+            "暴击伤害": 0.75,
+            "穿透率": 1,
+            "穿透值": 0.25,
+            "能量自动回复": 0,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    辅助·双爆: {
+        rule: (avatar) => {
+            const { CRITRate, CRITDMG, AnomalyProficiency } = avatar.initial_properties;
+            return CRITRate * 2 + CRITDMG >= 1.5 && AnomalyProficiency < 200;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 1,
+            "暴击伤害": 1,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    辅助·攻击: {
+        rule: (avatar) => {
+            const { CRITRate, CRITDMG } = avatar.initial_properties;
+            return CRITRate * 2 + CRITDMG >= 1.5;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 1,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 1,
+            "暴击伤害": 0.75,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    辅助·异常: {
+        rule: (avatar) => {
+            const { CRITRate, CRITDMG, AnomalyProficiency } = avatar.initial_properties;
+            return CRITRate * 2 + CRITDMG < 2 && AnomalyProficiency >= 200;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 0,
+            "暴击率": 0,
+            "暴击伤害": 0,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 1,
+            "异常掌控": 1,
+            "属性伤害加成": 1
+        }
+    },
+    冲击·双爆: {
+        rule: (avatar) => {
+            const { CRITRate, CRITDMG, AnomalyMastery, AnomalyProficiency } = avatar.initial_properties;
+            return CRITRate * 2 + CRITDMG >= 1.5 && AnomalyMastery < 150 && AnomalyProficiency < 200;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 1,
+            "暴击率": 1,
+            "暴击伤害": 1,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    冲击·攻击: {
+        rule: (avatar) => {
+            const { ATK, CRITRate, CRITDMG, AnomalyMastery, AnomalyProficiency } = avatar.initial_properties;
+            return ATK > 2000 && CRITRate * 2 + CRITDMG >= 1 && AnomalyMastery < 150 && AnomalyProficiency < 200;
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 1,
+            "防御力百分比": 0,
+            "冲击力": 1,
+            "暴击率": 1,
+            "暴击伤害": 0.75,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 0,
+            "异常掌控": 0,
+            "属性伤害加成": 1
+        }
+    },
+    冲击·异常: {
+        rule: (avatar) => {
+            const { CRITRate, CRITDMG, AnomalyMastery, AnomalyProficiency } = avatar.initial_properties;
+            return CRITRate * 2 + CRITDMG < 2 && (AnomalyMastery >= 150 || AnomalyProficiency >= 200);
+        },
+        value: {
+            "生命值百分比": 0,
+            "攻击力百分比": 0.75,
+            "防御力百分比": 0,
+            "冲击力": 1,
+            "暴击率": 0,
+            "暴击伤害": 0,
+            "穿透率": 0.75,
+            "穿透值": 0.25,
+            "能量自动回复": 1,
+            "异常精通": 1,
+            "异常掌控": 1,
+            "属性伤害加成": 1
+        }
+    },
+};
+
+return exports;})().default;
+const {EquipGrade}=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EquipGrade = void 0;
+class EquipGrade {
+    constructor(score) { this.score = score; }
+    get comment() {
+        if (this.score === false) {
+            return false;
+        }
+        if (this.score <= 12) {
+            return 'C';
+        }
+        if (this.score < 20) {
+            return 'B';
+        }
+        if (this.score < 28) {
+            return 'A';
+        }
+        if (this.score < 32) {
+            return 'S';
+        }
+        if (this.score < 36) {
+            return 'SS';
+        }
+        if (this.score < 40) {
+            return 'SSS';
+        }
+        if (this.score < 48) {
+            return 'ACE';
+        }
+        if (this.score >= 48) {
+            return 'MAX';
+        }
+        return false;
+    }
+}
+exports.EquipGrade = EquipGrade;
 
 return exports;})();

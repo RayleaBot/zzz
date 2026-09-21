@@ -10,9 +10,7 @@
 
 ## 装备评分
 
-评分核心按固定参考原生实现 ZZZ `Score`。转换脚本 `game-plugin-kit/scripts/import-score-data.py` 只读取静态数字对象与 JSON，不运行原插件。对应版权许可保留在 `LICENSES/`，评分结果带规则版本。
-
-采用 dev 提交 `fb66219cec0294e1834bacdf0033b2d43a9ccaf4` 的十个显式预设；动态模式已原生适配三份角色覆盖函数和条件预设选择，不在插件运行期执行 JS。评分不等于伤害计算或队伍收益。
+评分运行 dev 提交 `fb66219cec0294e1834bacdf0033b2d43a9ccaf4` 的 `Score`（含预设权重与按属性选择的规则）、`lib/score` 与角色专属 `score.js`，驱动盘与整套评级沿用上游 `Equip` 与角色模型的评级阈值。`EquipScore.json`、`EquipMainStats.json` 与 `EquipBaseValue.json` 随 `data.js` 打包，`internal/assets/calc/scores/<ID>-<角色名>.js` 由相邻库的 `scripts/bundle-zzz-calculation.mjs` 从 `score.js` 生成；尚无伤害脚本的代理人也进入计算目录，只用于评分。回归向量在 `internal/assets/testdata/score-vectors.json`。评分不等于伤害计算或队伍收益。
 
 ## 自动参考计算
 
