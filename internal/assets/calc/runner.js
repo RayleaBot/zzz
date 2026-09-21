@@ -96,11 +96,17 @@ function runScore(record,_weapons,input){
  Object.assign(avatar,{id:Number(record.id),rank:input.rank,element_type:Number(partner.ElementType),avatar_profession:Number(partner.WeaponType),properties:input.properties});
  const [title,weight]=ZZZScore.getFinalWeight(avatar);
  const pieces=input.equipment.map(disc=>{
-  const equip={equipment_type:disc.slot,level:disc.level,rarity:disc.rarity,main_properties:[{property_id:Number(disc.main)}],properties:disc.sub.map(s=>({property_id:Number(s.id),count:getEquipPropertyEnhanceCount(s.id,s.value)}))};
+  const properties=disc.sub.map(s=>({property_id:Number(s.id),count:getEquipPropertyEnhanceCount(s.id,s.value)}));
+  const equip={equipment_type:disc.slot,level:disc.level,rarity:disc.rarity,main_properties:[{property_id:Number(disc.main)}],properties};
   const score=ZZZScore.main(equip,weight);
   if(!Number.isFinite(score))throw Error('score.nonfinite');
-  return {slot:disc.slot,score,grade:new EquipGrade(score).comment};
+  return {slot:disc.slot,score,grade:new EquipGrade(score).comment,props:properties.map(p=>({id:p.property_id,count:p.count,weight:weight[p.property_id]||0}))};
  });
  Object.assign(avatar,{equip:pieces,scoreWeight:weight});
- return {title,pieces,total:avatar.equip_score,grade:avatar.equip_comment};
+ // Substat totals as ZZZ-Plugin's propertyStats: rolls include the initial one.
+ const stats={};
+ for(const piece of pieces)for(const p of piece.props){const stat=stats[p.id]??={id:p.id,name:property.idToShortName2(p.id),weight:p.weight,value:'0',count:0};stat.count+=p.count+1}
+ const statList=Object.values(stats);
+ for(const stat of statList)if(baseValueData[stat.id]){stat.value=(baseValueData[stat.id]*stat.count).toFixed(1);if([11102,12102,13102,20103,21103].includes(stat.id))stat.value+='%'}
+ return {title,pieces,total:avatar.equip_score,grade:avatar.equip_comment,weights:weight,stats:_.orderBy(statList,['count','weight'],['desc','desc'])};
 }
