@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+  <div class="tips"><p>统计周期：{{ .begin }} ~ {{ .end }}</p></div>
+
+  {{ with .total }}
+  <div class="total-info-container">
+    <div class="total-info-frame">
+      <div class="total-info-row">
+        <div class="total-score-section">
+          {{ template "score" .score }}
+          <div class="rank-container">
+            <div class="rank-icon bg{{ .rank_bg }}"></div>
+            <div class="rank-text">{{ .rank }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="ending-row"><div class="ending-text">{{ .ending }}</div></div>
+      <div class="frame-bg"{{ with .ending_bg }} data-render-resource="{{ . }}"{{ end }}></div>
+      <div class="frame-mask"></div>
+    </div>
+  </div>
+  {{ end }}
+
+  {{ with .boss }}
+  <div class="layer-container boss-layer">
+    {{ template "stage" . }}
+  </div>
+  {{ end }}
+
+  {{ range .stages }}
+  <div class="layer-container lower-layer-container">
+    {{ template "stage" . }}
+  </div>
+  {{ end }}
+
+  {{ with .rank_command }}
+  <div class="item-card">
+    <ul class="notes">
+      <li>请在群内发送<span class="command">{{ . }}</span>，以参与对应群的临界推演排名</li>
+    </ul>
+  </div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}
+{{ define "score" }}{{ if .full }}<div class="max-score-icon score{{ .max }}"></div>{{ else }}<div class="total-score">{{ .value }}</div>{{ end }}{{ end }}
+{{ define "buff" }}<div class="buffer"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt="{{ .name }}"></div>{{ end }}
+{{ define "stage" }}
+<div class="boss-layout">
+  <div class="boss-info-left">
+    <div class="boss-row boss-name-row">
+      <h3 class="boss-name">{{ .name }}</h3>
+      {{ template "buff" .buff }}
+    </div>
+    <div class="boss-row boss-score-row">
+      <div class="score-section">{{ if .score.full }}<div class="max-score-icon score{{ .score.max }}"></div>{{ else }}<div class="score-value">{{ .score.value }}</div>{{ end }}</div>
+      <div class="score-ratio">得分倍率：{{ .ratio }}</div>
+    </div>
+    <div class="boss-row boss-time-row"><div class="challenge-time">通关时间：{{ .time }}</div></div>
+    <div class="boss-row boss-team-row">{{ template "team" .team }}</div>
+  </div>
+  <div class="boss-info-right">
+    <div class="rating-icon {{ .rating }}"></div>
+    {{ with .icon }}<div class="boss-icon"><img data-render-resource="{{ . }}" alt=""></div>{{ end }}
+  </div>
+</div>
+{{ if .subs }}
+<div class="sub-challenges">
+  {{ range .subs }}
+  <div class="sub-item-card">
+    <div class="item-rating rating-icon {{ .rating }}"></div>
+    <div class="content">
+      <div class="value">
+        <div class="val">{{ .name }}</div>
+        {{ template "buff" .buff }}
+      </div>
+      {{ template "team" .team }}
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}
+{{ end }}
+{{ define "team" }}
+<div class="list">
+  {{ range .slots }}
+  {{ if . }}
+  <div class="item char">
+    {{ if .rank }}<div class="count">{{ .rank }}</div>{{ end }}
+    <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+    <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+  </div>
+  {{ else }}
+  <div class="item char"></div>
+  {{ end }}
+  {{ end }}
+  {{ with .buddy }}
+  <div class="item bangboo">
+    <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+    <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+  </div>
+  {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,11 @@
+{
+  "id": "void-front",
+  "name": "绝区零临界推演",
+  "description": "临界推演命令的战绩图片，布局参照 ZZZ-Plugin voidFrontBattle",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}
