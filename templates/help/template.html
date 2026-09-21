@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  <div class="special-title">
+    <div class="bg-content">HELP</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+    <div class="content">{{ .title }}</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  </div>
+  {{ range .parts }}
+  <div class="part">
+    <div class="title">
+      <div class="element-icon {{ .icon }}"></div>
+      <div class="content">{{ .title }}</div>
+    </div>
+    <div class="list">
+      {{ range .items }}
+      <div class="item">
+        <div class="name">{{ .name }}</div>
+        <div class="commands"><span class="command">{{ .command }}</span></div>
+        <div class="desc">{{ .desc }}</div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

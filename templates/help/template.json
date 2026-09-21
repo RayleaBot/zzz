@@ -1,0 +1,11 @@
+{
+  "id": "help",
+  "name": "绝区零帮助",
+  "description": "帮助命令的图片，布局参照 ZZZ-Plugin help",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}

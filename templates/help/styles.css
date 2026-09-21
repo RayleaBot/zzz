@@ -1,0 +1,514 @@
+/* resources/common/style/index.css */
+.zzz-font {
+  font-family: "zzz", "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.no-zzz-font {
+  font-family: "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+.no-zzz-font strong,
+.no-zzz-font b {
+  font-family: "zzz", "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.rank-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.rank-icon.s, .rank-icon.S {
+  background-image: var(--render-resource-common-images-RANK_S, none);
+}
+.rank-icon.a, .rank-icon.A {
+  background-image: var(--render-resource-common-images-RANK_A, none);
+}
+.rank-icon.b, .rank-icon.B {
+  background-image: var(--render-resource-common-images-RANK_B, none);
+}
+.rank-icon.bg1 {
+  background-image: var(--render-resource-common-images-rank_bg-1, none);
+}
+.rank-icon.bg2 {
+  background-image: var(--render-resource-common-images-rank_bg-2, none);
+}
+.rank-icon.bg3 {
+  background-image: var(--render-resource-common-images-rank_bg-3, none);
+}
+.rank-icon.bg4 {
+  background-image: var(--render-resource-common-images-rank_bg-4, none);
+}
+.rank-icon.bg5 {
+  background-image: var(--render-resource-common-images-rank_bg-5, none);
+}
+
+.rating-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.rating-icon.sp, .rating-icon.SP {
+  background-image: var(--render-resource-common-images-rating-SP, none);
+}
+.rating-icon.s, .rating-icon.S {
+  background-image: var(--render-resource-common-images-rating-S, none);
+}
+.rating-icon.s-corner, .rating-icon.S-corner {
+  background-image: var(--render-resource-common-images-rating-S-corner, none);
+}
+.rating-icon.a, .rating-icon.A {
+  background-image: var(--render-resource-common-images-rating-A, none);
+}
+.rating-icon.a-corner, .rating-icon.A-corner {
+  background-image: var(--render-resource-common-images-rating-A-corner, none);
+}
+.rating-icon.b, .rating-icon.B {
+  background-image: var(--render-resource-common-images-rating-B, none);
+}
+.rating-icon.b-corner, .rating-icon.B-corner {
+  background-image: var(--render-resource-common-images-rating-B-corner, none);
+}
+
+.team-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.team-icon.team01 {
+  background-image: var(--render-resource-common-images-team-01, none);
+}
+.team-icon.team02 {
+  background-image: var(--render-resource-common-images-team-02, none);
+}
+.team-icon.team03 {
+  background-image: var(--render-resource-common-images-team-03, none);
+}
+
+.max-score-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.max-score-icon.score50000 {
+  background-image: var(--render-resource-common-images-max_score-50000, none);
+}
+.max-score-icon.score65000 {
+  background-image: var(--render-resource-common-images-max_score-65000, none);
+}
+.max-score-icon.score149500 {
+  background-image: var(--render-resource-common-images-max_score-149500, none);
+}
+.max-score-icon.score150000 {
+  background-image: var(--render-resource-common-images-max_score-150000, none);
+}
+.max-score-icon.score182000 {
+  background-image: var(--render-resource-common-images-max_score-182000, none);
+}
+.max-score-icon.score195000 {
+  background-image: var(--render-resource-common-images-max_score-195000, none);
+}
+.max-score-icon.score481000 {
+  background-image: var(--render-resource-common-images-max_score-481000, none);
+}
+.max-score-icon.score663000 {
+  background-image: var(--render-resource-common-images-max_score-663000, none);
+}
+
+.rarity-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.rarity-icon.a, .rarity-icon.A {
+  background-image: var(--render-resource-common-images-Rarity_A, none);
+}
+.rarity-icon.b, .rarity-icon.B {
+  background-image: var(--render-resource-common-images-Rarity_B, none);
+}
+.rarity-icon.c, .rarity-icon.C {
+  background-image: var(--render-resource-common-images-Rarity_C, none);
+}
+.rarity-icon.s, .rarity-icon.S {
+  background-image: var(--render-resource-common-images-Rarity_S, none);
+}
+.rarity-icon.x, .rarity-icon.X {
+  background-image: var(--render-resource-common-images-Rarity_X, none);
+}
+
+.element-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.element-icon.physical, .element-icon.Physical {
+  background-image: var(--render-resource-common-images-element-Physical, none);
+}
+.element-icon.honededge, .element-icon.HonedEdge {
+  background-image: var(--render-resource-common-images-element-HonedEdge, none);
+}
+.element-icon.fire, .element-icon.Fire {
+  background-image: var(--render-resource-common-images-element-Fire, none);
+}
+.element-icon.ice, .element-icon.Ice {
+  background-image: var(--render-resource-common-images-element-Ice, none);
+}
+.element-icon.frost, .element-icon.Frost {
+  background-image: var(--render-resource-common-images-element-Frost, none);
+}
+.element-icon.electric, .element-icon.Electric {
+  background-image: var(--render-resource-common-images-element-Electric, none);
+}
+.element-icon.wind, .element-icon.Wind {
+  background-image: var(--render-resource-common-images-element-Wind, none);
+}
+.element-icon.ether, .element-icon.Ether {
+  background-image: var(--render-resource-common-images-element-Ether, none);
+}
+.element-icon.auricink, .element-icon.AuricInk {
+  background-image: var(--render-resource-common-images-element-AuricInk, none);
+}
+.element-icon.lumiflux, .element-icon.Lumiflux {
+  background-image: var(--render-resource-common-images-element-Lumiflux, none);
+}
+
+.prop-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.prop-icon.attack {
+  background-image: var(--render-resource-common-images-property-IconAttack, none);
+}
+.prop-icon.breakstun {
+  background-image: var(--render-resource-common-images-property-IconBreakStun, none);
+}
+.prop-icon.crit {
+  background-image: var(--render-resource-common-images-property-IconCrit, none);
+}
+.prop-icon.critdam {
+  background-image: var(--render-resource-common-images-property-IconCritDam, none);
+}
+.prop-icon.def {
+  background-image: var(--render-resource-common-images-property-IconDef, none);
+}
+.prop-icon.dungeonbuffether {
+  background-image: var(--render-resource-common-images-property-IconDungeonBuffEther, none);
+}
+.prop-icon.elementabnormalpower {
+  background-image: var(--render-resource-common-images-property-IconElementAbnormalPower, none);
+}
+.prop-icon.elementmystery {
+  background-image: var(--render-resource-common-images-property-IconElementMystery, none);
+}
+.prop-icon.fire {
+  background-image: var(--render-resource-common-images-property-IconFire, none);
+}
+.prop-icon.hpmax {
+  background-image: var(--render-resource-common-images-property-IconHpMax, none);
+}
+.prop-icon.ice {
+  background-image: var(--render-resource-common-images-property-IconIce, none);
+}
+.prop-icon.penratio {
+  background-image: var(--render-resource-common-images-property-IconPenRatio, none);
+}
+.prop-icon.penvalue {
+  background-image: var(--render-resource-common-images-property-IconPenValue, none);
+}
+.prop-icon.physdmg {
+  background-image: var(--render-resource-common-images-property-IconPhysDmg, none);
+}
+.prop-icon.spgetratio {
+  background-image: var(--render-resource-common-images-property-IconSpGetRatio, none);
+}
+.prop-icon.spmax {
+  background-image: var(--render-resource-common-images-property-IconSpMax, none);
+}
+.prop-icon.sprecover {
+  background-image: var(--render-resource-common-images-property-IconSpRecover, none);
+}
+.prop-icon.thunder {
+  background-image: var(--render-resource-common-images-property-IconThunder, none);
+}
+.prop-icon.sheerforce {
+  background-image: var(--render-resource-common-images-property-IconSheerForce, none);
+}
+.prop-icon.laceration {
+  background-image: var(--render-resource-common-images-property-IconLaceration, none);
+}
+.prop-icon.sharpnessaccumulate {
+  background-image: var(--render-resource-common-images-property-IconSharpnessAccumulate, none);
+}
+.prop-icon.adrenalineaccumulate {
+  background-image: var(--render-resource-common-images-property-IconAdrenalineAccumulate, none);
+}
+.prop-icon.wind {
+  background-image: var(--render-resource-common-images-property-IconWind, none);
+}
+
+.pro-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.pro-icon.anomaly {
+  background-image: var(--render-resource-common-images-profession-IconAnomaly, none);
+}
+.pro-icon.attack {
+  background-image: var(--render-resource-common-images-profession-IconAttack, none);
+}
+.pro-icon.defense {
+  background-image: var(--render-resource-common-images-profession-IconDefense, none);
+}
+.pro-icon.stun {
+  background-image: var(--render-resource-common-images-profession-IconStun, none);
+}
+.pro-icon.support {
+  background-image: var(--render-resource-common-images-profession-IconSupport, none);
+}
+.pro-icon.rupture {
+  background-image: var(--render-resource-common-images-profession-IconRupture, none);
+}
+.pro-icon.armorer {
+  background-image: var(--render-resource-common-images-profession-IconArmorer, none);
+}
+
+.skill-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.skill-icon.assist, .skill-icon.Switch, .skill-icon.switch {
+  background-image: var(--render-resource-common-images-skills-assist, none);
+}
+.skill-icon.basic, .skill-icon.Normal, .skill-icon.normal {
+  background-image: var(--render-resource-common-images-skills-basic, none);
+}
+.skill-icon.chain, .skill-icon.Ultimate, .skill-icon.UltimateReady, .skill-icon.ultimateready {
+  background-image: var(--render-resource-common-images-skills-chain, none);
+}
+.skill-icon.core, .skill-icon.Core, .skill-icon.CoreSkill, .skill-icon.coreskill {
+  background-image: var(--render-resource-common-images-skills-core, none);
+}
+.skill-icon.dodge, .skill-icon.Evade, .skill-icon.evade {
+  background-image: var(--render-resource-common-images-skills-dodge, none);
+}
+.skill-icon.special, .skill-icon.Special, .skill-icon.SpecialReady, .skill-icon.specialready {
+  background-image: var(--render-resource-common-images-skills-special, none);
+}
+
+.special-title {
+  width: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: stretch;
+  padding: 0 2.4em;
+  position: relative;
+  margin: 0.5em 0;
+}
+.special-title .parallelograms {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  position: inherit;
+  padding-bottom: 0.4em;
+  z-index: 1;
+}
+.special-title .parallelograms span {
+  width: 1.3em;
+  height: 80%;
+  background-color: rgb(246, 202, 69);
+  margin-right: -0.2em;
+  -webkit-clip-path: polygon(0.7em 0%, 100% 0%, calc(100% - 0.7em) 100%, 0% 100%);
+  clip-path: polygon(0.7em 0%, 100% 0%, calc(100% - 0.7em) 100%, 0% 100%);
+}
+.special-title .bg-content {
+  position: absolute;
+  bottom: -0.1em;
+  left: 0;
+  transform: skewX(-8deg);
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 2.7em;
+  width: 100%;
+  text-align: center;
+}
+.special-title .content {
+  flex-grow: 1;
+  flex-shrink: 1;
+  font-size: 1.5em;
+  text-align: center;
+  position: inherit;
+  z-index: 1;
+}
+
+/* resources/common/layout/index.css */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: "zzz", "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  zoom: 2;
+  font-size: 24px;
+  width: 840px;
+}
+
+.container {
+  background: var(--render-resource-common-images-bg, none) no-repeat center center;
+  background-size: cover;
+  color: white;
+}
+
+.copyright {
+  font-size: 0.7em;
+  color: #797979;
+  padding-bottom: 2em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3em;
+}
+.copyright .highlight {
+  color: #fff;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+.copyright .highlight .version {
+  vertical-align: super;
+  font-size: 0.8em;
+  margin-top: -0.3em;
+}
+
+/* resources/help/index.css */
+.special-title {
+  padding: 0;
+  font-size: 1.2em;
+}
+
+.card {
+  margin: 0 1em;
+  padding: 1em 0;
+}
+.card .part {
+  border-radius: 0.5em;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(1em);
+  margin-top: 1.5em;
+}
+.card .part .title {
+  font-size: 1.2em;
+  padding: 0.3em 0.7em;
+  border-bottom: 1px solid rgba(126, 126, 126, 0.5);
+  display: flex;
+  gap: 0.2em;
+  align-items: flex-end;
+  color: rgb(234, 225, 213);
+  box-shadow: 0 0 0.5em rgba(0, 0, 0, 0.5);
+  background-color: rgba(152, 152, 152, 0.3);
+  border-radius: 0.5em 0.5em 0 0;
+  position: relative;
+}
+.card .part .title .element-icon {
+  width: 1.8em;
+  position: absolute;
+  filter: drop-shadow(0.06em 0.06em 0 rgba(255, 255, 255, 0.5));
+  left: 0.3em;
+}
+.card .part .title .content {
+  flex: 1;
+  margin-bottom: -0.13em;
+  filter: drop-shadow(0.06em 0.06em 0 rgba(0, 0, 0, 0.5));
+  margin-left: 1.6em;
+}
+.card .part .list {
+  width: 100%;
+  overflow: hidden;
+  padding: 0.6em;
+  display: grid;
+  gap: 0.5em;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: stretch;
+}
+.card .part .list .item {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.4em;
+  padding: 0.4em 0.7em;
+  font-size: 0.8em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  box-shadow: 0 0 0.7em rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+.card .part .list .item .name {
+  width: 100%;
+  font-size: 1.2em;
+  display: flex;
+  overflow: hidden;
+  align-items: flex-start;
+}
+.card .part .list .item .name.ck::before {
+  content: "CK";
+  margin-top: 0.3em;
+  margin-right: 0.3em;
+  font-size: 0.6em;
+  padding: 0.1em 0.3em;
+  border-radius: 0.3em;
+  background-color: rgb(249, 149, 55);
+  text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.5);
+}
+.card .part .list .item .name.sk::before {
+  content: "SK";
+  margin-top: 0.3em;
+  margin-right: 0.3em;
+  font-size: 0.6em;
+  padding: 0.1em 0.3em;
+  border-radius: 0.3em;
+  background-color: rgb(249, 65, 55);
+  text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.5);
+}
+.card .part .list .item .commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  font-family: "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+.card .part .list .item .commands .command {
+  line-height: 1.6em;
+  padding: 0em 0.5em;
+  border-radius: 0.5em 0.2em 0.5em 0.2em;
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  color: rgb(255, 186, 96);
+  box-shadow: 0 0 0.1em rgba(0, 0, 0, 0.6);
+  border-bottom: 0.1em solid rgba(241, 22, 22, 0.7);
+}
+.card .part .list .item .commands .command::before {
+  content: "%";
+  color: rgba(238, 238, 238, 0.45);
+  text-shadow: none;
+  margin-right: 0.1em;
+  margin-left: -0.2em;
+}
+.card .part .list .item .desc {
+  font-size: 1em;
+  font-family: "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-size: 0.8em;
+  color: rgb(225, 225, 225);
+}
