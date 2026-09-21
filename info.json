@@ -521,7 +521,7 @@
     {
       "id": "monthly-history",
       "name": "月报统计",
-      "description": "已保存月报的累计收入",
+      "description": "保存官方仍提供的月份后，汇总全部已保存月份的菲林、母带与邦布券",
       "usage": "#月报统计 [UID]",
       "permission": "everyone",
       "trigger": {

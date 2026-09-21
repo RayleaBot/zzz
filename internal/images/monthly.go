@@ -2,6 +2,7 @@ package images
 
 import (
 	"strconv"
+	"strings"
 
 	gamekit "github.com/RayleaBot/game-plugin-kit"
 )
@@ -34,17 +35,28 @@ func Monthly(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.
 		return gamekit.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, monthlyArtwork)
-	counts := map[string]string{}
+	report, _ := monthlyReport(data)
+	month := gamekit.Text(result.Data["data_month"])
+	if len(month) >= 2 {
+		if number, err := strconv.Atoi(month[len(month)-2:]); err == nil {
+			month = strconv.Itoa(number)
+		}
+	}
+	report["month"], report["player"] = month+"月", playerCard(result.Role)
+	return gamekit.Image{Template: "monthly", Data: report, Resources: resources.List}, true
+}
+
+// monthlyReport is what ZZZ-Plugin's Monthly model shows of a month: the
+// Polychromes, Master Tapes and Boopons earned, each 0 when missing, and
+// every Polychrome source with its share; counts holds the three amounts.
+func monthlyReport(data map[string]any) (report map[string]any, counts [3]int) {
+	kinds := map[string]int{"PolychromesData": 0, "MatserTapeData": 1, "BooponsData": 2}
 	list, _ := data["list"].([]any)
 	for _, raw := range list {
 		item, _ := raw.(map[string]any)
-		counts[gamekit.Text(item["data_type"])] = gamekit.Text(item["count"])
-	}
-	count := func(kind string) string {
-		if value := counts[kind]; value != "" {
-			return value
+		if kind, ok := kinds[gamekit.Text(item["data_type"])]; ok {
+			counts[kind] = gamekit.Int(item["count"])
 		}
-		return "0"
 	}
 	sources := []any{}
 	components, _ := data["income_components"].([]any)
@@ -56,14 +68,36 @@ func Monthly(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.
 		}
 		sources = append(sources, map[string]any{"name": name, "percent": gamekit.Text(item["percent"]), "num": gamekit.Text(item["num"])})
 	}
-	month := gamekit.Text(result.Data["data_month"])
-	if len(month) >= 2 {
-		if number, err := strconv.Atoi(month[len(month)-2:]); err == nil {
-			month = strconv.Itoa(number)
+	return map[string]any{"poly": strconv.Itoa(counts[0]), "tape": strconv.Itoa(counts[1]), "boopon": strconv.Itoa(counts[2]), "sources": sources}, counts
+}
+
+// MonthlyCollect draws 月报统计 the way ZZZ-Plugin's monthly collect page
+// does: the span of the saved months, the player card, their Polychromes,
+// Master Tapes and Boopons together, then each month, newest first, with its
+// counts and Polychrome sources.
+func MonthlyCollect(context gamekit.ImageContext, stats gamekit.MonthlyStats) (gamekit.Image, bool) {
+	months := []any{}
+	var totals [3]int
+	for index := len(stats.Months) - 1; index >= 0; index-- {
+		data, _ := stats.Months[index].Data["month_data"].(map[string]any)
+		if data == nil {
+			continue
 		}
+		report, counts := monthlyReport(data)
+		for kind, count := range counts {
+			totals[kind] += count
+		}
+		year, month, _ := strings.Cut(stats.Months[index].Month, "-")
+		number, _ := strconv.Atoi(month)
+		report["date"] = year + "年" + strconv.Itoa(number) + "月"
+		months = append(months, report)
 	}
-	return gamekit.Image{Template: "monthly", Data: map[string]any{
-		"month": month + "月", "player": playerCard(result.Role),
-		"poly": count("PolychromesData"), "tape": count("MatserTapeData"), "boopon": count("BooponsData"), "sources": sources,
+	if len(months) == 0 {
+		return gamekit.Image{}, false
+	}
+	resources := newRecordResources(context, commonArtwork, monthlyArtwork)
+	return gamekit.Image{Template: "monthly-collect", Data: map[string]any{
+		"range":  months[len(months)-1].(map[string]any)["date"].(string) + "～" + months[0].(map[string]any)["date"].(string),
+		"player": playerCard(stats.Role), "poly": strconv.Itoa(totals[0]), "tape": strconv.Itoa(totals[1]), "boopon": strconv.Itoa(totals[2]), "months": months,
 	}, Resources: resources.List}, true
 }

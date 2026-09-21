@@ -1,0 +1,11 @@
+{
+  "id": "monthly-collect",
+  "name": "绝区零月报统计",
+  "description": "月报统计命令的图片，布局参照 ZZZ-Plugin monthly/collect",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 3000
+}

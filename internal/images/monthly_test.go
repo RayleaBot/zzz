@@ -2,6 +2,7 @@ package images
 
 import (
 	"encoding/json"
+	"strconv"
 	"testing"
 
 	gamekit "github.com/RayleaBot/game-plugin-kit"
@@ -23,5 +24,22 @@ func TestMonthlyFollowsZZZPlugin(t *testing.T) {
 	}
 	if _, ok := Monthly(gamekit.ImageContext{}, gamekit.QueryResult{Data: map[string]any{}}); ok {
 		t.Error("an empty month answers in text like upstream")
+	}
+}
+
+func TestMonthlyCollectFollowsZZZPlugin(t *testing.T) {
+	month := func(key string, poly int) gamekit.SavedMonth {
+		return gamekit.SavedMonth{Month: key, Data: map[string]any{"month_data": map[string]any{
+			"list": []any{map[string]any{"data_type": "PolychromesData", "count": json.Number(strconv.Itoa(poly))}, map[string]any{"data_type": "BooponsData", "count": json.Number("3")}}}}}
+	}
+	stats := gamekit.MonthlyStats{Months: []gamekit.SavedMonth{month("2026-07", 1000), month("2026-08", 2000), month("2026-09", 500)}}
+	image, ok := MonthlyCollect(gamekit.ImageContext{}, stats)
+	months := image.Data["months"].([]any)
+	if !ok || image.Data["range"] != "2026年7月～2026年9月" || image.Data["poly"] != "3500" || image.Data["tape"] != "0" || image.Data["boopon"] != "9" ||
+		months[0].(map[string]any)["date"] != "2026年9月" || months[0].(map[string]any)["poly"] != "500" {
+		t.Errorf("image = %v", image.Data)
+	}
+	if _, ok := MonthlyCollect(gamekit.ImageContext{}, gamekit.MonthlyStats{}); ok {
+		t.Error("no saved month drew a page")
 	}
 }

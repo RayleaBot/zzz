@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["range", "player", "poly", "tape", "boopon", "months"],
+  "properties": {
+    "range": { "type": "string" },
+    "player": { "type": "object" },
+    "poly": { "type": "string" },
+    "tape": { "type": "string" },
+    "boopon": { "type": "string" },
+    "months": { "type": "array" },
+    "user": { "type": "object" },
+    "permission": { "type": "object" },
+    "group": { "type": "object" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}
