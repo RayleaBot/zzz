@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  <div class="user-info">
+    <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+    <div class="info-bar">
+      <div class="info">
+        <div class="nickname">{{ .player.nickname }}</div>
+        <div class="label level">Lv{{ .player.level }}</div>
+        <div class="label server">{{ .player.region }}</div>
+      </div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+  </div>
+  {{ range .channels }}
+  <div class="title t{{ .band }}">
+    <div class="info">
+      <div class="type">
+        <div class="label">{{ .name }}</div>
+        <div class="status">已<span class="value">{{ .last }}</span>抽未出S级</div>
+      </div>
+      <div class="time">{{ .time_range }}</div>
+      <div class="analysis">
+        <div class="item"><div class="value">{{ .avg_five }}</div><div class="label">平均出金</div></div>
+        <div class="item"><div class="value">{{ .avg_up }}</div><div class="label">平均UP</div></div>
+        <div class="item"><div class="value">{{ .total }}</div><div class="label">抽卡总数</div></div>
+        {{ if .show_no_wai }}<div class="item"><div class="value">{{ .no_wai }}</div><div class="label">不歪率</div></div>{{ end }}
+      </div>
+    </div>
+    <div class="comment e{{ .emoji }}">
+      <div class="icon"></div>
+      <div class="label">{{ .tag }}</div>
+    </div>
+  </div>
+  {{ if not .cards }}<div style="margin: 1em auto; text-align: center;">暂无数据</div>{{ end }}
+  <div class="list">
+    {{ range .cards }}
+    <div class="item rankS{{ if .up }} up{{ end }}">
+      <div class="rank rank-icon s"></div>
+      <div class="image">{{ if .icon }}<img data-render-resource="{{ .icon }}" alt="">{{ end }}</div>
+      <div class="count" style="color: {{ .color }};">{{ .count }}抽</div>
+    </div>
+    {{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

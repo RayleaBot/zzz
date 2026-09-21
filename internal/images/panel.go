@@ -46,7 +46,7 @@ func Panel(context gamekit.ImageContext, image gamekit.PanelImage) (gamekit.Imag
 		return gamekit.Image{}, false
 	}
 	resources := []rayleabot.RenderImageResource{}
-	for _, item := range panelArtwork {
+	for _, item := range append(append([][2]string{}, commonArtwork...), panelArtwork...) {
 		if resource, ok := context.ArtworkResource(item[0], "zzz-plugin", item[1]); ok {
 			resources = append(resources, resource)
 		}

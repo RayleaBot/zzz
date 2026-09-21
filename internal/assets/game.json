@@ -139,6 +139,13 @@
       ]
     },
     {
+      "id": "mys-zzz",
+      "name": "绝区零官方头像",
+      "mirrors": [
+        "https://act-webstatic.mihoyo.com/game_record/zzzv2/"
+      ]
+    },
+    {
       "id": "zzz-atlas",
       "name": "Atlas 绝区零图鉴",
       "archives": [

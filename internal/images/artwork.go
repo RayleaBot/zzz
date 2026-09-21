@@ -1,9 +1,11 @@
 package images
 
-// panelArtwork maps the images named in the panel stylesheet, converted from
-// ZZZ-Plugin's common/style, common/layout and panel/card stylesheets, to
-// their repository paths; the stylesheet reads them as --render-resource-<id>.
-var panelArtwork = [][2]string{
+// The tables below map the images named in each stylesheet, converted from
+// ZZZ-Plugin's stylesheets, to their repository paths; stylesheets read them
+// as --render-resource-<id>.
+
+// commonArtwork is what common/style, common/layout and the shared fonts use.
+var commonArtwork = [][2]string{
 	{"common-images-RANK_A", "resources/common/images/RANK_A.png"},
 	{"common-images-RANK_B", "resources/common/images/RANK_B.png"},
 	{"common-images-RANK_S", "resources/common/images/RANK_S.png"},
@@ -12,6 +14,8 @@ var panelArtwork = [][2]string{
 	{"common-images-Rarity_C", "resources/common/images/Rarity_C.png"},
 	{"common-images-Rarity_S", "resources/common/images/Rarity_S.png"},
 	{"common-images-Rarity_X", "resources/common/images/Rarity_X.png"},
+	{"common-images-SuitBg", "resources/common/images/SuitBg.png"},
+	{"common-images-UIDBg", "resources/common/images/UIDBg.png"},
 	{"common-images-bg", "resources/common/images/bg.jpg"},
 	{"common-images-element-AuricInk", "resources/common/images/element/AuricInk.png"},
 	{"common-images-element-Electric", "resources/common/images/element/Electric.png"},
@@ -79,6 +83,11 @@ var panelArtwork = [][2]string{
 	{"common-images-team-01", "resources/common/images/team/01.png"},
 	{"common-images-team-02", "resources/common/images/team/02.png"},
 	{"common-images-team-03", "resources/common/images/team/03.png"},
+	{"zzz", "resources/common/fonts/inpinhongmengti.ttf"},
+}
+
+// panelArtwork is what panel/card adds.
+var panelArtwork = [][2]string{
 	{"panel-images-BgFrame01", "resources/panel/images/BgFrame01.png"},
 	{"panel-images-CurseBG04", "resources/panel/images/CurseBG04.png"},
 	{"panel-images-CurseBG08", "resources/panel/images/CurseBG08.png"},
@@ -99,5 +108,28 @@ var panelArtwork = [][2]string{
 	{"panel-images-star-4", "resources/panel/images/star/4.png"},
 	{"panel-images-star-5", "resources/panel/images/star/5.png"},
 	{"panel-images-weapon_bg", "resources/panel/images/weapon_bg.png"},
-	{"zzz", "resources/common/fonts/inpinhongmengti.ttf"},
+}
+
+// gachaArtwork is what gachalog adds.
+var gachaArtwork = [][2]string{
+	{"gachalog-images-IconTabUP", "resources/gachalog/images/IconTabUP.png"},
+	{"gachalog-images-bg1", "resources/gachalog/images/bg1.png"},
+	{"gachalog-images-bg2", "resources/gachalog/images/bg2.png"},
+	{"gachalog-images-bg3", "resources/gachalog/images/bg3.png"},
+	{"gachalog-images-emoji-1", "resources/gachalog/images/emoji/1.png"},
+	{"gachalog-images-emoji-10", "resources/gachalog/images/emoji/10.png"},
+	{"gachalog-images-emoji-11", "resources/gachalog/images/emoji/11.png"},
+	{"gachalog-images-emoji-12", "resources/gachalog/images/emoji/12.png"},
+	{"gachalog-images-emoji-13", "resources/gachalog/images/emoji/13.png"},
+	{"gachalog-images-emoji-14", "resources/gachalog/images/emoji/14.png"},
+	{"gachalog-images-emoji-15", "resources/gachalog/images/emoji/15.png"},
+	{"gachalog-images-emoji-16", "resources/gachalog/images/emoji/16.png"},
+	{"gachalog-images-emoji-2", "resources/gachalog/images/emoji/2.png"},
+	{"gachalog-images-emoji-3", "resources/gachalog/images/emoji/3.png"},
+	{"gachalog-images-emoji-4", "resources/gachalog/images/emoji/4.png"},
+	{"gachalog-images-emoji-5", "resources/gachalog/images/emoji/5.png"},
+	{"gachalog-images-emoji-6", "resources/gachalog/images/emoji/6.png"},
+	{"gachalog-images-emoji-7", "resources/gachalog/images/emoji/7.png"},
+	{"gachalog-images-emoji-8", "resources/gachalog/images/emoji/8.png"},
+	{"gachalog-images-emoji-9", "resources/gachalog/images/emoji/9.png"},
 }

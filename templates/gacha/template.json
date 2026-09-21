@@ -1,0 +1,11 @@
+{
+  "id": "gacha",
+  "name": "绝区零抽卡分析",
+  "description": "抽卡分析命令的图片，布局参照 ZZZ-Plugin gachalog",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}
