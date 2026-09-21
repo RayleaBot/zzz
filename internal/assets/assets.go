@@ -40,7 +40,21 @@ func CalcProfile() reference.Profile {
 	}
 }
 
+// data holds this game's fixed reference data: materials, banners and
+// birthdays, plus the optional feature data listed in Kit.
+//
+//go:embed data
+var data embed.FS
+
+func dataFile(name string) []byte {
+	raw, err := data.ReadFile("data/" + name)
+	if err != nil {
+		panic(err) // the embedded file names are fixed at build time
+	}
+	return raw
+}
+
 // Kit is everything the shared game library needs from this plugin.
 func Kit() gamekit.Assets {
-	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: manifest, Calc: CalcProfile()}
+	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: manifest, Calc: CalcProfile(), Resources: dataFile("resources.json")}
 }
