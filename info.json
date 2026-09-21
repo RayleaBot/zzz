@@ -326,26 +326,13 @@
     {
       "id": "score",
       "name": "绝区零评分",
-      "description": "按指定规则计算装备评分",
-      "usage": "#绝区零评分 <角色> <规则编号> [UID]",
+      "description": "按角色专属权重计算装备评分",
+      "usage": "#绝区零评分 <角色> [UID]",
       "permission": "everyone",
       "trigger": {
         "type": "exact",
         "names": [
           "绝区零评分"
-        ]
-      }
-    },
-    {
-      "id": "score-rules",
-      "name": "绝区零评分规则",
-      "description": "查看装备评分规则",
-      "usage": "#绝区零评分规则",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "绝区零评分规则"
         ]
       }
     },
@@ -1081,7 +1068,6 @@
         "zenkov_detail",
         "exploration",
         "score",
-        "score-rules",
         "build",
         "reminder",
         "reminder-stop",
