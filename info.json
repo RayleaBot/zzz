@@ -1060,21 +1060,39 @@
   ],
   "command_groups": [
     {
-      "id": "zzz",
-      "title": "绝区零",
+      "id": "info",
+      "title": "信息查询",
       "commands": [
         "profile",
         "note",
         "characters",
-        "character",
         "buddies",
-        "challenge",
         "accounts",
         "select",
-        "catalog",
-        "showcase",
-        "gacha",
         "monthly",
+        "monthly-history",
+        "monthly-save",
+        "exploration"
+      ]
+    },
+    {
+      "id": "panel",
+      "title": "角色面板",
+      "commands": [
+        "character",
+        "showcase",
+        "score",
+        "build",
+        "team-build",
+        "public-profile",
+        "original-image"
+      ]
+    },
+    {
+      "id": "records",
+      "title": "战绩",
+      "commands": [
+        "challenge",
         "deadly",
         "holo_boss",
         "tower",
@@ -1084,38 +1102,37 @@
         "hollow_zero_detail",
         "lost_void",
         "zenkov",
-        "zenkov_detail",
-        "exploration",
-        "score",
-        "build",
-        "reminder",
-        "reminder-stop",
-        "group-settings",
-        "rank-submit",
-        "rank-withdraw",
-        "rank",
-        "signin",
-        "signin-status",
-        "signin-task",
-        "public-profile",
+        "zenkov_detail"
+      ]
+    },
+    {
+      "id": "gacha",
+      "title": "抽卡",
+      "commands": [
+        "gacha",
         "gacha-background",
         "gacha-schedule",
         "gacha-progress",
         "gacha-stop",
-        "team-build",
-        "banner-history",
         "gacha-versions",
         "banner-current",
-        "community-status",
-        "community-sign",
-        "cloud-game-status",
-        "cloud-game-sign",
-        "community-task",
-        "community-stop",
-        "cloud-game-task",
-        "cloud-game-stop",
-        "codes",
-        "redeem",
+        "banner-history"
+      ]
+    },
+    {
+      "id": "wiki",
+      "title": "图鉴与养成",
+      "commands": [
+        "catalog",
+        "guides",
+        "image-library",
+        "photo"
+      ]
+    },
+    {
+      "id": "news",
+      "title": "资讯",
+      "commands": [
         "news",
         "info",
         "events",
@@ -1125,28 +1142,65 @@
         "content-progress",
         "subscribe",
         "unsubscribe",
-        "guides",
-        "photo",
-        "image-library",
-        "original-image",
-        "interaction",
-        "poke",
-        "help",
-        "version"
+        "codes"
       ]
     },
     {
-      "id": "challenges-and-history",
-      "title": "挑战与月报历史",
+      "id": "sign",
+      "title": "签到与米游社",
       "commands": [
+        "signin",
+        "signin-status",
+        "signin-task",
+        "community-status",
+        "community-sign",
+        "community-task",
+        "community-stop",
+        "cloud-game-status",
+        "cloud-game-sign",
+        "cloud-game-task",
+        "cloud-game-stop",
+        "redeem"
+      ]
+    },
+    {
+      "id": "remind",
+      "title": "提醒",
+      "commands": [
+        "reminder",
+        "reminder-stop",
+        "challenge-remind",
+        "challenge-stop"
+      ]
+    },
+    {
+      "id": "rank",
+      "title": "排名",
+      "commands": [
+        "rank-submit",
+        "rank",
+        "rank-withdraw",
         "challenge-submit",
         "challenge-rank",
         "challenge-withdraw",
-        "challenge-clear",
-        "challenge-remind",
-        "challenge-stop",
-        "monthly-history",
-        "monthly-save"
+        "challenge-clear"
+      ]
+    },
+    {
+      "id": "fun",
+      "title": "互动",
+      "commands": [
+        "interaction",
+        "poke"
+      ]
+    },
+    {
+      "id": "manage",
+      "title": "帮助与设置",
+      "commands": [
+        "help",
+        "version",
+        "group-settings"
       ]
     }
   ],
