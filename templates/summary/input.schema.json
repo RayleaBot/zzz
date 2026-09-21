@@ -25,6 +25,9 @@
         "array",
         "null"
       ]
+    },
+    "render_footer": {
+      "type": "string"
     }
   },
   "additionalProperties": false
