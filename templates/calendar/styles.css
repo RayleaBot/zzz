@@ -1,0 +1,3 @@
+/* ZZZ-Plugin sends the official calendar picture itself; the page only shows it. */
+* { margin: 0; padding: 0; }
+.container img { display: block; width: 100%; }

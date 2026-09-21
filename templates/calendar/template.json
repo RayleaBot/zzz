@@ -1,0 +1,11 @@
+{
+  "id": "calendar",
+  "name": "绝区零活动日历",
+  "description": "日历命令的图片，同 ZZZ-Plugin 发送官方活动日历公告中的图片",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1080,
+  "height": 4000
+}
