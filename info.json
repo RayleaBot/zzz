@@ -196,10 +196,10 @@
       }
     },
     {
-      "id": "hollow_zero",
+      "id": "hollow-zero",
       "name": "零号空洞",
-      "description": "零号空洞",
-      "usage": "#零号空洞 [UID]",
+      "description": "列出可查询的零号空洞玩法",
+      "usage": "#零号空洞",
       "permission": "everyone",
       "trigger": {
         "type": "exact",
@@ -211,9 +211,9 @@
       }
     },
     {
-      "id": "hollow_zero_detail",
+      "id": "hollow_zero",
       "name": "枯萎苗圃",
-      "description": "枯萎苗圃战绩",
+      "description": "枯萎苗圃的执照、收集与刀耕火焚战绩",
       "usage": "#枯萎苗圃 [UID]",
       "permission": "everyone",
       "trigger": {
@@ -1086,8 +1086,8 @@
         "holo_boss",
         "tower",
         "void_front",
+        "hollow-zero",
         "hollow_zero",
-        "hollow_zero_detail",
         "lost_void",
         "zenkov",
         "zenkov_detail"

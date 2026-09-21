@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+  <div class="hollow-zero-header"><div class="hollow-zero-title">零号空洞：迷失之地</div></div>
+  <div class="basic-info">
+    <div class="info-item license-level">
+      <div class="info-label"><img{{ with .level_icon }} data-render-resource="{{ . }}"{{ end }} alt="执照等级" class="info-icon"><span>执照等级</span></div>
+      <div class="info-value">{{ .level }}</div>
+    </div>
+    <div class="info-item"><div class="info-label"><span>悬赏委托进度</span></div><div class="info-value">{{ .duty }}</div></div>
+    <div class="info-item"><div class="info-label"><span>探索任务</span></div><div class="info-value">{{ .task }}</div></div>
+  </div>
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">收集数据</div></div>
+    <div class="collect-data">
+      {{ range .collections }}<div class="collect-item"><span class="collect-label">{{ .name }}</span><span class="collect-value">{{ .value }}</span></div>{{ end }}
+    </div>
+  </div>
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">矩阵行动</div></div>
+    <div class="challenge-info">
+      {{ with .matrix }}
+      <div class="challenge-item">
+        <span class="challenge-label">已通关最高难度</span>
+        <div class="challenge-value multi-line"><div>{{ .name }}</div><div>以太活性{{ .heat }}</div></div>
+      </div>
+      <div class="challenge-item"><span class="challenge-label">通关最高难度次数</span><span class="challenge-value">{{ .count }}</span></div>
+      <div class="challenge-item"><span class="challenge-label">通关最高难度最短耗时</span><span class="challenge-value">{{ .time }}</span></div>
+      {{ end }}
+    </div>
+  </div>
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">特遣调查</div></div>
+    <div class="challenge-info">
+      {{ with .investigation }}
+      <div class="challenge-item">
+        <span class="challenge-label">已通关最高难度</span>
+        <div class="challenge-value multi-line"><div>{{ .name }}</div><div>以太活性{{ .heat }}</div></div>
+      </div>
+      <div class="challenge-item"><span class="challenge-label">通关最高难度次数</span><span class="challenge-value">{{ .count }}</span></div>
+      <div class="challenge-item"><span class="challenge-label">通关最高难度最短耗时</span><span class="challenge-value">{{ .time }}</span></div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}

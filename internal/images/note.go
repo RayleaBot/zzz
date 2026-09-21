@@ -13,7 +13,8 @@ import (
 
 // Builders lists the image builders by the operation they draw.
 func Builders() map[string]gamekit.ImageBuilder {
-	return map[string]gamekit.ImageBuilder{"zzz.note": Note, "zzz.challenge": Abyss, "zzz.deadly": Deadly, "zzz.holo_boss": HoloBoss, "zzz.void_front": VoidFront, "zzz.tower": Tower, "zzz.profile": Card, "zzz.characters": Card, "zzz.training": Training, "zzz.monthly": Monthly}
+	return map[string]gamekit.ImageBuilder{"zzz.note": Note, "zzz.challenge": Abyss, "zzz.deadly": Deadly, "zzz.holo_boss": HoloBoss, "zzz.void_front": VoidFront, "zzz.tower": Tower, "zzz.profile": Card, "zzz.characters": Card, "zzz.training": Training, "zzz.monthly": Monthly,
+		"zzz.hollow_zero": HollowZero, "zzz.lost_void": LostVoid}
 }
 
 // Queries lists the commands that run another operation's query: 练度统计

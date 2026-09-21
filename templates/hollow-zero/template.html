@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  {{ template "player" . }}
+  <div class="hollow-zero-header"><div class="hollow-zero-title">零号空洞：枯萎苗圃</div></div>
+  <div class="basic-info">
+    <div class="info-row">
+      <div class="info-item license-level">
+        <div class="info-content"><div class="info-title">执照等级</div><div class="info-value">{{ .level }}</div></div>
+        <div class="info-icon-container"><img{{ with .level_icon }} data-render-resource="{{ . }}"{{ end }} alt="执照等级" class="info-icon"></div>
+      </div>
+      <div class="info-item">
+        <div class="info-content"><div class="info-title">作战机略</div><div class="info-value">{{ .talent }}</div></div>
+        <div class="info-icon-container"><img{{ with .talent_icon }} data-render-resource="{{ . }}"{{ end }} alt="作战机略" class="info-icon"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">收集数据</div></div>
+    <div class="collect-data">
+      {{ range .collections }}<div class="collect-item"><span class="collect-label">{{ .name }}</span><span class="collect-value">{{ .value }}</span></div>{{ end }}
+    </div>
+  </div>
+  <div class="section-container">
+    <div class="section-header"><div class="section-title">刀耕火焚</div></div>
+    {{ with .throne }}
+    <div class="battle-stats">
+      <div class="stats-item"><span class="stats-label">探索耗时</span><span class="stats-value">{{ .time }}</span></div>
+      <div class="stats-item"><span class="stats-label">对「尼尼微」造成伤害</span><span class="stats-value">{{ .damage }}</span></div>
+    </div>
+    <div class="team-container">
+      <div class="team-title">通关阵容</div>
+      <div class="team-list">
+        {{ range .slots }}
+        {{ if . }}
+        <div class="item char">
+          <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+          {{ if .rank }}<div class="count">{{ .rank }}</div>{{ end }}
+          <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+          <div class="char-info"><div class="char-info-row"><div class="char-level">LV.{{ .level }}</div><div class="char-damage">{{ .damage }}%</div></div></div>
+        </div>
+        {{ else }}
+        <div class="item char"></div>
+        {{ end }}
+        {{ end }}
+        {{ with .buddy }}
+        <div class="item bangboo">
+          <div class="rank_disp"><div class="rank rank-icon {{ .rarity }}"></div></div>
+          <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+          <div class="char-info"><div class="char-info-row"><div class="char-level">LV.{{ .level }}</div></div></div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
+{{ define "player" }}
+<div class="user-info">
+  <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+  <div class="info-bar">
+    <div class="info">
+      <div class="nickname">{{ .player.nickname }}</div>
+      <div class="label level">Lv{{ .player.level }}</div>
+      <div class="label server">{{ .player.region }}</div>
+    </div>
+    <div class="uid">UID {{ .player.uid }}</div>
+  </div>
+</div>
+{{ end }}

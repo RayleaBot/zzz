@@ -78,13 +78,13 @@
     },
     {
       "name": "zzz.hollow_zero",
-      "label": "零号空洞",
-      "command": "零号空洞",
+      "label": "枯萎苗圃",
+      "command": "枯萎苗圃",
       "input": "none"
     },
     {
       "name": "zzz.hollow_zero_detail",
-      "label": "枯萎苗圃战绩",
+      "label": "刀耕火焚",
       "command": "枯萎苗圃",
       "input": "none"
     },
@@ -113,6 +113,9 @@
       "input": "none"
     }
   ],
+  "hints": {
+    "hollow-zero": "当前可供查询的零号空洞数据有：\n- {prefix}枯萎苗圃\n- {prefix}迷失之地"
+  },
   "artwork": [
     {
       "id": "zzz-plugin",

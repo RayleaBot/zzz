@@ -1,0 +1,11 @@
+{
+  "id": "hollow-zero",
+  "name": "绝区零枯萎苗圃",
+  "description": "枯萎苗圃命令的战绩图片，布局参照 ZZZ-Plugin hollowZero",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1200,
+  "height": 3000
+}

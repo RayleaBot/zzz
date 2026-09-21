@@ -1,0 +1,11 @@
+{
+  "id": "lost-void",
+  "name": "绝区零迷失之地",
+  "description": "迷失之地命令的战绩图片，布局参照 ZZZ-Plugin hollowZeroS2",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1000,
+  "height": 3000
+}
