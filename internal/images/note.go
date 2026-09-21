@@ -30,6 +30,7 @@ var noteArtwork = [][2]string{
 	{"battery-bar-frame", "resources/note/images/ActivityGeneralBtnBg02.png"},
 	{"status-done", "resources/note/images/yes.png"},
 	{"status-open", "resources/note/images/no.png"},
+	{"zzz", "resources/common/fonts/inpinhongmengti.ttf"},
 }
 
 // Note draws the real-time note the way ZZZ-Plugin's note does: the player
