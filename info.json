@@ -841,6 +841,37 @@
       }
     },
     {
+      "id": "artwork",
+      "name": "素材更新",
+      "description": "从上游仓库下载或更新图片素材",
+      "usage": "#素材更新 [素材名]",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "素材更新",
+          "更新素材",
+          "下载素材",
+          "素材下载",
+          "图鉴升级",
+          "图鉴更新"
+        ]
+      }
+    },
+    {
+      "id": "artwork-status",
+      "name": "素材状态",
+      "description": "查看图片素材的下载进度与版本",
+      "usage": "#素材状态",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "素材状态"
+        ]
+      }
+    },
+    {
       "id": "select",
       "name": "绑定",
       "description": "选择已验证的默认游戏角色",
@@ -1141,7 +1172,9 @@
       "commands": [
         "help",
         "version",
-        "group-settings"
+        "group-settings",
+        "artwork",
+        "artwork-status"
       ]
     }
   ],
@@ -1202,7 +1235,7 @@
       },
       {
         "id": "media",
-        "label": "图库与互动"
+        "label": "素材与互动"
       },
       {
         "id": "help",

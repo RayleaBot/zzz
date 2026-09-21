@@ -106,5 +106,42 @@
       "command": "探索",
       "input": "none"
     }
+  ],
+  "artwork": [
+    {
+      "id": "zzz-plugin",
+      "name": "绝区零插件图片",
+      "archives": [
+        "https://codeload.github.com/ZZZure/ZZZ-Plugin/tar.gz/HEAD"
+      ],
+      "include": [
+        "resources/"
+      ],
+      "extensions": [
+        ".webp",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif"
+      ]
+    },
+    {
+      "id": "zzz-atlas",
+      "name": "Atlas 绝区零图鉴",
+      "archives": [
+        "https://gitee.com/Nwflower/zzz-atlas/repository/archive/master.tar.gz",
+        "https://codeload.github.com/Nwflower/zzz-atlas/tar.gz/HEAD"
+      ],
+      "include": [],
+      "extensions": [
+        ".webp",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".json",
+        ".yaml"
+      ]
+    }
   ]
 }
