@@ -1,0 +1,11 @@
+{
+  "id": "panel",
+  "name": "绝区零角色面板",
+  "description": "单角色面板图片，含驱动盘评分与参考伤害，布局参照 ZZZ-Plugin",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}

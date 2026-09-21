@@ -1,0 +1,67 @@
+package images_test
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+
+	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/images"
+)
+
+func TestPanelFollowsZZZPluginRules(t *testing.T) {
+	property := func(name string, id int, base string) map[string]any {
+		return map[string]any{"property_name": name, "property_id": id, "base": base}
+	}
+	official := map[string]any{
+		"id": 1011, "name_mi18n": "安比", "full_name_mi18n": "安比·德玛拉", "rarity": "A", "level": 60, "rank": 2, "avatar_profession": 7,
+		"skills":     []any{map[string]any{"level": 1}, map[string]any{"level": 2}, map[string]any{"level": 3}, map[string]any{"level": 4}, map[string]any{"level": 5}, map[string]any{"level": 6}},
+		"properties": []any{map[string]any{"property_name": "生命值", "base": "7689", "add": "2200", "final": "9889"}, map[string]any{"property_name": "防御力", "base": "612", "add": "0", "final": "612"}},
+		"equip": []any{map[string]any{"equipment_type": 2, "id": 31021, "level": 15, "rarity": "S", "name": "盘",
+			"main_properties": []any{property("电属性伤害加成", 31803, "30%")},
+			"properties":      []any{property("暴击率", 20103, "7.2%"), property("攻击力", 12102, "3%")}}},
+	}
+	raw, _ := json.Marshal(map[string]any{"total": 30.5, "grade": "S", "weights": map[string]float64{"11102": 1, "12102": 0.75},
+		"stats":  []any{map[string]any{"name": "暴击", "weight": 1, "value": "7.2%", "count": 3}, map[string]any{"name": "攻击", "weight": 0.5, "value": "3.0%", "count": 1}, map[string]any{"name": "防御", "weight": 0, "value": "4.8%", "count": 1}},
+		"pieces": []any{map[string]any{"slot": 2, "score": 30.5, "grade": "S", "props": []any{map[string]any{"id": 20103, "count": 2, "weight": 1}, map[string]any{"id": 12102, "count": 0, "weight": 0.75}}}}})
+	panel := gamekit.CharacterPanel{Official: official, ScoreDetail: &gamekit.ScoreDetail{Raw: raw}}
+	drawn, ok := images.Panel(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}, Now: time.Now()}, gamekit.PanelImage{Panel: panel, UID: "10000001"})
+	if !ok || drawn.Template != "panel" {
+		t.Fatalf("drawn = %+v", drawn)
+	}
+	// Skill levels follow upstream's order of the official list.
+	if skills := drawn.Data["skills"].([]any); skills[0] != "1" || skills[1] != "3" || skills[2] != "6" {
+		t.Errorf("skills = %v", skills)
+	}
+	rows := drawn.Data["properties"].([]any)
+	first, second := rows[0].(map[string]any), rows[1].(map[string]any)
+	if first["label"] != "yellow" || first["detail"] != true || first["final"] != "9889" {
+		t.Errorf("hp row = %v", first)
+	}
+	// Armorer agents show Laceration in place of attack.
+	if second["name"] != "锐暴伤害" || second["final"] != "0" {
+		t.Errorf("second row = %v", second)
+	}
+	if defence := rows[2].(map[string]any); defence["detail"] != false {
+		t.Errorf("a zero bonus hides the detail: %v", defence)
+	}
+	rating := drawn.Data["rating"].(map[string]any)
+	if rating["useful"] != 4 || rating["effective"] != "3.50" || rating["score"] != "30.50" || len(rating["stats"].([]any)) != 9 {
+		t.Errorf("rating = %v", rating)
+	}
+	discs := drawn.Data["discs"].([]any)
+	if discs[0].(map[string]any)["empty"] != true {
+		t.Errorf("slot 1 should be empty: %v", discs[0])
+	}
+	disc := discs[1].(map[string]any)
+	subs := disc["sub"].([]any)
+	if main := disc["main"].([]any)[0].(map[string]any); main["name"] != "电伤加成" {
+		t.Errorf("main = %v", main)
+	}
+	if subs[0].(map[string]any)["hit"] != "hit100" || len(subs[0].(map[string]any)["count"].([]struct{})) != 2 || subs[1].(map[string]any)["hit"] != "hit75" {
+		t.Errorf("subs = %v", subs)
+	}
+	if _, ok := images.Panel(gamekit.ImageContext{}, gamekit.PanelImage{}); ok {
+		t.Error("a panel without the official entry should keep the summary card")
+	}
+}

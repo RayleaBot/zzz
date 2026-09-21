@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container">
+<div class="card">
+  <div class="uid">UID {{ .uid }}</div>
+  <div class="basic">
+    <div class="char">
+      <div class="avatar"><img data-render-resource="role-icon" alt=""></div>
+      <div class="skills">
+        {{ range .skills }}<div class="skill">{{ . }}</div>{{ end }}
+      </div>
+    </div>
+    <div class="info">
+      <div class="char_info">
+        <div class="base">
+          <div class="rank rank-icon {{ .rarity }}"></div>
+          <div class="element-icon {{ .sub_element }}"></div>
+          <div class="name">{{ .name }}</div>
+        </div>
+        <div class="addition">
+          <div class="level">Lv.{{ .level }}</div>
+          <div class="role_ranks r{{ .rank }}"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="property_info">
+        <div class="title">
+          <div class="special-title">
+            <div class="bg-content">PROPERTY</div>
+            <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="content">属性</div>
+            <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+        <div class="list">
+          {{ range .properties }}
+          <div class="properties">
+            <div class="{{ .icon }} {{ .icon_class }}"></div>
+            <div class="label {{ .label }}">{{ .name }}</div>
+            {{ if .detail }}<div class="value-detail no-zzz-font"><span class="base">{{ .base }}</span><span class="add">+{{ .add }}</span></div>{{ end }}
+            <div class="value">{{ .final }}</div>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+      <div class="weapon_info">
+        {{ with .weapon }}
+        <div class="info">
+          <div class="base">
+            <div class="rarity-icon {{ .rarity }}"></div>
+            <div class="name">{{ .name }}</div>
+          </div>
+          <div class="main">
+            <div class="addition">
+              <div class="star star{{ .star }}"></div>
+              <div class="level">Lv.{{ .level }}</div>
+            </div>
+            {{ range .main }}<div class="properties"><div class="prop-icon {{ .class }}"></div><div class="label">{{ .name }}</div><div class="value">{{ .base }}</div></div>{{ end }}
+            {{ range .sub }}<div class="properties sub"><div class="prop-icon {{ .class }}"></div><div class="label">{{ .name }}</div><div class="value">{{ .base }}</div></div>{{ end }}
+          </div>
+        </div>
+        <div class="icon"><img data-render-resource="weapon-icon" alt=""></div>
+        {{ else }}
+        <div class="info empty"><div class="base"><div class="rarity-icon"></div><div class="name"></div></div></div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+  <div class="other">
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">METAL</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">驱动盘信息</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    {{ with .rating }}
+    <div class="equip-stats">
+      <div class="box1">
+        <div class="equip-score {{ .grade }}">
+          <div class="comment-box"><div class="comment">{{ .grade }}</div></div>
+          <div class="value"><span>{{ .score }}</span><span class="subt">分</span></div>
+        </div>
+        <div class="weight-rule">规则：{{ .rule }}</div>
+      </div>
+      <div class="box2">
+        <div class="property-stats">
+          {{ range .stats }}
+          {{ if .name }}<div class="stat-item {{ .class }}"><span class="title"><span class="count">{{ .count }}</span> {{ .name }}</span><span class="value">+{{ .value }}</span></div>{{ else }}<div class="stat-item"></div>{{ end }}
+          {{ end }}
+        </div>
+        <div class="useful-stats">有益词条数：{{ .useful }} 有效词条数：{{ .effective }}</div>
+      </div>
+    </div>
+    {{ end }}
+    <div class="equip-list">
+      {{ range .discs }}
+      {{ if .empty }}
+      <div class="box empty"><div class="icon"></div></div>
+      {{ else }}
+      <div class="box">
+        <div class="icon">{{ if .icon }}<img data-render-resource="{{ .icon }}" alt="">{{ end }}</div>
+        <div class="info">
+          <div class="level">等级{{ .level }}</div>
+          <div class="rarity-icon {{ .rarity }}"></div>
+        </div>
+        <div class="name">{{ .name }}</div>
+        {{ if .score }}<div class="score {{ .grade }}"><div class="comment">{{ .grade }}</div><div class="value">{{ .score }}</div></div>{{ end }}
+        <div class="property-list">
+          {{ range .main }}<div class="properties main"><div class="prop-icon {{ .class }}"></div><div class="label yellow">{{ .name }}</div><div class="value">{{ .base }}</div></div>{{ end }}
+          {{ range .sub }}
+          <div class="properties">
+            <div class="prop-icon {{ .class }}"></div>
+            <div class="label yellow{{ with .hit }} {{ . }}{{ end }}">{{ .name }}</div>
+            {{ if .count }}<div class="count">{{ range .count }}<span></span>{{ end }}</div>{{ end }}
+            <div class="value">{{ .base }}</div>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+      {{ end }}
+      {{ end }}
+    </div>
+    {{ with .damage }}
+    <div class="title damage-title">
+      <div class="special-title">
+        <div class="bg-content">DAMAGE</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">伤害统计</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="damagelist">
+      <div class="dmg-tr column4 titlebar no-zzz-font">
+        <div class="td dmg-td">%</div>
+        <div class="dmg-td">技能类型</div>
+        <div class="dmg-td">暴击伤害</div>
+        <div class="dmg-td">期望伤害</div>
+      </div>
+      {{ range .rows }}
+      <div class="dmg-tr {{ if .crit }}column4{{ else }}column3{{ end }}">
+        <div class="dmg-td">{{ .index }}</div>
+        <div class="dmg-td no-zzz-font">{{ .name }}</div>
+        {{ if .crit }}<div class="dmg-td">{{ .crit }}</div>{{ end }}
+        <div class="dmg-td">{{ .expect }}</div>
+      </div>
+      {{ end }}
+      <div class="tr dmg-tr info-tr no-zzz-font">
+        <div>伤害计算取有弱点、敌人等级{{ .level }}、1级基础防御力为50的敌方数据，且不考虑失衡易伤区</div>
+        <div>可通过<span>{{ $.damage_hint }}+序号</span>查看指定技能伤害详情 如<span>{{ $.damage_hint }}1</span></div>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

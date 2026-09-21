@@ -40,4 +40,4 @@
 
 ## 图片模板
 
-`templates/note/` 按 ZZZ-Plugin 的 note 模板改写（AGPL-3.0，见 `LICENSES/ZZZ-Plugin-AGPL-3.0.txt`），图片地址改为宿主渲染资源。模板用到的图片与字体不随插件分发，由管理员通过“素材更新”在运行时从上游仓库下载。
+`templates/note/` 按 ZZZ-Plugin 的 note 模板改写；`templates/panel/` 的样式由 ZZZ-Plugin 的 common/style、common/layout 与 panel/card 样式转换而来（均为 AGPL-3.0，见 `LICENSES/ZZZ-Plugin-AGPL-3.0.txt`）。图片地址改为宿主渲染资源；角色、音擎与驱动盘图与上游一样出图时从 ZZZeroUID 镜像按需下载，名称按 ZZZ-Plugin 的映射表换算。上游三个 SVG 属性图标不是可接受的渲染资源，不显示。模板用到的图片与字体不随插件分发，由管理员通过“素材更新”在运行时从上游仓库下载。
