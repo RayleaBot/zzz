@@ -1,0 +1,48 @@
+const characterRule=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.skills = exports.buffs = void 0;
+/** @type {import('#interface').buff[]} */
+exports.buffs = [
+    {
+        name: '1影',
+        type: '增伤',
+        value: 0.1,
+        teamTarget: true
+    },
+    {
+        name: '核心被动：脉中乾坤',
+        type: '贯穿力',
+        teamTarget: ({ teammates, runtime }) => teammates.filter(v => v.avatar_profession == runtime.professionEnum.命破), // 仅命破队友生效
+        showInPanel: true,
+        value: ({ avatar, calc }) => {
+            const initial_ATK = avatar.initial_properties.ATK;
+            const level = calc.get_SkillLevel('T');
+            const multiplier = [0.09, 0.105, 0.12, 0.135, 0.15, 0.165, 0.18][level - 1];
+            if (avatar.rank >= 6) {
+                const ATK = calc.get_ATK();
+                return initial_ATK * multiplier + ATK * 0.06;
+            }
+            return initial_ATK * multiplier;
+        },
+        max: ({ avatar }) => avatar.rank >= 6 ? 720 : 540
+    },
+    {
+        name: '额外能力：食铁纳金',
+        type: '增伤',
+        value: 0.2,
+        teamTarget: true
+    }
+];
+/** @type {import('#interface').skill[]} */
+exports.skills = [
+    { name: '普攻：极意连打四段', type: 'AP4' },
+    { name: '闪避反击：移峰倒海', type: 'CF' },
+    { name: '支援突击：借势打势', type: 'LT' },
+    { name: '特殊技：断脉破穴手', type: 'EPD' },
+    { name: '强化特殊技：贴山震脉靠', type: 'EQ' },
+    { name: '连携技：锅气灌顶', type: 'RL' },
+    { name: '终结技：满汉全席！', type: 'RZ' }
+];
+
+return exports;})();
