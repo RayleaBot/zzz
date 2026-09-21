@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="card">
+  <div class="user-info">
+    <div class="avatar">{{ with .user }}{{ with .avatar_url }}<img src="{{ . }}" alt="">{{ end }}{{ end }}</div>
+    <div class="info-bar">
+      <div class="info">
+        <div class="nickname">{{ .player.nickname }}</div>
+        <div class="label level">Lv{{ .player.level }}</div>
+        <div class="label server">{{ .player.region }}</div>
+      </div>
+      <div class="uid">UID {{ .player.uid }}</div>
+    </div>
+  </div>
+  <div class="status">
+    {{ range .stats }}<div class="item"><div class="value">{{ .value }}</div><div class="label">{{ .label }}</div></div>{{ end }}
+  </div>
+  <div class="special-title">
+    <div class="bg-content">AGENT</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+    <div class="content">代理人信息</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  </div>
+  <div class="list">
+    {{ range .agents }}
+    <div class="item rank{{ .rarity }}">
+      <div class="rank rank-icon {{ .rarity }}"></div>
+      <div class="element-icon {{ .element }}"></div>
+      <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+      <div class="c-info">
+        <div class="ranks r{{ .rank }}">{{ .rank }}影</div>
+        <div class="level">等级{{ .level }}</div>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+  <div class="special-title">
+    <div class="bg-content">BANGBOO</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+    <div class="content">邦布信息</div>
+    <div class="parallelograms">{{ range .bars }}<span></span>{{ end }}</div>
+  </div>
+  <div class="list">
+    {{ range .bangboo }}
+    <div class="item rank{{ .rarity }}">
+      <div class="rank rank-icon {{ .rarity }}"></div>
+      <div class="image"><img{{ with .icon }} data-render-resource="{{ . }}"{{ end }} alt=""></div>
+      <div class="c-info">
+        <div class="ranks r{{ .star }}">{{ .star }}命</div>
+        <div class="level">等级{{ .level }}</div>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
