@@ -33,7 +33,6 @@
     "account_provider": "raylea.mihoyo-accounts",
     "image_replies": true,
     "custom_aliases": {},
-    "alias_policy": "prefer_custom",
     "command_prefixes": [
       "%",
       "％",
