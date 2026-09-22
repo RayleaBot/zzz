@@ -9,6 +9,7 @@ import (
 	"github.com/RayleaBot/game-plugin-kit/reference"
 	plugin "github.com/RayleaBot/plugin-zzz"
 	"github.com/RayleaBot/plugin-zzz/internal/images"
+	"github.com/RayleaBot/plugin-zzz/internal/showcase"
 )
 
 //go:embed catalog.json
@@ -55,5 +56,5 @@ func dataFile(name string) []byte {
 
 // Kit is everything the shared game library needs from this plugin.
 func Kit() gamekit.Assets {
-	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Queries: images.Queries(), Panel: images.Panel, Gacha: images.Gacha, Help: images.Help, MonthlyStats: images.MonthlyCollect, Calendar: images.Calendar, QueryRank: images.QueryRank, Entry: images.Entry}
+	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Queries: images.Queries(), Panel: images.Panel, Gacha: images.Gacha, Help: images.Help, MonthlyStats: images.MonthlyCollect, Calendar: images.Calendar, QueryRank: images.QueryRank, Entry: images.Entry, Showcase: showcase.Source, PanelList: images.PanelList}
 }

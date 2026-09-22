@@ -4,7 +4,7 @@
 
 绝区零资料来自 ZZZ-Plugin dev，固定提交 fb66219cec0294e1834bacdf0033b2d43a9ccaf4；插件按 AGPL-3.0-only 分发，保留 LICENSES/ZZZ-Plugin-AGPL-3.0.txt。分发时同时提供此插件与实际构建依赖的对应源码。
 
-公开展柜来自 [Enka.Network](https://github.com/EnkaNetwork/API-docs/blob/master/api.md)，按响应 TTL 缓存。抽卡导入导出遵循 [UIGF](https://uigf.org/en/standards/uigf.html)，尚未申请兼容性认证。
+没有账号时的面板来自 [Enka.Network](https://github.com/EnkaNetwork/API-docs/blob/master/api.md)（ZZZ-Plugin 的默认 enkaApi），按响应 TTL 缓存，由打包的 ZZZ-Plugin `model/Enka/formater` 转为官方格式。`templates/panel-list/` 按 ZZZ-Plugin 的 `panel/list` 与 `panel/refresh` 改写（两页合为一个模板）。抽卡导入导出遵循 [UIGF](https://uigf.org/en/standards/uigf.html)，尚未申请兼容性认证。
 
 本插件及编译期业务库沿用 RayleaBot SDK 的 AGPL-3.0 许可，安装包管理页提供对应源码下载。上游数据的原许可声明另行保留。编译期业务库的娱乐抽卡模型源自 Miao-Yunzai 与 StarRail-plugin，随业务库编入本插件，因此一并保留 `LICENSES/Miao-Yunzai-GPL-3.0.txt` 与 `LICENSES/StarRail-plugin-Apache-2.0.txt`。
 

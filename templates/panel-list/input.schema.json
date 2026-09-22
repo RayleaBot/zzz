@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["player", "list", "count"],
+  "properties": {
+    "player": { "type": "object" },
+    "refresh": { "type": "boolean" },
+    "count": { "type": "integer" },
+    "new_count": { "type": "integer" },
+    "list": { "type": "array" },
+    "user": { "type": "object" },
+    "permission": { "type": "object" },
+    "group": { "type": "object" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

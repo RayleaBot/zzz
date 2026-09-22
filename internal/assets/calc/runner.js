@@ -88,6 +88,12 @@ function runBuild(record,_weapons,input){
  if(input.candidate_weapon||input.candidate_equipment||input.conditions){const next=input.candidate_weapon||original.selected;if(next.id&&!zzzPromotions(next.level,true).includes(next.promote))throw Error('weapon.promote');const nextGear=input.candidate_equipment?zzzGear(input.candidate_equipment):gear;candidate=zzzScenario(info,input,nextGear,next,original.promote,core,original.properties,input.conditions)}
  return {source:'simulation',version:'zzz-fb66219cec-reference-v1',character_id:record.id,character:record.name,enemy_level:input.enemy_level,baseline,candidate};
 }
+// Showcase agents become official avatar entries through ZZZ-Plugin's
+// Enka2Mys, which skips an agent its data does not know with a warning.
+function runShowcase(_record,_weapons,input){
+ logger.warn=()=>{};
+ return {avatar_list:EnkaFormat.Enka2Mys(input.avatars)};
+}
 // Drive disc scoring follows ZZZ-Plugin: Score.getFinalWeight picks the rule,
 // Score.main rates each disc, and the Equip and avatar getters grade them.
 function runScore(record,_weapons,input){

@@ -131,20 +131,25 @@
       }
     },
     {
-      "id": "showcase",
-      "name": "更新展柜面板",
-      "description": "查询已开放的公开展柜",
-      "usage": "#更新展柜面板 [UID]",
+      "id": "panel-refresh",
+      "name": "更新面板",
+      "description": "更新面板：已绑定账号读取米游社数据，否则或写“展柜”时读取 Enka 展柜",
+      "usage": "#更新面板 / #更新展柜面板",
       "permission": "everyone",
       "trigger": {
-        "type": "exact",
-        "names": [
-          "更新展柜面板",
-          "刷新展柜面板",
-          "展柜面板",
-          "面板",
-          "展柜"
-        ]
+        "type": "pattern",
+        "pattern": "^(?:(?:刷新|更新)(?:展柜)?面板(?:展柜)?(?:刷新|更新|列表)?|(?:展柜)?面板(?:展柜)?(?:刷新|更新))$"
+      }
+    },
+    {
+      "id": "panel-list",
+      "name": "面板列表",
+      "description": "已保存面板的代理人列表",
+      "usage": "#面板列表",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:.*?(?:展柜)?面板(?:展柜)?列表|(?:展柜)?面板(?:展柜)?)$"
       }
     },
     {
@@ -1063,7 +1068,8 @@
       "title": "角色面板",
       "commands": [
         "character",
-        "showcase",
+        "panel-refresh",
+        "panel-list",
         "score",
         "build",
         "original-image"
