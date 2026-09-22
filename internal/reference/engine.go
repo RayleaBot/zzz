@@ -166,17 +166,6 @@ func (e *Engine) Run(ctx context.Context, character Character, input map[string]
 	return e.call(ctx, "runBuild", character.Script, character, input)
 }
 
-// Change calculates the properties of a changed panel from its character,
-// weapon, equipment and traces, as 面板换装 does upstream.
-func (e *Engine) Change(ctx context.Context, character Character, input map[string]any) (json.RawMessage, error) {
-	script := ""
-	if validScript(character.Script, "characters") {
-		// The panel takes the rule's static bonuses.
-		script = character.Script
-	}
-	return e.call(ctx, "runChange", script, character, input)
-}
-
 // Score rates the equipment with the character's scoring rule, or with the
 // game's default weights when the character has none.
 func (e *Engine) Score(ctx context.Context, character Character, input map[string]any) (json.RawMessage, error) {

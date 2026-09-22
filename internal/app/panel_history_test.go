@@ -56,13 +56,13 @@ func TestPanelHistoryScopesRetentionAndRestart(t *testing.T) {
 func TestHistoryComparisonKeepsUnitsAndMissingValues(t *testing.T) {
 	before := PanelSnapshot{Panel: CharacterPanel{Name: "测试", Stats: []PanelStat{{ID: "1", Name: "攻击", Value: "1,000"}, {ID: "2", Name: "暴击", Value: "50%"}, {ID: "3", Name: "速度", Value: "100"}}}}
 	after := PanelSnapshot{Panel: CharacterPanel{Name: "测试", Stats: []PanelStat{{ID: "1", Name: "攻击", Value: "1,200"}, {ID: "2", Name: "暴击", Value: "60%"}, {ID: "4", Name: "充能", Value: "120%"}}}}
-	view := comparePanels(Game{ID: "starrail"}, before, after)
+	view := comparePanels(before, after)
 	rows := view.Sections[0].Rows
 	if !strings.Contains(rows[0].Value, "+200.00") || !strings.Contains(rows[1].Value, "+10.00 个百分点") || strings.Contains(rows[2].Value, "（") || strings.Contains(rows[3].Value, "（") {
 		t.Fatal(rows)
 	}
 	after.Panel.Stats[1].Value = "60"
-	rows = comparePanels(Game{}, before, after).Sections[0].Rows
+	rows = comparePanels(before, after).Sections[0].Rows
 	if strings.Contains(rows[1].Value, "（") {
 		t.Fatal("different units subtracted")
 	}

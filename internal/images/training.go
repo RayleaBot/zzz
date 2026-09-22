@@ -68,7 +68,7 @@ func Training(context app.ImageContext, result app.QueryResult) (app.Image, bool
 			ids = append(ids, app.Text(agent["id"]))
 		}
 		if detail, err := context.Query("zzz.character", map[string]any{"id_list": ids}); err == nil {
-			panels = append(panels, app.NormalizePanels("zzz", detail, context.Catalog)...)
+			panels = append(panels, app.NormalizePanels(detail, context.Catalog)...)
 		}
 	}
 	if len(panels) == 0 {

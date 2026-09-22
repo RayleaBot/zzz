@@ -7,41 +7,22 @@ import (
 	"strings"
 )
 
-type Talent struct {
-	Name        string   `json:"name"`
-	Description []string `json:"description"`
-}
 type Entry struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Aliases []string `json:"aliases,omitempty"`
-	// Abbr is upstream's short name for a character or weapon, printed where
-	// the full name does not fit.
-	Abbr        string            `json:"abbr,omitempty"`
-	Kind        string            `json:"kind"`
-	Rarity      int               `json:"rarity"`
-	Element     string            `json:"element,omitempty"`
-	Weapon      string            `json:"weapon,omitempty"`
-	Description string            `json:"description,omitempty"`
-	Materials   map[string]string `json:"materials,omitempty"`
-	Stats       map[string]any    `json:"stats,omitempty"`
-	Talents     []Talent          `json:"talents,omitempty"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Aliases     []string       `json:"aliases,omitempty"`
+	Kind        string         `json:"kind"`
+	Rarity      int            `json:"rarity"`
+	Element     string         `json:"element,omitempty"`
+	Weapon      string         `json:"weapon,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Stats       map[string]any `json:"stats,omitempty"`
 }
 type Catalog struct {
-	ArtifactSets map[string]string `json:"artifact_sets,omitempty"`
-	// ArtifactPieces are miao's piece names by set, in slot order.
-	ArtifactPieces map[string][]string `json:"artifact_pieces,omitempty"`
-	// SetAliases are miao's other names for equipment sets, by set name.
-	SetAliases map[string][]string `json:"set_aliases,omitempty"`
-	// SetAbbrs are upstream's short names for some equipment sets, by set
-	// name.
-	SetAbbrs map[string]string `json:"set_abbrs,omitempty"`
-	// MaterialAbbrs are upstream's short names for some materials, by name.
-	MaterialAbbrs map[string]string `json:"material_abbrs,omitempty"`
-	Version       string            `json:"version"`
-	Source        string            `json:"source"`
-	Entries       []Entry           `json:"entries"`
-	byID          map[string]int
+	Version string  `json:"version"`
+	Source  string  `json:"source"`
+	Entries []Entry `json:"entries"`
+	byID    map[string]int
 }
 
 func ParseCatalog(raw []byte) (Catalog, error) {

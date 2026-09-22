@@ -8,13 +8,13 @@ import (
 )
 
 func syncRecord() Record {
-	return Record{ID: "100", ItemID: "1001", GachaType: "100", UIGFType: "100", Time: "2026-09-01 08:00:00", Rank: "5"}
+	return Record{ID: "100", ItemID: "1001", GachaType: "1", UIGFType: "1", Time: "2026-09-01 08:00:00", Rank: "5"}
 }
 func testSync(t *testing.T) (*Store, *Syncs, SyncInfo) {
 	t.Helper()
-	store := &Store{Directory: t.TempDir(), Game: "genshin"}
+	store := &Store{Directory: t.TempDir(), Game: "zzz"}
 	jobs := &Syncs{}
-	info, err := jobs.Start(store, SyncChoice{"account", "role"}, "100000001", "cn_gf01", false)
+	info, err := jobs.Start(store, SyncChoice{"account", "role"}, "100000001", "prod_gf_cn", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func testSync(t *testing.T) (*Store, *Syncs, SyncInfo) {
 }
 func pageOnce(_ context.Context, pool, end string, page int) (RemotePage, error) {
 	result := RemotePage{Records: []Record{}, Timezone: 8, Language: "zh-cn", NextID: end}
-	if pool == "100" {
+	if pool == "1001" {
 		result.Records = []Record{syncRecord()}
 		result.NextID = "100"
 	}
@@ -45,7 +45,7 @@ func TestSyncStagesPagesAndCommitsOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Read("100000001", "cn_gf01"); !errors.Is(err, os.ErrNotExist) {
+	if _, err := store.Read("100000001", "prod_gf_cn"); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("partial sync wrote archive")
 	}
 	replayed, err := jobs.Step(t.Context(), store, info.Ref, 0, func(context.Context, string, string, int) (RemotePage, error) {
@@ -87,9 +87,9 @@ func TestSyncFailureCancelAndDeletionPreserveArchives(t *testing.T) {
 			case "cancel":
 				_ = jobs.Cancel(info.Ref)
 			case "delete":
-				_ = store.Remove("100000001", "cn_gf01")
+				_ = store.Remove("100000001", "prod_gf_cn")
 			case "import":
-				_, _, err = store.Import(Archive{UID: "100000001", Region: "cn_gf01", Timezone: 8, Records: []Record{syncRecord()}})
+				_, _, err = store.Import(Archive{UID: "100000001", Region: "prod_gf_cn", Timezone: 8, Records: []Record{syncRecord()}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -103,7 +103,7 @@ func TestSyncFailureCancelAndDeletionPreserveArchives(t *testing.T) {
 			if mode == "cancel" && !errors.Is(err, ErrSync) || mode != "cancel" && !errors.Is(err, ErrConflict) {
 				t.Fatal("stale sync committed")
 			}
-			archive, readErr := store.Read("100000001", "cn_gf01")
+			archive, readErr := store.Read("100000001", "prod_gf_cn")
 			if mode == "import" {
 				if readErr != nil || len(archive.Records) != 1 {
 					t.Fatal("imported archive changed")
@@ -138,7 +138,7 @@ func TestSyncKeepsOfficialUTCAndDistinctZZZReturnPools(t *testing.T) {
 		return result, nil
 	})
 	archive, err := store.Read("100000001", "prod_gf_cn")
-	if err != nil || archive.Timezone != 0 || done.Result.Total != 2 || len(Summarize("zzz", archive)) != 2 {
+	if err != nil || archive.Timezone != 0 || done.Result.Total != 2 || len(Summarize(archive)) != 2 {
 		t.Fatal("UTC or independent pools lost")
 	}
 }

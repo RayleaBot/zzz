@@ -146,7 +146,7 @@ func (a *App) panelHistory(ctx context.Context, client AccountsClient, action st
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"view": comparePanels(a.Game, before, after)}, nil
+		return map[string]any{"view": comparePanels(before, after)}, nil
 	}
 	snapshot, err := find(asText(input["ref"]))
 	if err != nil {
@@ -162,7 +162,7 @@ func (a *App) panelHistory(ctx context.Context, client AccountsClient, action st
 	}
 	return nil, gameError("operation_denied", "历史操作不存在。")
 }
-func comparePanels(game Game, before, after PanelSnapshot) View {
+func comparePanels(before, after PanelSnapshot) View {
 	v := View{Title: after.Panel.Name + " · 历史面板对比", Subtitle: time.UnixMilli(before.SavedAtMS).UTC().Format(time.RFC3339) + " → " + time.UnixMilli(after.SavedAtMS).UTC().Format(time.RFC3339), Rows: []Row{{Label: "等级", Value: fmt.Sprintf("%d → %d", before.Panel.Level, after.Panel.Level)}}, Note: "对比保存时的面板；缺失属性不补零，百分属性差值为百分点，不表示实际伤害变化。"}
 	if before.Panel.RankKnown && after.Panel.RankKnown {
 		v.Rows = append(v.Rows, Row{Label: "解锁层数", Value: fmt.Sprintf("%d → %d", before.Panel.Rank, after.Panel.Rank)})
@@ -214,7 +214,7 @@ func comparePanels(game Game, before, after PanelSnapshot) View {
 		p := named.item.Panel
 		rows := []Row{}
 		if p.Weapon != nil {
-			rows = append(rows, Row{Label: "武器 / 光锥 / 音擎", Value: fmt.Sprintf("%s · 等级 %d · 精炼/叠影/星级 %d", p.Weapon.Name, p.Weapon.Level, p.Weapon.Refinement)})
+			rows = append(rows, Row{Label: "音擎", Value: fmt.Sprintf("%s · 等级 %d · 星级 %d", p.Weapon.Name, p.Weapon.Level, p.Weapon.Refinement)})
 		}
 		for _, e := range p.Equipment {
 			rows = append(rows, Row{Label: fmt.Sprintf("位置 %d", e.Slot), Value: fmt.Sprintf("%s · %s · 等级 %d", e.Name, e.SetName, e.Level)})

@@ -57,22 +57,20 @@ func publicText(v string) string {
 	v = html.UnescapeString(publicTags.ReplaceAllString(v, ""))
 	return strings.TrimSpace(strings.ReplaceAll(v, "\u00a0", " "))
 }
-func publicGame(game string) (string, string) {
-	switch game {
-	case "starrail":
-		return "6", "sr"
-	case "zzz":
-		return "8", "zzz"
-	default:
-		return "2", "ys"
-	}
-}
-func publicPostID(game, value string) (string, error) {
+
+// bbsGID and bbsPath name Zenless Zone Zero on 米游社: its forum ID and URL
+// path.
+const (
+	bbsGID  = "8"
+	bbsPath = "zzz"
+)
+
+func publicPostID(value string) (string, error) {
 	if publicDigits.MatchString(value) {
 		return value, nil
 	}
 	u, err := url.Parse(value)
-	_, path := publicGame(game)
+	path := bbsPath
 	if err != nil || u.Scheme != "https" || u.User != nil || !slices.Contains([]string{"www.miyoushe.com", "miyoushe.com", "bbs.mihoyo.com"}, u.Host) || u.RawQuery != "" {
 		return "", gameError("input_invalid", "请输入本游戏米游社文章编号或官方文章链接。")
 	}
@@ -97,14 +95,14 @@ func publicImage(raw string) string {
 	u.RawQuery = ""
 	return u.String()
 }
-func normalizePublicPost(game string, raw any, full bool) (PublicPost, error) {
+func normalizePublicPost(raw any, full bool) (PublicPost, error) {
 	v := asObject(raw)
 	p := asObject(v["post"])
 	if p == nil {
 		p = v
 	}
 	id := asText(p["post_id"])
-	gid, path := publicGame(game)
+	gid, path := bbsGID, bbsPath
 	if !publicDigits.MatchString(id) || p["game_id"] != nil && asText(p["game_id"]) != "0" && asText(p["game_id"]) != gid {
 		return PublicPost{}, gameError("public_invalid", "帖子编号或所属游戏无效。")
 	}
@@ -153,8 +151,8 @@ func normalizePublicPost(game string, raw any, full bool) (PublicPost, error) {
 	}
 	return out, nil
 }
-func (c PublicContentClient) posts(ctx context.Context, game string, q ContentQuery) (map[string]any, error) {
-	gid, _ := publicGame(game)
+func (c PublicContentClient) posts(ctx context.Context, q ContentQuery) (map[string]any, error) {
+	gid := bbsGID
 	params := url.Values{"gids": {gid}}
 	host := "https://bbs-api.miyoushe.com"
 	path := ""
@@ -184,7 +182,7 @@ func (c PublicContentClient) posts(ctx context.Context, game string, q ContentQu
 			params.Set("last_id", q.LastID)
 		}
 	case "post":
-		id, err := publicPostID(game, q.PostID)
+		id, err := publicPostID(q.PostID)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +197,7 @@ func (c PublicContentClient) posts(ctx context.Context, game string, q ContentQu
 		return nil, err
 	}
 	if q.Kind == "post" {
-		post, err := normalizePublicPost(game, data["post"], true)
+		post, err := normalizePublicPost(data["post"], true)
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +216,7 @@ func (c PublicContentClient) posts(ctx context.Context, game string, q ContentQu
 	}
 	items := []PublicPost{}
 	for _, v := range raw {
-		p, err := normalizePublicPost(game, v, false)
+		p, err := normalizePublicPost(v, false)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +272,7 @@ func activityWindow(text string) (time.Time, time.Time) {
 // Announcements are a game's official announcements as the announcement API
 // returns them: the list's groups (upstream calendars read the first as game
 // notices and the second as events) and every announcement's body, and the
-// picture announcements Star Rail and Zenless Zone Zero list apart.
+// picture announcements the game lists apart.
 type Announcements struct {
 	Groups          []any
 	Contents        []any
@@ -283,8 +281,8 @@ type Announcements struct {
 }
 
 // announcements reads a game's announcement list and bodies.
-func (c PublicContentClient) announcements(ctx context.Context, game string) (Announcements, error) {
-	spec := map[string][5]string{"genshin": {"https://hk4e-api.mihoyo.com", "https://hk4e-api.mihoyo.com", "hk4e", "cn_gf01", "55"}, "starrail": {"https://hkrpg-api.mihoyo.com", "https://hkrpg-api-static.mihoyo.com", "hkrpg", "prod_gf_cn", "65"}, "zzz": {"https://announcement-api.mihoyo.com", "https://announcement-static.mihoyo.com", "nap", "prod_gf_cn", "70"}}[game]
+func (c PublicContentClient) announcements(ctx context.Context) (Announcements, error) {
+	spec := [5]string{"https://announcement-api.mihoyo.com", "https://announcement-static.mihoyo.com", "nap", "prod_gf_cn", "70"}
 	biz := spec[2] + "_cn"
 	params := url.Values{"game": {spec[2]}, "game_biz": {biz}, "lang": {"zh-cn"}, "bundle_id": {biz}, "platform": {"pc"}, "region": {spec[3]}, "level": {spec[4]}, "uid": {"100000000"}, "channel_id": {"1"}}
 	root := "/common/" + biz + "/announcement/api/"
@@ -309,8 +307,8 @@ func (c PublicContentClient) announcements(ctx context.Context, game string) (An
 	return Announcements{Groups: groups, Contents: contents, PictureGroups: pictureGroups, PictureContents: pictureContents}, nil
 }
 
-func (c PublicContentClient) calendar(ctx context.Context, game string) (map[string]any, error) {
-	announcements, err := c.announcements(ctx, game)
+func (c PublicContentClient) calendar(ctx context.Context) (map[string]any, error) {
+	announcements, err := c.announcements(ctx)
 	if err != nil {
 		return nil, err
 	}

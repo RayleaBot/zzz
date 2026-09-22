@@ -19,23 +19,16 @@ import (
 // Panels are kept per UID as the upstream plugins keep a player's data:
 // 更新面板 merges what the showcase service or the account returned, a
 // character read from the account is kept when it is viewed, and 面板,
-// 圣遗物 and 伤害 read the kept panel first.
+// 评分 and 伤害 read the kept panel first.
 
 // PanelSettings are a game's 更新面板 rules and upstream's wording for its
 // replies.
 type PanelSettings struct {
-	// RefreshWithAccount refreshes a user's own UID from the account, as
-	// ZZZ-Plugin does unless the word names the showcase (展柜); otherwise
-	// 更新面板 reads the showcase and 米游社更新面板 the account. A game that
-	// refreshes from the account does not read the showcase for a panel that
-	// is not kept yet.
-	RefreshWithAccount bool `json:"refresh_with_account"`
 	// Cooldown is the wait in seconds between two refreshes of a UID.
 	Cooldown int `json:"cooldown"`
 	// Replies are upstream's replies by key: failed, unreachable, empty,
-	// none, slow, account_start, account_failed, cooldown, list_empty,
-	// missing, delete_confirm, delete_denied, delete_owner and deleted.
-	// {prefix}, {uid}, {name}, {service}, {status}, {seconds}, {uids} and
+	// none, slow, account_start, account_failed, cooldown, list_empty and
+	// missing. {prefix}, {uid}, {name}, {service}, {status}, {seconds} and
 	// {error} are filled in.
 	Replies map[string]string `json:"replies"`
 }
@@ -159,18 +152,6 @@ type PanelListImage struct {
 	Updated  map[string]bool
 	// Service is the service of this refresh, or of the last one.
 	Service string
-	// Ranks are the UID's places in the group's panel ranking by character,
-	// when the command came from a group that ranks panels.
-	Ranks map[string]RankPlace
-	// RankSinceMS is when the group ranking started.
-	RankSinceMS int64
-}
-
-// RankPlace is a character's best place in a group's rankings, by damage or
-// by equipment score ("dmg" or "mark"), as miao's getRank gives it.
-type RankPlace struct {
-	Rank int
-	Mode string
 }
 
 type PanelListImageBuilder func(ImageContext, PanelListImage) (Image, bool)
@@ -265,14 +246,6 @@ func (a *App) refreshShowcase(ctx context.Context, event *rayleabot.EventContext
 // accountPanels reads every character of the user's own UID from the
 // account's official data, fifty characters a request.
 func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection) ([]CharacterPanel, error) {
-	if a.Game.ID == "starrail" {
-		// Star Rail's official panel answers every character at once.
-		result, err := client.Execute(ctx, choice, "starrail.character", map[string]any{})
-		if err != nil {
-			return nil, err
-		}
-		return NormalizePanels(a.Game.ID, result, a.Catalog), nil
-	}
 	listed, err := client.Execute(ctx, choice, a.Game.ID+".characters", map[string]any{})
 	if err != nil {
 		return nil, err
@@ -289,25 +262,20 @@ func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice S
 			}
 		}
 	}
-	key := "character_ids"
-	if a.Game.ID == "zzz" {
-		key = "id_list"
-	}
+	key := "id_list"
 	panels := []CharacterPanel{}
 	for batch := range slices.Chunk(ids, 50) {
 		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{key: batch})
 		if err != nil {
 			return nil, err
 		}
-		panels = append(panels, NormalizePanels(a.Game.ID, result, a.Catalog)...)
+		panels = append(panels, NormalizePanels(result, a.Catalog)...)
 	}
 	return panels, nil
 }
 
-// characterPanel is the panel 面板, 圣遗物 and 伤害 read: the kept one, else
-// the account's official one when the UID is the user's own, else, in games
-// that refresh from the showcase, the showcase once, as miao tries before it
-// asks for 更新面板.
+// characterPanel is the panel 面板, 评分 and 伤害 read: the kept one, else
+// the account's official one when the UID is the user's own.
 func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext, owner panelOwner, id string) (CharacterPanel, error) {
 	saved, err := a.Profiles.Read(owner.UID)
 	if err != nil {
@@ -323,15 +291,6 @@ func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext,
 			return panel, nil
 		}
 	}
-	if !a.Game.Panels.RefreshWithAccount && a.showcase.Parse != nil {
-		saved, _, err = a.refreshShowcase(ctx, event, owner.UID)
-		if err != nil {
-			return CharacterPanel{}, gameError("panel_missing", a.showcaseReply(err, owner.UID))
-		}
-		if kept, ok := saved.Panels[id]; ok {
-			return kept.panel(), nil
-		}
-	}
 	name := id
 	if entry, ok := a.Catalog.Get(id); ok {
 		name = entry.Name
@@ -339,7 +298,7 @@ func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext,
 	return CharacterPanel{}, gameError("panel_missing", a.panelReply("missing", map[string]string{"uid": owner.UID, "name": name}))
 }
 
-// commandPanel reads the panel a 面板, 圣遗物 or 伤害 command names by its
+// commandPanel reads the panel a 面板, 评分 or 伤害 command names by its
 // character and optional UID.
 func (a *App) commandPanel(ctx context.Context, event *rayleabot.EventContext, args []string) (CharacterPanel, string, error) {
 	input, uid, err := a.commandInput(Operation{Input: "characters"}, args, a.aliasMap(event))
@@ -354,14 +313,13 @@ func (a *App) commandPanel(ctx context.Context, event *rayleabot.EventContext, a
 	return panel, owner.UID, err
 }
 
-// panelCommand answers 更新面板, 米游社更新面板, 面板列表 and 删除面板.
+// panelCommand answers 更新面板 and 面板列表. 更新面板 reads a user's own UID
+// from the account, as ZZZ-Plugin does unless the word names the showcase
+// (展柜), and other UIDs from the showcase.
 func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
 	uid := ""
 	if len(args) > 0 {
 		uid = args[0]
-	}
-	if command == "panel-delete" {
-		return a.panelDelete(ctx, event, uid)
 	}
 	owner, err := a.panelOwner(ctx, event, uid)
 	if err != nil {
@@ -377,14 +335,7 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 		}
 		return a.sendPanelList(ctx, event, saved, nil, saved.Service)
 	}
-	account := command == "panel-refresh-account" || a.Game.Panels.RefreshWithAccount && owner.Owned && !strings.Contains(event.Event.Command(), "展柜")
-	if command == "panel-refresh-account" && !owner.Owned {
-		_, err := a.panelOwner(ctx, event, "")
-		if err == nil {
-			err = gameError("role_missing", "只能用米游社更新已绑定账号的 UID。")
-		}
-		return event.SendText(friendlyError(err))
-	}
+	account := owner.Owned && !strings.Contains(event.Event.Command(), "展柜")
 	saved, err := a.Profiles.Read(owner.UID)
 	if err != nil {
 		return event.SendText(friendlyError(err))
@@ -425,7 +376,7 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 }
 
 // sendPanelList answers with 面板列表, marking the characters a refresh
-// updated and, in a group that ranks panels, the UID's places.
+// updated.
 func (a *App) sendPanelList(ctx context.Context, event *rayleabot.EventContext, saved SavedProfiles, updated map[string]bool, service string) error {
 	list := saved.Sorted(a.Catalog, updated)
 	view := View{Title: a.Game.Name + "面板列表", Subtitle: "UID " + saved.UID, Rows: []Row{}, Note: "当前更新服务：" + service}
@@ -441,84 +392,9 @@ func (a *App) sendPanelList(ctx context.Context, event *rayleabot.EventContext, 
 	}
 	if a.panelList != nil {
 		image := PanelListImage{UID: saved.UID, Profiles: saved, Panels: list, Updated: updated, Service: service}
-		if scope := groupScope(event); event.Event.EventType == "message.group" && scope.valid() {
-			if group, err := a.Groups.Read(scope); err == nil && !group.RankOff {
-				image.Ranks, image.RankSinceMS = rankPlaces(group.Rank, saved.UID), group.RankSinceMS
-			}
-		}
 		if drawn, ok := a.panelList(a.imageContext(ctx), image); ok {
 			view.Image = &drawn
 		}
 	}
 	return a.sendView(ctx, event, view)
-}
-
-// rankPlaces are a UID's best places by character among the group's damage
-// and score rankings, counted over the whole ranking as miao's zRevRank.
-func rankPlaces(entries []RankEntry, uid string) map[string]RankPlace {
-	places := map[string]RankPlace{}
-	for _, own := range entries {
-		if own.UID != uid || own.Panel == nil {
-			continue
-		}
-		for _, mode := range []string{"mark", "dmg"} {
-			value, ok := rankValue(own, mode)
-			if !ok {
-				continue
-			}
-			place := 1
-			for _, other := range entries {
-				if other.CharacterID == own.CharacterID && other.UID != uid && other.Panel != nil {
-					if theirs, ok := rankValue(other, mode); ok && theirs > value {
-						place++
-					}
-				}
-			}
-			if current, seen := places[own.CharacterID]; !seen || place <= current.Rank {
-				places[own.CharacterID] = RankPlace{Rank: place, Mode: mode}
-			}
-		}
-	}
-	return places
-}
-
-// panelDelete is miao's 删除面板: without a UID it asks for one; a user may
-// delete a UID bound to their account, a super administrator any UID. The
-// UID's entries in this group's ranking go with it.
-func (a *App) panelDelete(ctx context.Context, event *rayleabot.EventContext, uid string) error {
-	super := slices.Contains(event.SuperAdmins, event.Event.Actor.ID)
-	listed, err := a.accountClient(event).List(ctx, 0)
-	own := []string{}
-	if err == nil {
-		for _, account := range listed.Items {
-			for _, role := range account.Roles {
-				if role.Game == a.Game.ID {
-					own = append(own, role.UID)
-				}
-			}
-		}
-	}
-	if len(own) == 0 && !super {
-		return event.SendText(a.panelReply("delete_owner", nil))
-	}
-	if uid == "" {
-		_, role, chooseErr := Choose(listed, a.Game.ID, "")
-		if chooseErr != nil {
-			return event.SendText(friendlyError(chooseErr))
-		}
-		return event.SendText(a.panelReply("delete_confirm", map[string]string{"uid": role.UID}))
-	}
-	if !super && !slices.Contains(own, uid) {
-		return event.SendText(a.panelReply("delete_denied", map[string]string{"uids": strings.Join(own, ",")}))
-	}
-	if err := a.Profiles.Delete(uid); err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	if scope := groupScope(event); event.Event.EventType == "message.group" && scope.valid() {
-		_ = a.Groups.Update(scope, func(data *GroupData) error {
-			data.Rank = slices.DeleteFunc(data.Rank, func(entry RankEntry) bool { return entry.UID == uid })
-			return nil
-		})
-	}
-	return event.SendText(a.panelReply("deleted", map[string]string{"uid": uid}))
 }

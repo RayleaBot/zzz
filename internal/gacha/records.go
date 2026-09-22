@@ -30,28 +30,16 @@ type Archive struct {
 }
 
 var digits = regexp.MustCompile(`^[0-9]{1,19}$`)
-var pools = map[string][]string{"genshin": {"100", "200", "301", "302", "400", "500"}, "starrail": {"1", "2", "11", "12", "21", "22"}, "zzz": {"1", "2", "3", "5", "102", "103"}}
+var pools = []string{"1", "2", "3", "5", "102", "103"}
 var ErrInvalid = errors.New("invalid gacha archive")
 var ErrConflict = errors.New("conflicting gacha record")
 
-func Pool(game, value string) string {
-	if game == "genshin" && value == "400" {
-		return "301"
-	}
-	return value
-}
-func Validate(game string, archive Archive) error {
+func Validate(archive Archive) error {
 	if !digits.MatchString(archive.UID) || archive.Region == "" || len(archive.Region) > 64 || archive.Timezone < -12 || archive.Timezone > 14 || len(archive.Records) > 200000 {
 		return ErrInvalid
 	}
 	for _, record := range archive.Records {
-		if !digits.MatchString(record.ID) || !digits.MatchString(record.ItemID) || !slices.Contains(pools[game], record.GachaType) || len(record.Name) > 256 || len(record.ItemType) > 64 {
-			return ErrInvalid
-		}
-		if game == "starrail" && !digits.MatchString(record.GachaID) {
-			return ErrInvalid
-		}
-		if game == "genshin" && record.UIGFType != Pool(game, record.GachaType) {
+		if !digits.MatchString(record.ID) || !digits.MatchString(record.ItemID) || !slices.Contains(pools, record.GachaType) || len(record.Name) > 256 || len(record.ItemType) > 64 {
 			return ErrInvalid
 		}
 		if record.Count != "" && record.Count != "1" {
@@ -74,8 +62,8 @@ func Validate(game string, archive Archive) error {
 	return nil
 }
 
-func Merge(game string, existing, incoming Archive) (Archive, int, error) {
-	if err := Validate(game, incoming); err != nil {
+func Merge(existing, incoming Archive) (Archive, int, error) {
+	if err := Validate(incoming); err != nil {
 		return Archive{}, 0, err
 	}
 	if existing.UID != "" && (existing.UID != incoming.UID || existing.Region != incoming.Region || existing.Timezone != incoming.Timezone) {
@@ -85,11 +73,11 @@ func Merge(game string, existing, incoming Archive) (Archive, int, error) {
 	result.Records = append([]Record{}, existing.Records...)
 	byID := map[string]int{}
 	for i, item := range result.Records {
-		byID[Pool(game, item.GachaType)+":"+item.ID] = i
+		byID[item.GachaType+":"+item.ID] = i
 	}
 	added := 0
 	for _, item := range incoming.Records {
-		key := Pool(game, item.GachaType) + ":" + item.ID
+		key := item.GachaType + ":" + item.ID
 		if index, ok := byID[key]; ok {
 			old := result.Records[index]
 			if old.ItemID != item.ItemID || old.Time != item.Time || old.GachaType != item.GachaType || old.GachaID != item.GachaID || old.Rank != "" && item.Rank != "" && old.Rank != item.Rank {
@@ -150,14 +138,11 @@ type PoolSummary struct {
 	Rare           []Rare `json:"rare"`
 }
 
-func Summarize(game string, archive Archive) []PoolSummary {
+func Summarize(archive Archive) []PoolSummary {
 	groups := map[string]*PoolSummary{}
-	highest := "5"
-	if game == "zzz" {
-		highest = "4"
-	}
+	highest := "4"
 	for _, item := range archive.Records {
-		pool := Pool(game, item.GachaType)
+		pool := item.GachaType
 		group := groups[pool]
 		if group == nil {
 			group = &PoolSummary{Pool: pool, PityLowerBound: true, Rare: []Rare{}}

@@ -90,53 +90,7 @@ func (c AccountsClient) Execute(ctx context.Context, choice Selection, operation
 	if err != nil {
 		return result, err
 	}
-	return result, shapeQueryResult(operation, input, &result)
-}
-
-// shapeQueryResult does the business shaping the accounts plugin leaves to
-// the game: the official Star Rail panel lists every character and the rogue
-// endpoint returns both periods, so each keeps only what was asked for.
-func shapeQueryResult(operation string, input map[string]any, result *QueryResult) error {
-	switch operation {
-	case "starrail.character":
-		ids, ok := input["character_ids"].([]any)
-		if !ok {
-			return nil
-		}
-		avatars, ok := result.Data["avatar_list"].([]any)
-		if !ok {
-			return gameError("upstream_invalid", "官方返回的角色列表格式无效。")
-		}
-		wanted := map[string]bool{}
-		for _, id := range ids {
-			wanted[asText(id)] = true
-		}
-		kept := []any{}
-		for _, raw := range avatars {
-			if wanted[asText(asObject(raw)["id"])] {
-				kept = append(kept, raw)
-			}
-		}
-		result.Data["avatar_list"] = kept
-	case "starrail.rogue":
-		switch asText(input["schedule_type"]) {
-		case "1":
-			delete(result.Data, "last_record")
-		case "2":
-			delete(result.Data, "current_record")
-		}
-	}
-	return nil
-}
-
-// Ark sends an authorized ark request through the accounts plugin, which keeps
-// the ark token; the response comes back without it.
-func (c AccountsClient) Ark(ctx context.Context, route string, body map[string]any) (any, error) {
-	var result struct {
-		Data any `json:"data"`
-	}
-	err := c.call(ctx, "ark.request", map[string]any{"route": route, "body": body}, &result)
-	return result.Data, err
+	return result, nil
 }
 
 func (c AccountsClient) ExecuteConfirmed(ctx context.Context, choice Selection, operation string, input map[string]any) (QueryResult, error) {

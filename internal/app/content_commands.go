@@ -10,7 +10,7 @@ import (
 // calendarCommand answers 日历 with the plugin's calendar page, or the
 // announced activities and their times as text.
 func (a *App) calendarCommand(ctx context.Context, event *rayleabot.EventContext) error {
-	announcements, err := a.Content.announcements(ctx, a.Game.ID)
+	announcements, err := a.Content.announcements(ctx)
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}

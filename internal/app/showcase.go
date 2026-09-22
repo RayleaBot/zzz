@@ -15,9 +15,8 @@ import (
 )
 
 // ShowcaseSource is the public showcase service a game refreshes panels from
-// without an account, the one its upstream plugin uses by default: Enka for
-// Genshin Impact and ZZZ, Mihomo for Star Rail. The game plugin reads the
-// service's answer into panels.
+// without an account, the one ZZZ-Plugin uses by default: Enka. The plugin
+// reads the service's answer into panels.
 type ShowcaseSource struct {
 	Name  string
 	URL   func(uid string) string

@@ -27,8 +27,6 @@ type Pictures struct {
 	// Atlas are the 图鉴 libraries, tried in order: an Atlas repository's
 	// path.json index, or file paths with {name}.
 	Atlas []PictureSource `json:"atlas"`
-	// Static are commands answered with fixed upstream images, by command.
-	Static map[string]StaticPicture `json:"static"`
 }
 
 type PictureSource struct {
@@ -42,13 +40,9 @@ type artworkFile struct{ Source, Path string }
 
 var pictureExtensions = []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
-// characterPhotos lists a character's downloaded photos; the Traveler's are
-// both twins', as miao's.
+// characterPhotos lists a character's downloaded photos.
 func (a *App) characterPhotos(entry Entry) []artworkFile {
 	names := []string{entry.Name}
-	if entry.Name == "旅行者" {
-		names = []string{"空", "荧"}
-	}
 	files := []artworkFile{}
 	for _, source := range a.Game.Pictures.Photos {
 		for _, pattern := range source.Paths {

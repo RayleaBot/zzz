@@ -2,15 +2,16 @@ package app
 
 import (
 	"context"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/pluginmeta"
 	"slices"
 	"strings"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
+	"github.com/RayleaBot/plugin-zzz/internal/pluginmeta"
 )
 
 // help lists the commands the requester may use, and the same list grouped
 // for a plugin help image.
-func (a *App) help(ctx context.Context, event *rayleabot.EventContext, query string) (map[string]any, HelpImage, error) {
+func (a *App) help(event *rayleabot.EventContext, query string) (map[string]any, HelpImage, error) {
 	m := a.Manifest
 	disabled := false
 	if event.Event.Target.Type == "group" {
@@ -22,7 +23,7 @@ func (a *App) help(ctx context.Context, event *rayleabot.EventContext, query str
 	}
 	commands := []pluginmeta.Command{}
 	for _, c := range m.Commands {
-		if event.Event.Target.Type == "group" && slices.Contains([]string{"group-settings", "challenge-clear"}, c.ID) && !groupAdministrator(event) {
+		if event.Event.Target.Type == "group" && c.ID == "group-settings" && !groupAdministrator(event) {
 			continue
 		}
 		if disabled && !slices.Contains([]string{"help", "version", "group-settings", "unsubscribe", "reminder-stop", "gacha-stop", "poke"}, c.ID) {
@@ -83,7 +84,7 @@ func (a *App) helpCommand(ctx context.Context, event *rayleabot.EventContext, co
 	if command == "version" {
 		return a.sendView(ctx, event, View{Title: a.Game.Name + "版本", Rows: []Row{{"插件", a.Manifest.Version}, {"最低宿主", a.Manifest.MinCoreVersion}, {"图鉴", a.Catalog.Version}, {"材料与卡池", resourceVersion(a.Game)}, {"许可", a.Manifest.License}}, Note: "插件通过宿主的安装/更新入口替换正式安装包。公开资料查询获取最新官方结果，本地固定资料随插件版本更新。"})
 	}
-	out, image, err := a.help(ctx, event, strings.Join(args, " "))
+	out, image, err := a.help(event, strings.Join(args, " "))
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}

@@ -24,7 +24,7 @@ func TestChallengeReminderScheduleUnknownAndRestart(t *testing.T) {
 	query := func(Reminder) (QueryResult, error) { queries.Add(1); return QueryResult{Data: data}, nil }
 	send := func(Reminder, string) error { sends.Add(1); return errors.New("synthetic uncertain result") }
 	tick := func() {
-		if err := s.Tick(t.Context(), "task", now, query, send, Game{ID: "zzz"}); err != nil {
+		if err := s.Tick("task", now, query, send, Game{ID: "zzz"}); err != nil {
 			t.Error(err)
 		}
 	}

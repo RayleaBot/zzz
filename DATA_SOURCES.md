@@ -1,24 +1,24 @@
 # 资料来源
 
-本插件的固定资料由 `game-plugin-kit/scripts/import-reference-data.py` 从已下载参考 JSON 转换，源提交记录在 `internal/assets/catalog.json`。转换保留角色、装备名称、属性、技能文字与材料，不包含素材图片；伤害与评分由打包的上游脚本计算，见下文。
+本插件的固定资料由 `scripts/import-reference-data.py` 从已下载参考 JSON 转换，源提交记录在 `internal/assets/catalog.json`。转换保留代理人、音擎与邦布的名称、稀有度、属性、特性、描述与基础属性，不包含素材图片；内置别名由 `scripts/import-aliases.py` 取自上游 `defSet/alias.yaml`。伤害与评分由打包的上游脚本计算，见下文。
 
 绝区零资料来自 ZZZ-Plugin dev，固定提交 fb66219cec0294e1834bacdf0033b2d43a9ccaf4；插件按 AGPL-3.0-only 分发，保留 LICENSES/ZZZ-Plugin-AGPL-3.0.txt。分发时同时提供此插件与实际构建依赖的对应源码。
 
 没有账号时的面板来自 [Enka.Network](https://github.com/EnkaNetwork/API-docs/blob/master/api.md)（ZZZ-Plugin 的默认 enkaApi），按响应 TTL 缓存，由打包的 ZZZ-Plugin `model/Enka/formater` 转为官方格式。`templates/panel-list/` 按 ZZZ-Plugin 的 `panel/list` 与 `panel/refresh` 改写（两页合为一个模板）。抽卡导入导出遵循 [UIGF](https://uigf.org/en/standards/uigf.html)，尚未申请兼容性认证。
 
-本插件及编译期业务库沿用 RayleaBot SDK 的 AGPL-3.0 许可，安装包管理页提供对应源码下载。上游数据的原许可声明另行保留。编译期业务库的娱乐抽卡模型源自 Miao-Yunzai 与 StarRail-plugin，随业务库编入本插件，因此一并保留 `LICENSES/Miao-Yunzai-GPL-3.0.txt` 与 `LICENSES/StarRail-plugin-Apache-2.0.txt`。
+本插件沿用 RayleaBot SDK 的 AGPL-3.0 许可，安装包管理页提供对应源码下载。上游数据的原许可声明另行保留。
 
 ## 装备评分
 
-评分运行 dev 提交 `fb66219cec0294e1834bacdf0033b2d43a9ccaf4` 的 `Score`（含预设权重与按属性选择的规则）、`lib/score` 与角色专属 `score.js`，驱动盘与整套评级沿用上游 `Equip` 与角色模型的评级阈值。`EquipScore.json`、`EquipMainStats.json` 与 `EquipBaseValue.json` 随 `data.js` 打包，`internal/assets/calc/scores/<ID>-<角色名>.js` 由相邻库的 `scripts/bundle-zzz-calculation.mjs` 从 `score.js` 生成；尚无伤害脚本的代理人也进入计算目录，只用于评分。回归向量在 `internal/assets/testdata/score-vectors.json`。评分不等于伤害计算或队伍收益。
+评分运行 dev 提交 `fb66219cec0294e1834bacdf0033b2d43a9ccaf4` 的 `Score`（含预设权重与按属性选择的规则）、`lib/score` 与角色专属 `score.js`，驱动盘与整套评级沿用上游 `Equip` 与角色模型的评级阈值。`EquipScore.json`、`EquipMainStats.json` 与 `EquipBaseValue.json` 随 `data.js` 打包，`internal/assets/calc/scores/<ID>-<角色名>.js` 由 `scripts/bundle-reference-calculation.mjs` 从 `score.js` 生成；尚无伤害脚本的代理人也进入计算目录，只用于评分。回归向量在 `internal/assets/testdata/score-vectors.json`。评分不等于伤害计算或队伍收益。
 
 ## 自动参考计算
 
-`internal/assets/calc/` 保存完整的绝区零计算运行时：`data.js`（上游 ID 映射）、`common.js`（Calculator 与 BuffManager）、`buffs.js`（音擎与驱动盘效果）、手写的 `bootstrap.js` 与 `runner.js`，以及角色脚本 `characters/<ID>-<角色名>.js`。除手写的两个文件外均由相邻库的 `scripts/bundle-zzz-calculation.mjs` 从 ZZZ-Plugin dev 固定快照生成。这些文件只编入本插件。
+`internal/assets/calc/` 保存完整的绝区零计算运行时：`data.js`（上游 ID 映射）、`common.js`（Calculator 与 BuffManager）、`buffs.js`（音擎与驱动盘效果）、手写的 `bootstrap.js` 与 `runner.js`，以及角色脚本 `characters/<ID>-<角色名>.js`。除手写的两个文件外均由 `scripts/bundle-reference-calculation.mjs` 从 ZZZ-Plugin dev 固定快照生成。`scripts/generate-reference-build-vectors.mjs` 以合成代理人对照打包后的计算与上游流程，结果写入 `internal/assets/testdata/calc-vectors.json`。
 
-## 模拟与固定资料
+## 卡池资料
 
-绝区零卡池历史与 ZZZ-Plugin 一样运行时读取 [GachaClock](https://github.com/iaoongin/GachaClock) 的 `spider/data/zzz/history.json`（缓存六小时，读取失败时沿用上次结果），读不到时使用随插件的[固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746)快照，保留 `LICENSES/GachaClock-MIT.txt`。缺少起点的卡池按参考规则推算并标记；2026-09-22 时上游数据的末期结束日仍为 2026-05-05。仅转换文字和日期，没有下载或分发关联图片。原神/星铁仍使用 miao 同一固定快照的数据。
+绝区零卡池历史与 ZZZ-Plugin 一样运行时读取 [GachaClock](https://github.com/iaoongin/GachaClock) 的 `spider/data/zzz/history.json`（缓存六小时，读取失败时沿用上次结果），读不到时使用随插件的[固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746)快照（由 `scripts/import-banner-data.py` 转换），保留 `LICENSES/GachaClock-MIT.txt`。缺少起点的卡池按参考规则推算并标记；2026-09-22 时上游数据的末期结束日仍为 2026-05-05。仅转换文字和日期，没有下载或分发关联图片。
 
 ## 计算脚本的兼容修正
 
@@ -34,9 +34,7 @@
 
 非伤害的能量、失衡、防护、积蓄与持续时间保留完整说明；比格气缸附加伤害只显示描述可确定的防御倍率基础值，未指定的元素不作猜测。血髓秘匣读取截断前暴击率后再计算增伤上限；元素、职业和技能限定保留，未来异常类型不冒充已有异常。
 
-自定义条件只修改候选情境，基准不变。队友由用户选择并填写实际增益，不自动假定角色等级或装备；原神/星铁按原乘区应用，绝区零的百分比基础属性用明确函数转换，避免把 100% 当固定一点。局内来源开关保留静态面板，绝区零保留驱动盘主属性及两件常驻属性。无额外条件的旧参考向量保持一致。
-
-官方面板导出复用突破匹配，仅在内部 `resolve_identity` 输入时返回匹配出的角色/武器突破；普通试算输出保持一致。星铁 HP/攻击/防御词条的两组编号按明确的百分号单位区分百分比与固定值，兼容参考和实际接口编号族。交换格式中的强化档位按官方显示值和次数近似还原，不声明为真实升级顺序。
+自定义条件只修改候选情境，基准不变。队友由用户选择并填写实际增益，不自动假定角色等级或装备；百分比基础属性用明确函数转换，避免把 100% 当固定一点。局内来源开关保留静态面板、驱动盘主属性及两件常驻属性。无额外条件的旧参考向量保持一致。
 
 ## 图片模板
 

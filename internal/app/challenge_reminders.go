@@ -5,11 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func nextChallengeCheck(now int64, hour, minute, weekday int) int64 {
@@ -30,12 +31,12 @@ func challengeUnstarted(data map[string]any) bool {
 	return false
 }
 
-func challengeTarget(kind ChallengeKind, metric string, threshold float64, data map[string]any, game string) (float64, bool, bool, error) {
+func challengeTarget(kind ChallengeKind, metric string, threshold float64, data map[string]any) (float64, bool, bool, error) {
 	index := slices.IndexFunc(kind.Metrics, func(m ChallengeMetric) bool { return m.Key == metric })
 	if index < 0 {
 		return 0, false, false, gameError("input_invalid", "挑战指标不存在。")
 	}
-	entry, err := challengeExtract(game, kind, data, 1)
+	entry, err := challengeExtract(kind, data)
 	if err != nil {
 		return 0, false, false, err
 	}
@@ -72,7 +73,7 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 	if decodeObject(input, &q) != nil || q.Threshold == nil || !finiteRange(*q.Threshold, 0, 1e14) {
 		return nil, gameError("input_invalid", "请提供明确的挑战指标和阈值。")
 	}
-	kind, ok := challengeKind(a.Game.ID, q.Kind)
+	kind, ok := challengeKind(q.Kind)
 	if !ok || !slices.ContainsFunc(kind.Metrics, func(m ChallengeMetric) bool { return m.Key == q.Metric }) {
 		return nil, gameError("input_invalid", "挑战玩法或指标不存在。")
 	}
@@ -85,7 +86,7 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 		if challengeUnstarted(result.Data) {
 			return map[string]any{"state": "not_started", "known": true, "met": false, "value": nil, "role": result.Role}, nil
 		}
-		value, met, known, err := challengeTarget(kind, q.Metric, *q.Threshold, result.Data, a.Game.ID)
+		value, met, known, err := challengeTarget(kind, q.Metric, *q.Threshold, result.Data)
 		return map[string]any{"value": value, "met": met, "known": known, "role": result.Role}, err
 	}
 	if action != "challenge.reminder.create" || !q.Confirm || q.Days < 1 || q.Days > 90 || q.Hour < 0 || q.Hour > 23 || q.Minute < 0 || q.Minute > 59 || q.Weekday < 0 || q.Weekday > 7 {
@@ -147,7 +148,7 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 	return map[string]any{"task": task}, nil
 }
 func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Reminder) (QueryResult, error), send func(Reminder, string) error, game Game) error {
-	kind, ok := challengeKind(game.ID, task.ChallengeKind)
+	kind, ok := challengeKind(task.ChallengeKind)
 	if !ok {
 		task.Enabled = false
 		task.LastCode = "plugin.game_input_invalid"
@@ -166,7 +167,7 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 		}
 		return s.save(*task)
 	}
-	value, met, known, err := challengeTarget(kind, task.Metric, task.Threshold, result.Data, game.ID)
+	value, met, known, err := challengeTarget(kind, task.Metric, task.Threshold, result.Data)
 	if challengeUnstarted(result.Data) {
 		err = nil
 		known = true

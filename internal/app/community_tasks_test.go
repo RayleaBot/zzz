@@ -38,7 +38,7 @@ func TestCommunityPlanRespectsSelectedActionsAndStopsOnce(t *testing.T) {
 	sent := 0
 	send := func(Reminder, string) error { sent++; return nil }
 	for range 20 {
-		if err := store.Tick(t.Context(), task.Ref, now, query, send, Game{ID: "genshin"}); err != nil {
+		if err := store.Tick(task.Ref, now, query, send, Game{ID: "zzz"}); err != nil {
 			t.Fatal(err)
 		}
 		now += int64(time.Minute / time.Millisecond)
@@ -56,7 +56,7 @@ func TestCommunityPlanRespectsSelectedActionsAndStopsOnce(t *testing.T) {
 	}
 	store = &ReminderStore{taskFiles[Reminder]{Directory: store.Directory}}
 	before := len(actions)
-	_ = store.Tick(t.Context(), task.Ref, now, query, send, Game{ID: "genshin"})
+	_ = store.Tick(task.Ref, now, query, send, Game{ID: "zzz"})
 	if len(actions) != before {
 		t.Fatal("completed once task replayed after restart")
 	}
@@ -67,7 +67,12 @@ func TestCommunityUncertainWriteIsNotReplayedAfterCrash(t *testing.T) {
 	task := Reminder{Ref: "community", Kind: "community", Once: true, Enabled: true, ExpiresAtMS: now + 100000, Community: CommunityPlan{State: "running", Steps: []CommunityStep{{Action: "sign"}}, Cursor: 1, Pending: true}}
 	_ = seedReminders(store, []Reminder{task})
 	queries := 0
-	_ = store.Tick(t.Context(), task.Ref, now, func(Reminder) (QueryResult, error) { queries++; return QueryResult{}, nil }, func(Reminder, string) error { return nil }, Game{ID: "genshin"})
+	_ = store.Tick(task.Ref, now, func(Reminder) (QueryResult, error) {
+		queries++
+		return QueryResult{}, nil
+	}, func(Reminder, string) error {
+		return nil
+	}, Game{ID: "zzz"})
 	items, _ := store.List()
 	if queries != 0 || items[0].Enabled || items[0].LastCode != "step_outcome_unknown" {
 		t.Fatal(queries, items)

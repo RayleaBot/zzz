@@ -52,11 +52,11 @@ type History struct {
 	Analytics  Analytics       `json:"analytics"`
 }
 
-func (f HistoryFilter) Validate(game string) error {
+func (f HistoryFilter) Validate() error {
 	if f.Offset < 0 || f.Offset > 200000 || f.Limit < 0 || f.Limit > 100 || len(f.Query) > 128 || !slices.Contains([]string{"", "unknown", "2", "3", "4", "5"}, f.Rank) {
 		return ErrInvalid
 	}
-	if f.Pool != "" && !slices.Contains(pools[game], f.Pool) {
+	if f.Pool != "" && !slices.Contains(pools, f.Pool) {
 		return ErrInvalid
 	}
 	for _, date := range []string{f.From, f.To} {
@@ -74,12 +74,12 @@ func (f HistoryFilter) Validate(game string) error {
 	}
 	return nil
 }
-func Browse(game string, archive Archive, f HistoryFilter) (History, error) {
+func Browse(archive Archive, f HistoryFilter) (History, error) {
 	out := History{Records: []HistoryRecord{}, Revision: strconv.FormatInt(archive.Revision, 10), Analytics: Analytics{Ranks: map[string]int{}, Months: []MonthCount{}, Items: []ItemCount{}}}
-	if err := f.Validate(game); err != nil {
+	if err := f.Validate(); err != nil {
 		return out, err
 	}
-	if err := Validate(game, archive); err != nil {
+	if err := Validate(archive); err != nil {
 		return out, err
 	}
 	if f.Revision != "" && f.Revision != out.Revision {
@@ -89,21 +89,18 @@ func Browse(game string, archive Archive, f HistoryFilter) (History, error) {
 		f.Limit = 50
 	}
 	intervals := map[string]Rare{}
-	for _, pool := range Summarize(game, archive) {
+	for _, pool := range Summarize(archive) {
 		for _, rare := range pool.Rare {
 			intervals[pool.Pool+":"+rare.ID] = rare
 		}
 	}
-	highest := "5"
-	if game == "zzz" {
-		highest = "4"
-	}
+	highest := "4"
 	months := map[string]*MonthCount{}
 	items := map[string]*ItemCount{}
 	filtered := []HistoryRecord{}
 	totalInterval, top := 0, 0
 	for _, record := range archive.Records {
-		if f.Pool != "" && Pool(game, f.Pool) != Pool(game, record.GachaType) {
+		if f.Pool != "" && f.Pool != record.GachaType {
 			continue
 		}
 		rank := record.Rank
@@ -121,7 +118,7 @@ func Browse(game string, archive Archive, f HistoryFilter) (History, error) {
 			continue
 		}
 		item := HistoryRecord{Record: record}
-		if rare, ok := intervals[Pool(game, record.GachaType)+":"+record.ID]; ok {
+		if rare, ok := intervals[record.GachaType+":"+record.ID]; ok {
 			item.Interval = &rare
 			if !rare.LowerBound && !rare.Uncertain {
 				totalInterval += rare.Pulls

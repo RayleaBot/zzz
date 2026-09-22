@@ -40,15 +40,11 @@ type GroupConfig struct {
 	Aliases      map[string]string `json:"aliases"`
 }
 type GroupData struct {
-	Cards      []RoleCardOffer  `json:"cards,omitempty"`
-	Challenges []ChallengeEntry `json:"challenges,omitempty"`
-	Revision   uint64           `json:"revision"`
-	Scope      GroupScope       `json:"scope"`
-	Config     GroupConfig      `json:"config"`
-	Rank       []RankEntry      `json:"rank"`
-	// RankOff closes the panel ranking to queries (panels are still
-	// recorded, as upstream); RankSinceMS is when the ranking started.
-	RankOff     bool  `json:"rank_off,omitempty"`
+	Revision uint64      `json:"revision"`
+	Scope    GroupScope  `json:"scope"`
+	Config   GroupConfig `json:"config"`
+	Rank     []RankEntry `json:"rank"`
+	// RankSinceMS is when the ranking started.
 	RankSinceMS int64 `json:"rank_since_ms,omitempty"`
 	// QueryRanks are the UIDs in each query ranking, by ranking ID and UID.
 	QueryRanks map[string]map[string]QueryRankMember `json:"query_ranks,omitempty"`
@@ -153,7 +149,7 @@ func (s *GroupStore) List(page int) ([]map[string]any, *int, error) {
 		if err := localdata.Read(filepath.Join(s.Directory, f.Name()), &data); err != nil {
 			return nil, nil, err
 		}
-		out = append(out, map[string]any{"scope": data.Scope, "config": data.Config, "rank_entries": len(data.Rank), "challenge_entries": len(data.Challenges), "revision": data.Revision})
+		out = append(out, map[string]any{"scope": data.Scope, "config": data.Config, "rank_entries": len(data.Rank), "revision": data.Revision})
 	}
 	return out, nil, nil
 }
@@ -308,7 +304,6 @@ func (a *App) manageGroups(action string, input map[string]any) (map[string]any,
 			d.Config = GroupConfig{Aliases: map[string]string{}}
 			d.Rank = []RankEntry{}
 			d.QueryRanks = nil
-			d.Challenges = nil
 			return nil
 		})
 		return map[string]any{"updated": err == nil}, err

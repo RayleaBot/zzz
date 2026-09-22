@@ -50,7 +50,7 @@ func Parse(ctx context.Context, game app.Game, catalog app.Catalog, raw []byte) 
 	if err != nil || json.Unmarshal(converted, &data) != nil {
 		return profile, &app.ShowcaseFailure{Status: 200}
 	}
-	panels := app.NormalizePanels(game.ID, app.QueryResult{Data: data}, catalog)
+	panels := app.NormalizePanels(app.QueryResult{Data: data}, catalog)
 	for index := range panels {
 		panels[index].Source = "enka"
 	}

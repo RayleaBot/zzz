@@ -79,7 +79,7 @@ func (s *Store) importVersion(incoming Archive, version *uint64) (Archive, int, 
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return Archive{}, 0, err
 	}
-	merged, added, err := Merge(s.Game, existing, incoming)
+	merged, added, err := Merge(existing, incoming)
 	if err != nil {
 		return Archive{}, 0, err
 	}

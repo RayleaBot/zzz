@@ -2,14 +2,15 @@ package app
 
 import (
 	"errors"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 	"os"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
+	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 )
 
 func TestReminderPersistsAdmissionAndThresholdRearming(t *testing.T) {
@@ -23,12 +24,12 @@ func TestReminderPersistsAdmissionAndThresholdRearming(t *testing.T) {
 	current := 180.0
 	query := func(Reminder) (QueryResult, error) {
 		checks.Add(1)
-		return QueryResult{Data: map[string]any{"current_resin": current, "max_resin": 200}}, nil
+		return QueryResult{Data: map[string]any{"energy": map[string]any{"progress": map[string]any{"current": current, "max": 200}}}}, nil
 	}
 	send := func(Reminder, string) error { sent.Add(1); return nil }
 	tick := func(at int64) {
 		t.Helper()
-		if err := store.Tick(t.Context(), "task", at, query, send, Game{ID: "genshin"}); err != nil {
+		if err := store.Tick("task", at, query, send, Game{ID: "zzz"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -68,7 +69,7 @@ func TestReminderVerificationBackoffAndFailedSendNotRepeated(t *testing.T) {
 	query := func(Reminder) (QueryResult, error) {
 		return QueryResult{}, &rayleabot.ActionError{Code: "plugin.upstream_device_required"}
 	}
-	if err := store.Tick(t.Context(), "task", now, query, send, Game{ID: "zzz"}); err != nil {
+	if err := store.Tick("task", now, query, send, Game{ID: "zzz"}); err != nil {
 		t.Fatal(err)
 	}
 	items, _ := store.List()
@@ -78,12 +79,12 @@ func TestReminderVerificationBackoffAndFailedSendNotRepeated(t *testing.T) {
 	query = func(Reminder) (QueryResult, error) {
 		return QueryResult{Data: map[string]any{"energy": map[string]any{"progress": map[string]any{"current": 240, "max": 240}}}}, nil
 	}
-	_ = store.Tick(t.Context(), "task", items[0].NextCheckMS, query, send, Game{ID: "zzz"})
+	_ = store.Tick("task", items[0].NextCheckMS, query, send, Game{ID: "zzz"})
 	items, _ = store.List()
 	if items[0].LastCode != "notification_failed" || items[0].Armed {
 		t.Fatal(items)
 	}
-	_ = store.Tick(t.Context(), "task", items[0].NextCheckMS, query, send, Game{ID: "zzz"})
+	_ = store.Tick("task", items[0].NextCheckMS, query, send, Game{ID: "zzz"})
 	if sent != 1 {
 		t.Fatal("ambiguous send retried")
 	}

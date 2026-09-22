@@ -1,8 +1,9 @@
 package app
 
 import (
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"testing"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func TestGroupSettingsDoNotChangeGlobalOrOtherBots(t *testing.T) {

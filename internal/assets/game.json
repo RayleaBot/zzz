@@ -114,7 +114,6 @@
     }
   ],
   "panels": {
-    "refresh_with_account": true,
     "cooldown": 300,
     "replies": {
       "cooldown": "{seconds}秒内只能更新一次，请稍后再试",

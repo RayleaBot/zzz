@@ -86,14 +86,8 @@ func extractPublicActs(value any) []string {
 	}
 	return out
 }
-func (c PublicContentClient) codes(ctx context.Context, game string) (map[string]any, error) {
-	gid, author := "2", "75276539"
-	if game == "starrail" {
-		gid, author = "6", "80823548"
-	}
-	if game == "zzz" {
-		gid, author = "8", "152039148"
-	}
+func (c PublicContentClient) codes(ctx context.Context) (map[string]any, error) {
+	gid, author := "8", "152039148"
 	nav, err := c.get(ctx, "https://bbs-api.miyoushe.com/apihub/api/home/new?gids="+gid+"&parts=1%2C3%2C4", nil)
 	if err != nil {
 		return nil, err
@@ -149,13 +143,7 @@ func (c PublicContentClient) codes(ctx context.Context, game string) (map[string
 				row["expires_at"] = calendarTime(expires)
 			} else if stamp, ok := challengeNumber(v["to_get_time"]); ok && stamp > 1000000000 {
 				date := time.Unix(int64(stamp), 0).In(time.FixedZone("UTC+8", 28800))
-				days, hour := 3, 12
-				if game == "starrail" {
-					days, hour = 1, 23
-				}
-				if game == "zzz" {
-					days, hour = 2, 23
-				}
+				days, hour := 2, 23
 				date = date.AddDate(0, 0, days)
 				minute, second := 0, 0
 				if hour == 23 {

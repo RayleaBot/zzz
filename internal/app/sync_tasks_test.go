@@ -19,8 +19,8 @@ func syncTaskFixture(t *testing.T, kind string) (*SyncTaskStore, *gacha.Syncs, *
 	now := time.Date(2026, 9, 20, 8, 0, 0, 0, time.FixedZone("CN", 28800)).UnixMilli()
 	s := syncTaskStore(dir)
 	jobs := &gacha.Syncs{}
-	archive := &gacha.Store{Directory: filepath.Join(dir, "gacha"), Game: "genshin"}
-	task := SyncTask{Ref: "game.sync.fixture", Selection: Selection{"account", "role"}, Provider: "provider", Role: Role{Ref: "role", Game: "genshin", UID: "100000001", Region: "cn_gf01"}, Kind: kind, Hour: 8, State: "waiting", ExpiresAtMS: now + 30*86400000, DelegationRef: "grant", Owner: Subject{ActorID: "owner"}}
+	archive := &gacha.Store{Directory: filepath.Join(dir, "gacha"), Game: "zzz"}
+	task := SyncTask{Ref: "game.sync.fixture", Selection: Selection{"account", "role"}, Provider: "provider", Role: Role{Ref: "role", Game: "zzz", UID: "100000001", Region: "prod_gf_cn"}, Kind: kind, Hour: 8, State: "waiting", ExpiresAtMS: now + 30*86400000, DelegationRef: "grant", Owner: Subject{ActorID: "owner"}}
 	if err := seedSyncTasks(s, task); err != nil {
 		t.Fatal(err)
 	}
@@ -28,8 +28,8 @@ func syncTaskFixture(t *testing.T, kind string) (*SyncTaskStore, *gacha.Syncs, *
 }
 func syncPage(_ context.Context, _ SyncTask, pool, end string, page int) (gacha.RemotePage, error) {
 	p := gacha.RemotePage{Records: []gacha.Record{}, Timezone: 8, Language: "zh-cn", NextID: end}
-	if pool == "100" {
-		p.Records = []gacha.Record{{ID: "100", ItemID: "1001", GachaType: "100", UIGFType: "100", Time: "2026-09-01 08:00:00", Rank: "5"}}
+	if pool == "1001" {
+		p.Records = []gacha.Record{{ID: "100", ItemID: "1001", GachaType: "1", UIGFType: "1", Time: "2026-09-01 08:00:00", Rank: "5"}}
 		p.NextID = "100"
 	}
 	return p, nil
@@ -156,7 +156,7 @@ func TestBackgroundSyncFailuresExpiryAndMergeConflict(t *testing.T) {
 			}
 			if mode == "conflict" {
 				task = tickOne(t, s, j, a, task, now, syncPage, nil)
-				_, _, err := a.Import(gacha.Archive{UID: task.Role.UID, Region: task.Role.Region, Timezone: 8, Language: "zh-cn", Records: []gacha.Record{{ID: "99", ItemID: "1002", GachaType: "100", UIGFType: "100", Time: "2026-09-01 07:00:00", Rank: "3"}}})
+				_, _, err := a.Import(gacha.Archive{UID: task.Role.UID, Region: task.Role.Region, Timezone: 8, Language: "zh-cn", Records: []gacha.Record{{ID: "99", ItemID: "1002", GachaType: "1", UIGFType: "1", Time: "2026-09-01 07:00:00", Rank: "3"}}})
 				if err != nil {
 					t.Fatal(err)
 				}

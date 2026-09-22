@@ -41,10 +41,7 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 		if role.Ref == "" {
 			return nil, gameError("role_missing", "请选择已授权的游戏角色。")
 		}
-		if a.Game.ID == "starrail" && !overseasGameRegion(a.Game.ID, role.Region) {
-			return nil, gameError("sync_unavailable", "星铁国服完整记录同步暂不可用，请导入 UIGF 或 SRGF 文件。")
-		}
-		if !syncRegionAllowed(a.Game.ID, role.Region) {
+		if !syncRegionAllowed(role.Region) {
 			return nil, gameError("region_unsupported", "此区服暂未适配官方同步。")
 		}
 		full, ok := input["full"].(bool)
@@ -69,7 +66,7 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 			if err != nil {
 				return gacha.RemotePage{}, err
 			}
-			return gacha.ParsePage(a.Game.ID, response.Role.UID, response.Role.Region, pool, endID, response.Data)
+			return gacha.ParsePage(response.Role.UID, response.Role.Region, pool, endID, response.Data)
 		})
 		return map[string]any{"sync": info}, err
 	case "gacha.sync.cancel":

@@ -7,21 +7,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
+	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 )
 
 type MonthlySnapshot struct {
-	Month         string          `json:"month"`
-	YearEstimated bool            `json:"year_estimated"`
-	SavedMS       int64           `json:"saved_ms"`
-	Data          json.RawMessage `json:"data"`
+	Month   string          `json:"month"`
+	SavedMS int64           `json:"saved_ms"`
+	Data    json.RawMessage `json:"data"`
 }
 type MonthlyArchive struct {
 	Revision uint64            `json:"revision"`
@@ -61,21 +61,13 @@ func (s *MonthlyStore) Update(provider string, choice Selection, revision uint64
 	out.Revision++
 	return localdata.Write(file, out)
 }
-func monthlyKey(game string, data map[string]any, now time.Time) (string, bool, error) {
+func monthlyKey(data map[string]any) (string, error) {
 	raw := asText(data["data_month"])
 	month, err := strconv.Atoi(raw)
 	if err == nil && month >= 202001 && month <= 210012 && month%100 >= 1 && month%100 <= 12 {
-		return fmt.Sprintf("%04d-%02d", month/100, month%100), false, nil
+		return fmt.Sprintf("%04d-%02d", month/100, month%100), nil
 	}
-	if game == "genshin" && err == nil && month >= 1 && month <= 12 {
-		china := now.In(time.FixedZone("UTC+8", 28800))
-		year := china.Year()
-		if month > int(china.Month()) {
-			year--
-		}
-		return fmt.Sprintf("%04d-%02d", year, month), true, nil
-	}
-	return "", false, gameError("monthly_invalid", "官方月报未提供可辨识的月份，未保存。")
+	return "", gameError("monthly_invalid", "官方月报未提供可辨识的月份，未保存。")
 }
 func decodeMonthly(raw json.RawMessage) (map[string]any, error) {
 	var data map[string]any
@@ -84,31 +76,19 @@ func decodeMonthly(raw json.RawMessage) (map[string]any, error) {
 	err := decoder.Decode(&data)
 	return data, err
 }
-func monthlyAmounts(game string, data map[string]any) map[string]float64 {
+func monthlyAmounts(data map[string]any) map[string]float64 {
 	out := map[string]float64{}
-	keys := map[string]string{"current_primogems": "原石", "current_mora": "摩拉"}
-	if game == "starrail" {
-		keys = map[string]string{"current_hcoin": "星琼", "current_rails_pass": "星轨专票", "current_money": "信用点"}
-	}
 	month := asObject(data["month_data"])
-	if game == "zzz" {
-		for _, raw := range asList(month["list"]) {
-			item := asObject(raw)
-			label := map[string]string{"PolychromesData": "菲林", "MatserTapeData": "母带", "BooponsData": "邦布券"}[asText(item["data_type"])]
-			if v, ok := challengeNumber(item["count"]); ok && label != "" {
-				out[label] = v
-			}
-		}
-		return out
-	}
-	for key, label := range keys {
-		if v, ok := challengeNumber(month[key]); ok {
+	for _, raw := range asList(month["list"]) {
+		item := asObject(raw)
+		label := map[string]string{"PolychromesData": "菲林", "MatserTapeData": "母带", "BooponsData": "邦布券"}[asText(item["data_type"])]
+		if v, ok := challengeNumber(item["count"]); ok && label != "" {
 			out[label] = v
 		}
 	}
 	return out
 }
-func monthlySummaries(game string, archive MonthlyArchive) map[string]any {
+func monthlySummaries(archive MonthlyArchive) map[string]any {
 	items := []map[string]any{}
 	totals := map[string]float64{}
 	coverage := map[string]int{}
@@ -118,12 +98,12 @@ func monthlySummaries(game string, archive MonthlyArchive) map[string]any {
 		if err != nil {
 			continue
 		}
-		amounts := monthlyAmounts(game, data)
+		amounts := monthlyAmounts(data)
 		for k, n := range amounts {
 			totals[k] += n
 			coverage[k]++
 		}
-		items = append(items, map[string]any{"month": v.Month, "year_estimated": v.YearEstimated, "saved_ms": v.SavedMS, "amounts": amounts})
+		items = append(items, map[string]any{"month": v.Month, "saved_ms": v.SavedMS, "amounts": amounts})
 	}
 	return map[string]any{"items": items, "totals": totals, "coverage": coverage, "revision": archive.Revision}
 }
@@ -145,7 +125,7 @@ func (a *App) monthlyAction(ctx context.Context, client AccountsClient, action s
 		return nil, err
 	}
 	if action == "monthly.list" {
-		return monthlySummaries(a.Game.ID, archive), nil
+		return monthlySummaries(archive), nil
 	}
 	if action == "monthly.fetch" {
 		args := map[string]any{}
@@ -156,14 +136,14 @@ func (a *App) monthlyAction(ctx context.Context, client AccountsClient, action s
 		if err != nil {
 			return nil, err
 		}
-		key, err := a.Monthly.Save(client.Provider, choice, archive.Revision, a.Game.ID, result.Data, time.Now())
+		key, err := a.Monthly.Save(client.Provider, choice, archive.Revision, result.Data, time.Now())
 		if err != nil {
 			return nil, err
 		}
 		available := []string{}
 		for _, value := range asList(result.Data["optional_month"]) {
 			month, err := strconv.Atoi(asText(value))
-			if err == nil && (a.Game.ID == "genshin" && month >= 1 && month <= 12 || a.Game.ID != "genshin" && month >= 202001 && month <= 210012 && month%100 >= 1 && month%100 <= 12) {
+			if err == nil && (month >= 202001 && month <= 210012 && month%100 >= 1 && month%100 <= 12) {
 				available = append(available, strconv.Itoa(month))
 			}
 		}
@@ -280,7 +260,7 @@ func (a *App) refreshMonthly(ctx context.Context, client AccountsClient, choice 
 		return err
 	}
 	now := time.Now()
-	if _, err := a.Monthly.Keep(client.Provider, choice, a.Game.ID, current.Data, now); err != nil {
+	if err := a.Monthly.Keep(client.Provider, choice, current.Data, now); err != nil {
 		return err
 	}
 	archive, err := a.Monthly.Read(client.Provider, choice)
@@ -292,7 +272,7 @@ func (a *App) refreshMonthly(ctx context.Context, client AccountsClient, choice 
 		if month == asText(current.Data["data_month"]) {
 			continue
 		}
-		key, _, err := monthlyKey(a.Game.ID, map[string]any{"data_month": month}, now)
+		key, err := monthlyKey(map[string]any{"data_month": month})
 		if err != nil || monthlyFinal(archive, key) {
 			continue
 		}
@@ -300,7 +280,7 @@ func (a *App) refreshMonthly(ctx context.Context, client AccountsClient, choice 
 		if err != nil {
 			continue
 		}
-		_, _ = a.Monthly.Keep(client.Provider, choice, a.Game.ID, result.Data, now)
+		_ = a.Monthly.Keep(client.Provider, choice, result.Data, now)
 	}
 	return nil
 }
@@ -318,19 +298,20 @@ func monthlyFinal(archive MonthlyArchive, key string) bool {
 
 // Keep saves a month over whatever archive is current, for reads the user did
 // not start from the archive page.
-func (s *MonthlyStore) Keep(provider string, choice Selection, game string, data map[string]any, now time.Time) (string, error) {
+func (s *MonthlyStore) Keep(provider string, choice Selection, data map[string]any, now time.Time) error {
 	archive, err := s.Read(provider, choice)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return s.Save(provider, choice, archive.Revision, game, data, now)
+	_, err = s.Save(provider, choice, archive.Revision, data, now)
+	return err
 }
 
-func (s *MonthlyStore) Save(provider string, choice Selection, revision uint64, game string, data map[string]any, now time.Time) (string, error) {
+func (s *MonthlyStore) Save(provider string, choice Selection, revision uint64, data map[string]any, now time.Time) (string, error) {
 	if asObject(data["month_data"]) == nil {
 		return "", gameError("monthly_invalid", "官方月报没有月度内容，未保存。")
 	}
-	key, estimated, err := monthlyKey(game, data, now)
+	key, err := monthlyKey(data)
 	if err != nil {
 		return "", err
 	}
@@ -338,7 +319,7 @@ func (s *MonthlyStore) Save(provider string, choice Selection, revision uint64, 
 	if err != nil || len(raw) > 64*1024 {
 		return "", gameError("history_limit", "单月月报超出保存上限。")
 	}
-	snapshot := MonthlySnapshot{key, estimated, now.UnixMilli(), raw}
+	snapshot := MonthlySnapshot{key, now.UnixMilli(), raw}
 	err = s.Update(provider, choice, revision, func(v *MonthlyArchive) error {
 		i := slices.IndexFunc(v.Items, func(item MonthlySnapshot) bool { return item.Month == key })
 		if i >= 0 {

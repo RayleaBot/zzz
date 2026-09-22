@@ -2,11 +2,12 @@ package app
 
 import (
 	"crypto/rand"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 )
 
 type BuildConditions struct {
@@ -29,18 +30,9 @@ type BuildConditionField struct {
 	Max   float64 `json:"max"`
 }
 
-func conditionFields(game string) []BuildConditionField {
+func conditionFields() []BuildConditionField {
 	fields := []BuildConditionField{{"atkPct", "攻击力百分比", "%", 1000}, {"atkPlus", "固定攻击力", "点", 100000}, {"hpPct", "生命值百分比", "%", 1000}, {"hpPlus", "固定生命值", "点", 100000}, {"defPct", "防御力百分比", "%", 1000}, {"defPlus", "固定防御力", "点", 100000}, {"cpct", "暴击率", "%", 100}, {"cdmg", "暴击伤害", "%", 500}, {"dmg", "伤害加成", "%", 500}, {"enemyDmg", "目标受到伤害增加", "%", 100}, {"ignore", "无视防御", "%", 100}, {"resistance", "抗性降低/穿透", "%", 100}}
-	if game == "zzz" {
-		return append(fields, BuildConditionField{"proficiency", "异常精通", "点", 1000}, BuildConditionField{"anomaly", "异常增伤", "%", 200}, BuildConditionField{"sheer", "贯穿增伤", "%", 200}, BuildConditionField{"impact", "固定冲击力", "点", 1000}, BuildConditionField{"stun", "失衡易伤增量", "%", 400})
-	}
-	fields = append(fields, BuildConditionField{"enemyDef", "降低防御", "%", 100}, BuildConditionField{"recharge", "充能效率", "%", 500}, BuildConditionField{"aDmg", "普攻增伤", "%", 500}, BuildConditionField{"eDmg", "战技增伤", "%", 500}, BuildConditionField{"qDmg", "终结技/爆发增伤", "%", 500})
-	if game == "genshin" {
-		fields = append(fields, BuildConditionField{"mastery", "元素精通", "点", 5000})
-	} else {
-		fields = append(fields, BuildConditionField{"speed", "固定速度", "点", 500}, BuildConditionField{"stance", "击破特攻", "%", 500}, BuildConditionField{"dotDmg", "持续伤害增伤", "%", 500})
-	}
-	return fields
+	return append(fields, BuildConditionField{"proficiency", "异常精通", "点", 1000}, BuildConditionField{"anomaly", "异常增伤", "%", 200}, BuildConditionField{"sheer", "贯穿增伤", "%", 200}, BuildConditionField{"impact", "固定冲击力", "点", 1000}, BuildConditionField{"stun", "失衡易伤增量", "%", 400})
 }
 func (a *App) validateConditions(characterID string, value any) (*BuildConditions, error) {
 	var raw map[string]any
@@ -77,15 +69,12 @@ func (a *App) validateConditions(characterID string, value any) (*BuildCondition
 	if c.EnemyResistance != nil && !finiteRange(*c.EnemyResistance, -100, 100) {
 		return nil, gameError("build_input_invalid", "敌人抗性应为 -100% 至 100%。")
 	}
-	maxTeam := 3
-	if a.Game.ID == "zzz" {
-		maxTeam = 2
-	}
+	maxTeam := 2
 	if len(c.Team) > maxTeam {
 		return nil, gameError("build_input_invalid", "队友数量超过游戏队伍上限。")
 	}
 	fields := map[string]BuildConditionField{}
-	for _, f := range conditionFields(a.Game.ID) {
+	for _, f := range conditionFields() {
 		fields[f.Key] = f
 	}
 	valid := func(values map[string]float64) bool {
@@ -137,7 +126,7 @@ func (s *BuildPresetStore) List() ([]BuildPreset, error) {
 }
 func (a *App) buildPresetAction(action string, input map[string]any) (map[string]any, error) {
 	if action == "build.conditions" {
-		return map[string]any{"fields": conditionFields(a.Game.ID)}, nil
+		return map[string]any{"fields": conditionFields()}, nil
 	}
 	s := a.BuildPresets
 	if action == "build.presets.list" {

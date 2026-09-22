@@ -5,11 +5,11 @@ import (
 	"embed"
 	"io/fs"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
 	plugin "github.com/RayleaBot/plugin-zzz"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 	"github.com/RayleaBot/plugin-zzz/internal/banners"
 	"github.com/RayleaBot/plugin-zzz/internal/images"
+	"github.com/RayleaBot/plugin-zzz/internal/reference"
 	"github.com/RayleaBot/plugin-zzz/internal/showcase"
 )
 

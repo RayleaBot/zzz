@@ -86,7 +86,7 @@ func (a *App) syncTaskAction(ctx context.Context, event *rayleabot.EventContext,
 			if role.UID != t.Role.UID || role.Region != t.Role.Region {
 				return gameError("role_missing", "账号角色已变更，请重新创建任务。")
 			}
-			if !syncRegionAllowed(a.Game.ID, role.Region) {
+			if !syncRegionAllowed(role.Region) {
 				return gameError("sync_unavailable", "此区服暂不可同步完整记录。")
 			}
 			a.Syncs.Forget(t.Progress.Ref)
@@ -117,10 +117,7 @@ func (a *App) syncTaskAction(ctx context.Context, event *rayleabot.EventContext,
 	if err != nil {
 		return nil, err
 	}
-	if a.Game.ID == "starrail" && !overseasGameRegion(a.Game.ID, role.Region) {
-		return nil, gameError("sync_unavailable", "星铁国服完整抽卡同步暂不可用，请导入 UIGF 或 SRGF。")
-	}
-	if !syncRegionAllowed(a.Game.ID, role.Region) {
+	if !syncRegionAllowed(role.Region) {
 		return nil, gameError("region_unsupported", "此区服暂未适配后台同步。")
 	}
 	task := SyncTask{Ref: syncTaskID(a.Game.ID, client.Provider, q.Selection), Selection: q.Selection, Owner: account.Owner, Role: role, Provider: client.Provider, Kind: q.Kind, Hour: q.Hour, Full: q.Full, Notify: q.Notify, State: "creating"}
@@ -190,7 +187,7 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 		if response.Role.UID != task.Role.UID || response.Role.Region != task.Role.Region || response.Role.Ref != task.Role.Ref {
 			return gacha.RemotePage{}, gacha.ErrInvalid
 		}
-		return gacha.ParsePage(a.Game.ID, response.Role.UID, response.Role.Region, pool, end, response.Data)
+		return gacha.ParsePage(response.Role.UID, response.Role.Region, pool, end, response.Data)
 	}, func(ctx context.Context, task SyncTask, text string) error {
 		if !slices.ContainsFunc(event.Bots, func(bot rayleabot.Bot) bool {
 			return bot.ID == task.Owner.BotID && bot.SourceProtocol == task.Owner.SourceProtocol && bot.SourceAdapter == task.Owner.SourceAdapter

@@ -103,7 +103,7 @@ func (a *App) contentAction(action string, input map[string]any) (map[string]any
 		return map[string]any{"job": job}, err
 	}
 	var q ContentQuery
-	if decodeObject(input, &q) != nil || action != "content.start" || !slices.Contains([]string{"stats", "estimate", "guides", "codes", "news", "search", "post", "calendar"}, q.Kind) {
+	if decodeObject(input, &q) != nil || action != "content.start" || !slices.Contains([]string{"estimate", "guides", "codes", "news", "search", "post", "calendar"}, q.Kind) {
 		return nil, gameError("operation_denied", "公开资料查询类型不存在。")
 	}
 	job, err := a.ContentJobs.Start(func(ctx context.Context) (map[string]any, error) { return a.fetchContent(ctx, q) })
@@ -114,17 +114,15 @@ func (a *App) contentAction(action string, input map[string]any) (map[string]any
 // within the event deadline; the management page runs it as a job.
 func (a *App) fetchContent(ctx context.Context, q ContentQuery) (map[string]any, error) {
 	switch q.Kind {
-	case "stats":
-		return a.publicStatistics(ctx, q)
 	case "estimate":
-		return a.Content.estimate(ctx, a.Game.ID)
+		return a.Content.estimate(ctx)
 	case "guides":
-		return a.Content.guides(ctx, a.Game.ID, q)
+		return a.Content.guides(ctx, q)
 	case "codes":
-		return a.Content.codes(ctx, a.Game.ID)
+		return a.Content.codes(ctx)
 	case "calendar":
-		return a.Content.calendar(ctx, a.Game.ID)
+		return a.Content.calendar(ctx)
 	default:
-		return a.Content.posts(ctx, a.Game.ID, q)
+		return a.Content.posts(ctx, q)
 	}
 }

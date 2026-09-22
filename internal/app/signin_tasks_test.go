@@ -21,7 +21,7 @@ func TestScheduledSignUsesChinaDayAndSurvivesRestart(t *testing.T) {
 	send := func(Reminder, string) error { notices.Add(1); return nil }
 	tick := func(at time.Time) {
 		t.Helper()
-		if err := s.Tick(t.Context(), "sign", at.UnixMilli(), query, send, Game{ID: "genshin"}); err != nil {
+		if err := s.Tick("sign", at.UnixMilli(), query, send, Game{ID: "zzz"}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -54,7 +54,7 @@ func TestScheduledSignFailureIsNotReplayedWithinDay(t *testing.T) {
 	}
 	send := func(Reminder, string) error { notices++; return nil }
 	for _, at := range []time.Time{now, now.Add(11 * time.Minute), now.Add(time.Hour)} {
-		if err := s.Tick(t.Context(), "sign", at.UnixMilli(), query, send, Game{ID: "genshin"}); err != nil {
+		if err := s.Tick("sign", at.UnixMilli(), query, send, Game{ID: "zzz"}); err != nil {
 			t.Fatal(err)
 		}
 	}

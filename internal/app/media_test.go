@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"image"
 	"image/color"
 	"image/png"
 	"path/filepath"
 	"testing"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func pngFixture(t *testing.T) []byte {

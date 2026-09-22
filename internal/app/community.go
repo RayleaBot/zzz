@@ -54,17 +54,8 @@ func (a *App) communityAction(ctx context.Context, client AccountsClient, action
 	case "cloudgame.sign":
 		operation = "cloud_sign"
 		write = true
-	case "cloudgame.rewards":
-		operation = "cloud_rewards"
-	case "cloudgame.claim":
-		operation = "cloud_claim"
-		write = true
-		params["reward_id"] = asText(input["reward_id"])
 	default:
 		return nil, gameError("operation_denied", "社区或云游戏操作不存在。")
-	}
-	if strings.HasPrefix(operation, "cloud_") && (a.Game.ID == "starrail" || a.Game.ID != "genshin" && strings.Contains(operation, "cloud_claim")) {
-		return nil, gameError("operation_denied", "当前参考未提供此游戏的云功能。")
 	}
 	if write && input["confirm"] != true {
 		return nil, gameError("input_invalid", "请明确确认本次社区或云游戏操作。")

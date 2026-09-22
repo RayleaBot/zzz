@@ -3,10 +3,11 @@ package app
 import (
 	"context"
 	"encoding/json"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"path/filepath"
 	"testing"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 type monthCaller struct {
@@ -32,12 +33,12 @@ func (c *monthCaller) CallService(_ context.Context, req rayleabot.ServiceCallRe
 	return gameError("operation_denied", "unexpected")
 }
 func TestMonthlyHistoryCoverageAndConcurrentChanges(t *testing.T) {
-	role := Role{Ref: "role", Game: "starrail", UID: "100000001", Region: "prod_gf_cn"}
-	caller := &monthCaller{role: role, data: map[string]any{"data_month": 202608, "month_data": map[string]any{"current_hcoin": 1000, "current_money": 0}, "optional_month": []any{202608, 202609}}}
-	client := AccountsClient{Caller: caller, Provider: "p", Game: "starrail"}
+	role := Role{Ref: "role", Game: "zzz", UID: "10000001", Region: "prod_gf_cn"}
+	caller := &monthCaller{role: role, data: map[string]any{"data_month": 202608, "month_data": map[string]any{"list": []any{map[string]any{"data_type": "PolychromesData", "count": 1000}, map[string]any{"data_type": "MatserTapeData", "count": 0}}}, "optional_month": []any{202608, 202609}}}
+	client := AccountsClient{Caller: caller, Provider: "p", Game: "zzz"}
 	choice := Selection{"account", "role"}
 	input := map[string]any{"account_ref": "account", "role_ref": "role"}
-	a := App{Game: Game{ID: "starrail"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}}
+	a := App{Game: Game{ID: "zzz"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}}
 	defer a.Close()
 	call := func(action string) map[string]any {
 		t.Helper()
@@ -48,11 +49,11 @@ func TestMonthlyHistoryCoverageAndConcurrentChanges(t *testing.T) {
 		return out
 	}
 	call("monthly.fetch")
-	caller.data = map[string]any{"data_month": 202609, "month_data": map[string]any{"current_hcoin": 2000}}
+	caller.data = map[string]any{"data_month": 202609, "month_data": map[string]any{"list": []any{map[string]any{"data_type": "PolychromesData", "count": 2000}}}}
 	call("monthly.fetch")
 	a.Monthly = &MonthlyStore{Directory: a.Monthly.Directory}
 	list := call("monthly.list")
-	if list["totals"].(map[string]float64)["星琼"] != 3000 || list["coverage"].(map[string]int)["信用点"] != 1 {
+	if list["totals"].(map[string]float64)["菲林"] != 3000 || list["coverage"].(map[string]int)["母带"] != 1 {
 		t.Fatal(list)
 	}
 	caller.beforeReply = func() {
@@ -77,21 +78,6 @@ func TestMonthlyHistoryCoverageAndConcurrentChanges(t *testing.T) {
 		t.Fatal(data, err)
 	}
 }
-func TestMonthlyJanuaryYearInferenceAndZZZCurrencies(t *testing.T) {
-	key, estimated, err := monthlyKey("genshin", map[string]any{"data_month": 12}, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
-	if err != nil || key != "2025-12" || !estimated {
-		t.Fatal(key, estimated, err)
-	}
-	_, _, err = monthlyKey("zzz", map[string]any{"data_month": 12}, time.Now())
-	if err == nil {
-		t.Fatal("missing year guessed outside supported API")
-	}
-	totals := monthlyAmounts("zzz", map[string]any{"month_data": map[string]any{"list": []any{map[string]any{"data_type": "PolychromesData", "count": 1200}, map[string]any{"data_type": "MatserTapeData", "count": 0}}}})
-	if totals["菲林"] != 1200 || len(totals) != 2 {
-		t.Fatal(totals)
-	}
-}
-
 func TestDailyMonthlyCollectionPersistsAdmissionAndKeepsNotifyOff(t *testing.T) {
 	now := time.Date(2026, 9, 21, 16, 0, 0, 0, time.UTC).UnixMilli()
 	s := reminderStore(t.TempDir())
@@ -105,11 +91,11 @@ func TestDailyMonthlyCollectionPersistsAdmissionAndKeepsNotifyOff(t *testing.T) 
 		return QueryResult{Data: map[string]any{"data_month": 202609}}, nil
 	}
 	send := func(Reminder, string) error { sends++; return nil }
-	if err := s.Tick(t.Context(), task.Ref, now, query, send, Game{ID: "zzz"}); err != nil {
+	if err := s.Tick(task.Ref, now, query, send, Game{ID: "zzz"}); err != nil {
 		t.Fatal(err)
 	}
 	s = &ReminderStore{taskFiles[Reminder]{Directory: s.Directory}}
-	if err := s.Tick(t.Context(), task.Ref, now, query, send, Game{ID: "zzz"}); err != nil {
+	if err := s.Tick(task.Ref, now, query, send, Game{ID: "zzz"}); err != nil {
 		t.Fatal(err)
 	}
 	items, _ := s.List()
@@ -142,10 +128,10 @@ func TestRefreshMonthlyKeepsOfferedMonthsNotYetFinal(t *testing.T) {
 	a := App{Game: Game{ID: "zzz"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}}
 	// July was saved after it ended, August while it ran.
 	august := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
-	if _, err := a.Monthly.Keep("p", choice, "zzz", month(202607), august); err != nil {
+	if err := a.Monthly.Keep("p", choice, month(202607), august); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.Monthly.Keep("p", choice, "zzz", month(202608), august); err != nil {
+	if err := a.Monthly.Keep("p", choice, month(202608), august); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.refreshMonthly(t.Context(), client, choice); err != nil {

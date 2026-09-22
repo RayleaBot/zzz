@@ -34,7 +34,7 @@ type ImageContext struct {
 	// 上期. It is nil outside a query.
 	Input map[string]any
 	// Word is the command word as sent, for images that read choices the
-	// query does not take, as 上期幽境单人.
+	// query does not take, as 上期危局.
 	Word string
 	// RankShown is whether the requester's UID shows in the group rankings
 	// the query feeds, for the note upstream ends a record with; nil outside a
@@ -57,8 +57,6 @@ type PanelImage struct {
 	UID    string
 	Record reference.Character
 	Damage *BuildResult
-	// Change is the 面板换装 word of a changed panel, which is not real data.
-	Change string
 }
 
 // PanelImageBuilder draws a single-character panel with the plugin's
@@ -111,19 +109,6 @@ type CalendarImage struct {
 // CalendarImageBuilder draws 日历 with the plugin's template, or returns
 // false to keep the announcement list in text.
 type CalendarImageBuilder func(ImageContext, CalendarImage) (Image, bool)
-
-// SimulationImage is what a 十连 image draws on: the command word as sent,
-// the pool drawn from, the draws in order and the pool's pity after them.
-type SimulationImage struct {
-	Word      string
-	Selection SimulationSelection
-	Draws     []SimulationDraw
-	Pity      SimulationPity
-}
-
-// SimulationImageBuilder draws a 十连 with the plugin's template, or returns
-// false to keep the draws in text.
-type SimulationImageBuilder func(ImageContext, SimulationImage) (Image, bool)
 
 // RankImage is what a 排名 image draws on: the command word, the mode it
 // ranks by ("dmg" or "mark"), the character (zero when the ranking lists every

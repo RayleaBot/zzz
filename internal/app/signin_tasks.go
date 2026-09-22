@@ -20,9 +20,6 @@ func (a *App) signinTask(ctx context.Context, event *rayleabot.EventContext, act
 		kind, root, operation, label, taskPrefix = "community", "community.task.", a.Game.ID+".community_run", "米游社任务", "game.community."
 	}
 	if strings.HasPrefix(action, "cloudgame.task.") {
-		if a.Game.ID == "starrail" {
-			return nil, gameError("operation_denied", "当前没有星铁云游戏任务。")
-		}
 		kind, root, operation, label, taskPrefix = "cloudgame", "cloudgame.task.", a.Game.ID+".cloud_sign", "云游戏签到", "game.cloudgame."
 	}
 	if action == root+"list" {

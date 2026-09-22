@@ -62,28 +62,28 @@ func TestShowcaseKeepsAnswersForTheirTTLAndBacksOffWhenLimited(t *testing.T) {
 }
 
 func TestPanelStoreMergesRefreshesAndListsLikeUpstream(t *testing.T) {
-	catalog, err := ParseCatalog([]byte(`{"version":"1","entries":[{"id":"10000046","name":"胡桃","kind":"character","rarity":5},{"id":"10000023","name":"香菱","kind":"character","rarity":4},{"id":"10000032","name":"班尼特","kind":"character","rarity":4}]}`))
+	catalog, err := ParseCatalog([]byte(`{"version":"1","entries":[{"id":"1191","name":"艾莲·乔","kind":"character","rarity":4},{"id":"1011","name":"安比·德玛拉","kind":"character","rarity":3},{"id":"1081","name":"比利·奇德","kind":"character","rarity":3}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	store := &PanelStore{Directory: t.TempDir()}
-	if _, err = store.Keep("100000001", []CharacterPanel{{ID: "10000046", Level: 90}, {ID: "10000023", Level: 80}}, "Enka", &ShowcaseProfile{Nickname: "旅行者", Level: 60}); err != nil {
+	if _, err = store.Keep("100000001", []CharacterPanel{{ID: "1191", Level: 90}, {ID: "1011", Level: 80}}, "Enka", &ShowcaseProfile{Nickname: "绳匠", Level: 60}); err != nil {
 		t.Fatal(err)
 	}
 	// A later refresh replaces its characters and keeps the others.
-	saved, err := store.Keep("100000001", []CharacterPanel{{ID: "10000023", Level: 90, Official: map[string]any{"id": 10000023}}, {ID: "10000032", Level: 70}}, "米游社", nil)
-	if err != nil || len(saved.Panels) != 3 || saved.Panels["10000023"].Panel.Level != 90 || saved.Service != "Enka" || saved.Nickname != "旅行者" {
+	saved, err := store.Keep("100000001", []CharacterPanel{{ID: "1011", Level: 90, Official: map[string]any{"id": 1011}}, {ID: "1081", Level: 70}}, "米游社", nil)
+	if err != nil || len(saved.Panels) != 3 || saved.Panels["1011"].Panel.Level != 90 || saved.Service != "Enka" || saved.Nickname != "绳匠" {
 		t.Fatal(saved, err)
 	}
 	saved, _ = store.Read("100000001")
-	if saved.Panels["10000023"].panel().Official == nil {
+	if saved.Panels["1011"].panel().Official == nil {
 		t.Fatal("official entry was not kept")
 	}
 	order := []string{}
-	for _, item := range saved.Sorted(catalog, map[string]bool{"10000032": true}) {
+	for _, item := range saved.Sorted(catalog, map[string]bool{"1081": true}) {
 		order = append(order, item.Panel.ID)
 	}
-	if strings.Join(order, ",") != "10000032,10000046,10000023" {
+	if strings.Join(order, ",") != "1081,1191,1011" {
 		t.Fatalf("order = %v", order)
 	}
 	if _, err = store.Read("../x"); err == nil {
@@ -94,20 +94,6 @@ func TestPanelStoreMergesRefreshesAndListsLikeUpstream(t *testing.T) {
 	}
 	if saved, _ = store.Read("100000001"); len(saved.Panels) != 0 {
 		t.Fatal("deleted panels were kept")
-	}
-}
-
-func TestRankPlacesTakeTheBetterOfDamageAndScore(t *testing.T) {
-	entry := func(uid, id string, score, damage float64) RankEntry {
-		e := RankEntry{UID: uid, CharacterID: id, Score: score, Panel: &CharacterPanel{ID: id}}
-		if damage > 0 {
-			e.Damage = &RankDamage{Value: damage}
-		}
-		return e
-	}
-	places := rankPlaces([]RankEntry{entry("1", "a", 100, 30000), entry("2", "a", 200, 20000), entry("3", "a", 300, 10000), entry("1", "b", 50, 0), entry("2", "b", 60, 0)}, "1")
-	if places["a"] != (RankPlace{Rank: 1, Mode: "dmg"}) || places["b"] != (RankPlace{Rank: 2, Mode: "mark"}) {
-		t.Fatal(places)
 	}
 }
 

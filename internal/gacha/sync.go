@@ -60,7 +60,7 @@ func (s *Syncs) Reset() {
 	s.jobs = nil
 }
 
-var syncPools = map[string][]string{"genshin": {"100", "200", "301", "302", "400", "500"}, "starrail": {"1", "2", "11", "12", "21", "22"}, "zzz": {"1001", "2001", "3001", "5001", "12001", "13001"}}
+var syncPools = []string{"1001", "2001", "3001", "5001", "12001", "13001"}
 
 func (s *Syncs) Start(store *Store, choice SyncChoice, uid, region string, full bool) (SyncInfo, error) {
 	if choice.AccountRef == "" || choice.RoleRef == "" {
@@ -71,12 +71,12 @@ func (s *Syncs) Start(store *Store, choice SyncChoice, uid, region string, full 
 		return SyncInfo{}, err
 	}
 	incoming := Archive{UID: uid, Region: region, Timezone: 8, Language: "zh-cn", Records: []Record{}}
-	if Validate(store.Game, incoming) != nil || len(syncPools[store.Game]) == 0 {
+	if Validate(incoming) != nil || len(syncPools) == 0 {
 		return SyncInfo{}, ErrInvalid
 	}
 	known := map[string]Record{}
 	for _, r := range archive.Records {
-		known[Pool(store.Game, r.GachaType)+":"+r.ID] = r
+		known[r.GachaType+":"+r.ID] = r
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -95,8 +95,8 @@ func (s *Syncs) Start(store *Store, choice SyncChoice, uid, region string, full 
 		return SyncInfo{}, ErrSync
 	}
 	ref := rand.Text()
-	view := SyncInfo{Ref: ref, State: "running", Pool: syncPools[store.Game][0]}
-	s.jobs[ref] = &syncJob{view: view, choice: choice, archive: incoming, version: version, full: full, known: known, pools: syncPools[store.Game], page: 1, endID: "0", expires: time.Now().Add(15 * time.Minute)}
+	view := SyncInfo{Ref: ref, State: "running", Pool: syncPools[0]}
+	s.jobs[ref] = &syncJob{view: view, choice: choice, archive: incoming, version: version, full: full, known: known, pools: syncPools, page: 1, endID: "0", expires: time.Now().Add(15 * time.Minute)}
 	return view, nil
 }
 func (s *Syncs) job(ref string) (*syncJob, error) {
@@ -196,7 +196,7 @@ func (s *Syncs) Step(ctx context.Context, store *Store, ref string, sequence int
 		batch.Timezone = page.Timezone
 	}
 	batch.Records = page.Records
-	if err := Validate(store.Game, batch); err != nil {
+	if err := Validate(batch); err != nil {
 		return SyncInfo{}, err
 	}
 	if len(job.archive.Records)+len(page.Records) > 200000 || job.view.Pages >= 10000 {
@@ -204,7 +204,7 @@ func (s *Syncs) Step(ctx context.Context, store *Store, ref string, sequence int
 	}
 	stop := !page.More
 	for _, r := range page.Records {
-		if old, exists := job.known[Pool(store.Game, r.GachaType)+":"+r.ID]; exists {
+		if old, exists := job.known[r.GachaType+":"+r.ID]; exists {
 			if old.ItemID != r.ItemID || old.Time != r.Time || old.GachaType != r.GachaType || old.GachaID != r.GachaID {
 				return SyncInfo{}, ErrConflict
 			}

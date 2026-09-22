@@ -3,17 +3,18 @@ package app
 import (
 	"context"
 	"encoding/json"
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func TestPublicCodesFixedSourcesEstimatedExpiryAndNoCredentials(t *testing.T) {
 	calls := 0
-	c := PublicContentClient{HTTP: cloudDoer(func(r *http.Request) (*http.Response, error) {
+	c := PublicContentClient{HTTP: httpDoer(func(r *http.Request) (*http.Response, error) {
 		calls++
 		if r.Header.Get("Cookie") != "" || r.URL.Scheme != "https" {
 			t.Fatal("unexpected credentials/transport")
@@ -37,7 +38,7 @@ func TestPublicCodesFixedSourcesEstimatedExpiryAndNoCredentials(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"retcode":0,"data":` + data + `}`))}, nil
 	})}
-	result, err := c.codes(t.Context(), "genshin")
+	result, err := c.codes(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,54 +83,6 @@ func (c *billingCaller) CallService(_ context.Context, r rayleabot.ServiceCallRe
 		result.Data = map[string]any{"items": []any{}, "has_more": false, "next_page": "3"}
 	}
 	return nil
-}
-func TestBillingCollectAtomicReplayRevocationAndClearConflict(t *testing.T) {
-	a := App{Game: Game{ID: "genshin"}, Billing: &BillingStore{Directory: t.TempDir()}}
-	defer a.Close()
-	caller := &billingCaller{role: Role{Ref: "role", Game: "genshin", UID: "100000001", Region: "cn_gf01"}}
-	client := AccountsClient{Caller: caller, Game: "genshin", Provider: "p"}
-	input := map[string]any{"account_ref": "account", "role_ref": "role", "category": "crystal", "direction": "all"}
-	start, err := a.billingManage(t.Context(), client, "billing.sync.start", input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	job := start["job"].(BillingJob)
-	step := map[string]any{"ref": job.Ref, "sequence": 0}
-	if _, err = a.billingManage(t.Context(), client, "billing.sync.step", step); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = a.billingManage(t.Context(), client, "billing.sync.step", step); err != nil || caller.calls != 1 {
-		t.Fatal("replay changed progress", err)
-	}
-	stored, _ := a.Billing.Read("p", Selection{"account", "role"}, "crystal", "all")
-	if stored.Revision != 0 {
-		t.Fatal("partial commit")
-	}
-	caller.deny = true
-	step["sequence"] = 1
-	if _, err = a.billingManage(t.Context(), client, "billing.sync.step", step); err == nil {
-		t.Fatal("revoked read accepted")
-	}
-	caller.deny = false
-	if _, err = a.billingManage(t.Context(), client, "billing.sync.step", step); err != nil {
-		t.Fatal(err)
-	}
-	report, err := a.billingManage(t.Context(), client, "billing.archive.get", input)
-	if err != nil || report["totals"].(map[string]string)["获得"] != "9007199254740993.00" {
-		t.Fatal(report, err)
-	}
-	pending, err := a.billingManage(t.Context(), client, "billing.sync.start", input)
-	if err != nil {
-		t.Fatal(err)
-	}
-	input["confirm"] = true
-	input["revision"] = 1
-	if _, err = a.billingManage(t.Context(), client, "billing.archive.remove", input); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = a.billingManage(t.Context(), client, "billing.sync.step", map[string]any{"ref": pending["job"].(BillingJob).Ref, "sequence": 0}); err == nil {
-		t.Fatal("late job resurrected archive")
-	}
 }
 func TestContentCancellationIgnoresLateResults(t *testing.T) {
 	s := ContentJobs{}

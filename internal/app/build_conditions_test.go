@@ -12,14 +12,14 @@ import (
 )
 
 func TestConditionScopeAndPresetRevision(t *testing.T) {
-	a := pluginApp(t, "genshin")
-	for _, v := range []any{map[string]any{"bonuses": map[string]any{"atkPct": nil}}, map[string]any{"bonuses": map[string]any{"script": 1}}, map[string]any{"enemy_resistance": 101}, map[string]any{"team": []any{map[string]any{"character_id": "10000046"}}}, map[string]any{"team": []any{map[string]any{"character_id": "10000016"}, map[string]any{"character_id": "10000016"}}}} {
-		if _, err := a.validateConditions("10000046", v); err == nil {
+	a := pluginApp(t)
+	for _, v := range []any{map[string]any{"bonuses": map[string]any{"atkPct": nil}}, map[string]any{"bonuses": map[string]any{"script": 1}}, map[string]any{"enemy_resistance": 101}, map[string]any{"team": []any{map[string]any{"character_id": "1011"}}}, map[string]any{"team": []any{map[string]any{"character_id": "1021"}, map[string]any{"character_id": "1021"}}}} {
+		if _, err := a.validateConditions("1011", v); err == nil {
 			t.Fatal("invalid condition accepted", v)
 		}
 	}
-	conditions := map[string]any{"team": []any{map[string]any{"character_id": "10000016", "name": "untrusted", "bonuses": map[string]any{"atkPct": 25}}}, "bonuses": map[string]any{"cpct": 10}}
-	out, err := a.buildPresetAction("build.presets.save", map[string]any{"name": "日常队伍", "character_id": "10000046", "conditions": conditions, "account_ref": "must-not-save", "uid": "must-not-save"})
+	conditions := map[string]any{"team": []any{map[string]any{"character_id": "1021", "name": "untrusted", "bonuses": map[string]any{"atkPct": 25}}}, "bonuses": map[string]any{"cpct": 10}}
+	out, err := a.buildPresetAction("build.presets.save", map[string]any{"name": "日常队伍", "character_id": "1011", "conditions": conditions, "account_ref": "must-not-save", "uid": "must-not-save"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,12 +43,12 @@ func TestConditionScopeAndPresetRevision(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-func TestCustomConditionsUseBaseAttributePercentAcrossGames(t *testing.T) {
-	for _, spec := range []struct{ game, key, file, attr, base string }{{"genshin", "gs_10000046", "", "atk", "atkBase"}, {"starrail", "sr_1102", "", "atk", "atkBase"}, {"zzz", "zzz_1011", "", "ATK", "ATKBase"}} {
+func TestCustomConditionsUseBaseAttributePercent(t *testing.T) {
+	for _, spec := range []struct{ game, key, file, attr, base string }{{"zzz", "zzz_1011", "", "ATK", "ATKBase"}} {
 		t.Run(spec.game, func(t *testing.T) {
-			engine := calcEngine(t, spec.game)
+			engine := calcEngine(t)
 			metadata := engine.Metadata()
-			raw := pluginFile(t, spec.game, "internal/assets/testdata/calc-vectors.json")
+			raw := pluginFile(t, "internal/assets/testdata/calc-vectors.json")
 			var cases []struct {
 				Key   string
 				Input map[string]any

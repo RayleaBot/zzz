@@ -19,8 +19,8 @@ import (
 // plugin's news and news-list; their images come from the Yunzai 原神插件
 // source.
 
-// newsGameNames are mysNews's names of the games.
-var newsGameNames = map[string]string{"genshin": "原神", "starrail": "崩坏星穹铁道", "zzz": "绝区零"}
+// newsGameName is mysNews's name of the game.
+const newsGameName = "绝区零"
 
 var newsKinds = map[string]struct {
 	Type int
@@ -41,8 +41,8 @@ type newsEmoticons struct {
 }
 
 func (a *App) newsCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	gid, _ := publicGame(a.Game.ID)
-	game := newsGameNames[a.Game.ID]
+	gid := bbsGID
+	game := newsGameName
 	word := strings.Join(args, "")
 	switch command {
 	case "news", "info", "events":
@@ -95,7 +95,7 @@ func (a *App) newsCommand(ctx context.Context, event *rayleabot.EventContext, co
 		}
 		return a.sendNewsPost(ctx, event, asText(asObject(asObject(posts[index])["post"])["post_id"]), "")
 	case "post":
-		id, err := publicPostID(a.Game.ID, word)
+		id, err := publicPostID(word)
 		if err != nil {
 			return event.SendText(friendlyError(err))
 		}
@@ -104,17 +104,10 @@ func (a *App) newsCommand(ctx context.Context, event *rayleabot.EventContext, co
 	return a.newsEstimate(ctx, event)
 }
 
-// newsEstimate answers 预估 with the newest summary of the author the
-// upstreams read, drawn as the Yunzai 原神插件 does. 星铁's plain 预估 is
-// StarRail-plugin's srEstimate instead, which forwards the pictures of the
-// author's newest 星琼统计 post.
+// newsEstimate answers 预估 with the author's newest 菲林统计汇总 post, drawn
+// as the Yunzai 原神插件 draws its posts.
 func (a *App) newsEstimate(ctx context.Context, event *rayleabot.EventContext) error {
-	keyword := map[string]string{"genshin": "原石统计汇总", "starrail": "星琼统计汇总", "zzz": "菲林统计汇总"}[a.Game.ID]
-	forward := a.Game.ID == "starrail" && event.Event.Command() == "预估"
-	if forward {
-		keyword = "星琼统计"
-	}
-	data, err := a.Content.get(ctx, "https://bbs-api.miyoushe.com/painter/api/user_instant/search/list?"+url.Values{"keyword": {keyword}, "uid": {"137101761"}, "size": {"20"}, "offset": {"0"}, "sort_type": {"2"}}.Encode(), nil)
+	data, err := a.Content.get(ctx, "https://bbs-api.miyoushe.com/painter/api/user_instant/search/list?"+url.Values{"keyword": {"菲林统计汇总"}, "uid": {"137101761"}, "size": {"20"}, "offset": {"0"}, "sort_type": {"2"}}.Encode(), nil)
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
@@ -123,19 +116,12 @@ func (a *App) newsEstimate(ctx context.Context, event *rayleabot.EventContext) e
 		return event.SendText("暂无数据")
 	}
 	post := asObject(asObject(asObject(list[0])["post"])["post"])
-	if !forward {
-		return a.sendNewsPost(ctx, event, asText(post["post_id"]), "")
-	}
-	pictures := []rayleabot.Segment{}
-	for _, picture := range asList(post["images"]) {
-		pictures = append(pictures, rayleabot.Image(asText(picture)))
-	}
-	return a.sendForward(ctx, event, [][]rayleabot.Segment{{rayleabot.Text(asText(post["subject"]))}, pictures})
+	return a.sendNewsPost(ctx, event, asText(post["post_id"]), "")
 }
 
 // sendNewsPost draws a post after a line with its title.
 func (a *App) sendNewsPost(ctx context.Context, event *rayleabot.EventContext, id, title string) error {
-	gid, _ := publicGame(a.Game.ID)
+	gid := bbsGID
 	data, err := a.Content.get(ctx, "https://bbs-api.miyoushe.com/post/wapi/getPostFull?"+url.Values{"gids": {gid}, "read": {"1"}, "post_id": {id}}.Encode(), nil)
 	if err != nil {
 		return event.SendText(friendlyError(err))
@@ -145,7 +131,7 @@ func (a *App) sendNewsPost(ctx context.Context, event *rayleabot.EventContext, i
 	if asText(post["post_id"]) != id {
 		return event.SendText("帖子编号与请求不一致。")
 	}
-	_, path := publicGame(a.Game.ID)
+	path := bbsPath
 	title += asText(post["subject"])
 	return a.sendNewsImage(ctx, event, title, title+"\nhttps://www.miyoushe.com/"+path+"/article/"+id, func() Image { return a.newsPostImage(ctx, full) })
 }
@@ -176,7 +162,7 @@ func (a *App) newsResources(ctx context.Context) *ImageResources {
 // topics.
 func (a *App) newsPostImage(ctx context.Context, full map[string]any) Image {
 	post, user, stat := asObject(full["post"]), asObject(full["user"]), asObject(full["stat"])
-	_, path := publicGame(a.Game.ID)
+	path := bbsPath
 	id := asText(post["post_id"])
 	link := "https://www.miyoushe.com/" + path + "/article/" + id
 	resources := a.newsResources(ctx)
@@ -275,7 +261,7 @@ func (a *App) newsEmoticons(ctx context.Context) map[string]string {
 	if a.emoticons.icons != nil {
 		return a.emoticons.icons
 	}
-	gid, _ := publicGame(a.Game.ID)
+	gid := bbsGID
 	data, err := a.Content.get(ctx, "https://bbs-api.miyoushe.com/misc/api/emoticon_set?gids="+gid, nil)
 	if err != nil {
 		return nil

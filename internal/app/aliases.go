@@ -1,9 +1,10 @@
 package app
 
 import (
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"slices"
 	"strings"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 type AliasConflict struct {
@@ -67,7 +68,7 @@ func (a *App) aliasMap(event *rayleabot.EventContext) map[string]string {
 	}
 	return aliases
 }
-func (a *App) aliasAction(event *rayleabot.EventContext, input map[string]any) (map[string]any, error) {
+func (a *App) aliasAction(input map[string]any) (map[string]any, error) {
 	var q struct {
 		Aliases map[string]string `json:"aliases"`
 	}

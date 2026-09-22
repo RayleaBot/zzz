@@ -7,29 +7,29 @@ import (
 )
 
 func fixture() Archive {
-	return Archive{UID: "100000001", Region: "cn_gf01", Timezone: 8, Language: "zh-cn", Records: []Record{{ID: "1844674407370955101", GachaType: "301", UIGFType: "301", ItemID: "10000042", Name: "测试角色", Rank: "5", Time: "2026-09-01 08:00:00"}, {ID: "1844674407370955102", GachaType: "400", UIGFType: "301", ItemID: "10000043", Rank: "4", Time: "2026-09-01 08:00:00"}}}
+	return Archive{UID: "10000001", Region: "prod_gf_cn", Timezone: 8, Language: "zh-cn", Records: []Record{{ID: "1844674407370955101", GachaType: "2", UIGFType: "2", ItemID: "1041", Name: "测试角色", Rank: "4", Time: "2026-09-01 08:00:00"}, {ID: "1844674407370955102", GachaType: "2", UIGFType: "2", ItemID: "1011", Rank: "3", Time: "2026-09-01 08:00:00"}}}
 }
-func TestMergePreservesLargeIDsTimeAndSharedPoolPity(t *testing.T) {
+func TestMergePreservesLargeIDsTimeAndPity(t *testing.T) {
 	first := fixture()
-	merged, added, err := Merge("genshin", Archive{}, first)
+	merged, added, err := Merge(Archive{}, first)
 	if err != nil || added != 2 {
 		t.Fatal(err)
 	}
-	again, added, err := Merge("genshin", merged, first)
+	again, added, err := Merge(merged, first)
 	if err != nil || added != 0 || !reflect.DeepEqual(again.Records, first.Records) {
 		t.Fatal("duplicate import changed records")
 	}
-	summary := Summarize("genshin", again)
+	summary := Summarize(again)
 	if len(summary) != 1 || summary[0].CurrentPity != 1 || summary[0].PityLowerBound || !summary[0].Rare[0].LowerBound {
-		t.Fatal("incorrect history or shared pool handling")
+		t.Fatal("incorrect history handling")
 	}
-	first.Records[0].ItemID = "20001"
-	if _, _, err := Merge("genshin", merged, first); !errors.Is(err, ErrConflict) {
+	first.Records[0].ItemID = "1021"
+	if _, _, err := Merge(merged, first); !errors.Is(err, ErrConflict) {
 		t.Fatal("conflicting record overwritten")
 	}
 }
 func TestTransferCommitsOnlyAtFinishAndExportIsASnapshot(t *testing.T) {
-	store := &Store{Directory: t.TempDir(), Game: "genshin"}
+	store := &Store{Directory: t.TempDir(), Game: "zzz"}
 	transfers := &Transfers{}
 	data := fixture()
 	metadata := data
@@ -73,13 +73,13 @@ func TestTransferCommitsOnlyAtFinishAndExportIsASnapshot(t *testing.T) {
 func TestCrossRegionAndTimezoneAreNotMerged(t *testing.T) {
 	first := fixture()
 	other := fixture()
-	other.Region = "os_usa"
-	if _, _, err := Merge("genshin", first, other); !errors.Is(err, ErrConflict) {
+	other.Region = "prod_gf_us"
+	if _, _, err := Merge(first, other); !errors.Is(err, ErrConflict) {
 		t.Fatal("regions merged")
 	}
 	other = fixture()
 	other.Timezone = -5
-	if _, _, err := Merge("genshin", first, other); !errors.Is(err, ErrConflict) {
+	if _, _, err := Merge(first, other); !errors.Is(err, ErrConflict) {
 		t.Fatal("timezone silently converted")
 	}
 }

@@ -140,8 +140,7 @@ func (a *App) bannerQuery(input map[string]any) (map[string]any, error) {
 	if end < total {
 		next = &end
 	}
-	birthdayInfo, _ := a.resourceQuery("calendar.query", map[string]any{"date": date.Format("2006-01-02")})
-	return map[string]any{"pools": matches[offset:end], "appearances": appearances, "total": total, "next_offset": next, "version": resourceVersion(game), "coverage": "fixed_reference", "date": date.Format("2006-01-02"), "birthdays": birthdayInfo["birthdays"], "birthday_date": date.Format("2006-01-02")}, nil
+	return map[string]any{"pools": matches[offset:end], "appearances": appearances, "total": total, "next_offset": next, "version": resourceVersion(game), "coverage": "fixed_reference", "date": date.Format("2006-01-02")}, nil
 }
 
 type VersionDrawCount struct {
@@ -158,13 +157,10 @@ func versionDraws(game Game, archive gacha.Archive) map[string]any {
 	return classifyVersionDraws(game, archive)
 }
 func classifyVersionDraws(g Game, archive gacha.Archive) map[string]any {
-	game, periods := g.ID, g.Data.Resources.Pools
+	periods := g.Data.Resources.Pools
 	groups := map[string]*VersionDrawCount{}
 	unclassified := 0
-	top := "5"
-	if game == "zzz" {
-		top = "4"
-	}
+	top := "4"
 	zone := time.FixedZone("archive", archive.Timezone*3600)
 	cn := time.FixedZone("UTC+8", 28800)
 	for _, record := range archive.Records {
@@ -176,9 +172,6 @@ func classifyVersionDraws(g Game, archive gacha.Archive) map[string]any {
 		stamp := when.In(cn).Format("2006-01-02 15:04:05")
 		found := map[string]PoolInfo{}
 		for _, p := range periods {
-			if game == "genshin" && (record.GachaType == "500") != (p.Kind == "chronicled") {
-				continue
-			}
 			if p.From != "" && stamp >= p.From && stamp <= p.To {
 				key := p.Version + "/" + p.Half
 				if old, ok := found[key]; !ok || old.EstimatedStart {
@@ -222,12 +215,4 @@ func classifyVersionDraws(g Game, archive gacha.Archive) map[string]any {
 		return strings.Compare(b.Version+"/"+b.Half, a.Version+"/"+a.Half)
 	})
 	return map[string]any{"items": rows, "total": len(archive.Records), "unclassified": unclassified, "version": resourceVersion(g), "timezone": fmt.Sprintf("UTC%+d", archive.Timezone)}
-}
-
-func versionDrawView(game Game, result map[string]any) View {
-	v := View{Title: game.Name + "版本抽卡统计", Rows: []Row{{Label: "总记录", Value: asText(result["total"])}, {Label: "未能匹配版本", Value: asText(result["unclassified"])}}, Note: "按固定资料时间范围归类，不代表官方概率；未收录、版本冲突的记录保留为未分类。"}
-	for _, r := range result["items"].([]VersionDrawCount) {
-		v.Rows = append(v.Rows, Row{Label: r.Version + " · " + r.Half, Value: fmt.Sprintf("%d 抽 · 最高稀有度 %d · 估算起点涉及 %d", r.Total, r.Top, r.Estimated)})
-	}
-	return v
 }

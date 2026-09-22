@@ -221,7 +221,7 @@ func (a *App) interactionCommand(ctx context.Context, event *rayleabot.EventCont
 	switch command {
 	case "poke":
 		if len(args) != 1 || (args[0] != "开启" && args[0] != "关闭") {
-			return event.SendText("使用“" + a.Game.Prefix + "戳一戳 开启/关闭”。多个游戏同时开启时，按原神、星铁、绝区零顺序只响应一次。")
+			return event.SendText("使用“" + a.Game.Prefix + "戳一戳 开启/关闭”。")
 		}
 		err := a.Interactions.edit(owner, func(p *InteractionProfile) error { p.Poke = args[0] == "开启"; return nil })
 		if err != nil {

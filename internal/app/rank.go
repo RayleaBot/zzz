@@ -5,16 +5,12 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
-	"unicode/utf8"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
 )
 
 // Group panel ranks follow miao-plugin's ProfileRank: every panel a member
@@ -51,27 +47,6 @@ type RankDamage struct {
 // rankLength is miao's default rankNumber, the rows a character's ranking
 // shows.
 const rankLength = 15
-
-var (
-	rankListWord   = regexp.MustCompile(`排名|排行|列表`)
-	rankMarkWord   = regexp.MustCompile(`分|圣遗物|遗器|评分|ACE`)
-	rankStrip      = regexp.MustCompile(`#|星铁|最强|最高分|第一|词条|双爆|双暴|极限|最高|最多|最牛|圣遗物|遗器|评分|群内|群|排名|排行|面板|面版|详情|榜`)
-	rankResetStrip = regexp.MustCompile(`#|星铁|重置|重设|排名|排行|群|群内|面板|详情|面版`)
-)
-
-// rankMode is the ranking a command word asks for, as miao's groupRank reads
-// it: equipment score ("mark"), crit or weighted-roll counts, or damage.
-func rankMode(word string) string {
-	switch {
-	case strings.Contains(word, "双爆") || strings.Contains(word, "双暴"):
-		return "crit"
-	case strings.Contains(word, "词条"):
-		return "valid"
-	case rankMarkWord.MatchString(word):
-		return "mark"
-	}
-	return "dmg"
-}
 
 // rankValue is what an entry ranks by in a mode. miao's score detail no
 // longer carries crit or weighted-roll counts, so upstream's 双爆 and 词条
@@ -206,63 +181,31 @@ func (s *GroupStore) Submit(scope GroupScope, entry RankEntry) error {
 	})
 }
 
-// rankCommand answers miao's group rank commands: <角色>排名 lists a
-// character's ranking by damage (by score with 圣遗物, 遗器 or 评分), a word
-// without a character lists every character's best, 最强<角色> and
-// 最高分<角色> show the top panel, and administrators reset, refresh, open or
-// close the ranking.
-func (a *App) rankCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
+// rankCommand answers 排行 [角色]: the group's panels by equipment score, for
+// one character or every character's best. ZZZ-Plugin has no panel ranking;
+// this is the plugin's own, on the group ranking miao's ProfileRank keeps.
+func (a *App) rankCommand(ctx context.Context, event *rayleabot.EventContext, args []string) error {
 	scope := groupScope(event)
 	if event.Event.EventType != "message.group" || event.Event.Target.Type != "group" || !scope.valid() || event.Event.Actor.ID == "" {
 		// Upstream leaves these words to other plugins outside groups.
 		return event.Result(map[string]any{"handled": false})
 	}
-	word := event.Event.Command()
-	switch command {
-	case "rank-reset":
-		return a.rankReset(event, scope, word)
-	case "rank-refresh":
-		return a.rankRefresh(ctx, event, scope)
-	case "rank-switch":
-		return a.rankSwitch(event, scope, word)
-	}
-	list, mode := rankListWord.MatchString(word), rankMode(word)
-	if a.Game.ID == "zzz" {
-		// ZZZ-Plugin has no panel ranking; this plugin's 排行 lists
-		// equipment scores.
-		mode = "mark"
-	}
-	name := strings.TrimSpace(rankStrip.ReplaceAllString(word, ""))
-	if name == "" {
-		name = strings.Join(args, " ")
-	}
 	var character Entry
-	if name != "" {
+	if name := strings.Join(args, " "); name != "" {
 		entry, ok := a.Catalog.Resolve(name, "character", a.aliasMap(event))
 		if !ok {
 			return event.Result(map[string]any{"handled": false})
 		}
 		character = entry
-	} else if !list {
-		return event.Result(map[string]any{"handled": false})
 	}
 	data, err := a.Groups.Read(scope)
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	if data.RankOff {
-		return event.SendText("本群已关闭群排名，群管理员或Bot主人可通过【" + a.Game.Prefix + "启用排名】启用...")
-	}
+	mode := "mark"
 	entries := a.rankEntries(data.Rank, character.ID, mode)
 	if len(entries) == 0 {
-		if mode == "dmg" && character.ID != "" && !a.hasDamageRule(character.ID) {
-			return event.SendText("暂无排名：" + character.Name + "暂不支持伤害计算，无法进行排名..")
-		}
 		return event.SendText("暂无排名：请通过【" + a.Game.Prefix + "面板】查看角色面板以更新排名信息...")
-	}
-	if !list {
-		top := entries[0]
-		return a.sendView(ctx, event, a.fullPanelView(ctx, event, *top.Panel, top.UID, false, ""))
 	}
 	view := rankView(a.Game, character, mode, entries)
 	if a.rankImage != nil {
@@ -272,125 +215,11 @@ func (a *App) rankCommand(ctx context.Context, event *rayleabot.EventContext, co
 				entries[index].Avatar = "https://q1.qlogo.cn/g?b=qq&nk=" + entries[index].ActorID + "&s=100"
 			}
 		}
-		if drawn, ok := a.rankImage(a.imageContext(ctx), RankImage{Word: word, Mode: mode, Character: character, Entries: entries, SinceMS: data.RankSinceMS}); ok {
+		if drawn, ok := a.rankImage(a.imageContext(ctx), RankImage{Word: event.Event.Command(), Mode: mode, Character: character, Entries: entries, SinceMS: data.RankSinceMS}); ok {
 			view.Image = &drawn
 		}
 	}
 	return a.sendView(ctx, event, view)
-}
-
-// hasDamageRule reports whether the character has a pinned damage rule.
-func (a *App) hasDamageRule(id string) bool {
-	if a.Game.Calc == nil {
-		return false
-	}
-	return slices.ContainsFunc(a.Game.Calc.Metadata().Characters, func(record reference.Character) bool { return record.ID == id && record.Script != "" })
-}
-
-// rankReset is miao's 重置排名: the bot's super administrators clear the
-// group's ranking, or one character's.
-func (a *App) rankReset(event *rayleabot.EventContext, scope GroupScope, word string) error {
-	if !slices.Contains(event.SuperAdmins, event.Event.Actor.ID) {
-		return event.SendText("只有管理员可重置排名")
-	}
-	name := strings.TrimSpace(rankResetStrip.ReplaceAllString(word, ""))
-	id, label := "", "全部角色"
-	if name != "" {
-		character, ok := a.Catalog.Resolve(name, "character", a.aliasMap(event))
-		if !ok {
-			return event.SendText("重置排名失败，角色：" + name + "不存在")
-		}
-		id, label = character.ID, character.Name
-	}
-	err := a.Groups.Update(scope, func(data *GroupData) error {
-		data.Rank = slices.DeleteFunc(data.Rank, func(entry RankEntry) bool { return id == "" || entry.CharacterID == id })
-		if id == "" {
-			data.RankSinceMS = time.Now().UnixMilli()
-		}
-		return nil
-	})
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	return event.SendText("本群" + label + "排名已重置...")
-}
-
-// rankSwitch is miao's 开启排名 and 关闭排名 for group administrators.
-func (a *App) rankSwitch(event *rayleabot.EventContext, scope GroupScope, word string) error {
-	closing := strings.Contains(word, "关闭") || strings.Contains(word, "禁用")
-	if !groupAdministrator(event) {
-		action := "启用"
-		if closing {
-			action = "禁用"
-		}
-		return event.SendText("只有主人及群管理员可" + action + "排名...")
-	}
-	if err := a.Groups.Update(scope, func(data *GroupData) error { data.RankOff = closing; return nil }); err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	if closing {
-		return event.SendText("当前群排名功能已禁用...")
-	}
-	return event.SendText("当前群排名功能已启用...\n如数据有问题可通过【" + a.Game.Prefix + "刷新排名】命令来刷新当前群内排名")
-}
-
-// rankRefresh is miao's 刷新排名: every recorded panel is scored and
-// calculated again with the pinned rules, four at a time.
-func (a *App) rankRefresh(ctx context.Context, event *rayleabot.EventContext, scope GroupScope) error {
-	if !groupAdministrator(event) {
-		return event.SendText("只有主人及群管理员可刷新排名...")
-	}
-	data, err := a.Groups.Read(scope)
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	_, _ = event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: scope.Protocol, SourceAdapter: scope.Adapter, TargetType: "group", TargetID: scope.GroupID,
-		Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text("面板数据刷新中，等待时间可能较长，请耐心等待...")}}})
-	refreshed := make([]RankEntry, len(data.Rank))
-	var group sync.WaitGroup
-	slots := make(chan struct{}, 4)
-	for index, entry := range data.Rank {
-		refreshed[index] = entry
-		if entry.Panel == nil {
-			continue
-		}
-		group.Add(1)
-		slots <- struct{}{}
-		go func() {
-			defer func() { <-slots; group.Done() }()
-			// As miao reloads each UID's data, a panel kept since is ranked.
-			panel := *entry.Panel
-			if saved, err := a.Profiles.Read(entry.UID); err == nil {
-				if kept, ok := saved.Panels[entry.CharacterID]; ok {
-					panel = kept.panel()
-				}
-			}
-			if scored, err := a.scorePanel(ctx, panel); err == nil {
-				panel = scored
-			}
-			var damage *BuildResult
-			if result, err := a.panelDamage(ctx, panel); err == nil {
-				damage = &result
-			}
-			a.rankScores(&refreshed[index], panel, damage)
-		}()
-	}
-	group.Wait()
-	uids := map[string]bool{}
-	err = a.Groups.Update(scope, func(current *GroupData) error {
-		for _, entry := range refreshed {
-			index := slices.IndexFunc(current.Rank, func(r RankEntry) bool { return r.UID == entry.UID && r.CharacterID == entry.CharacterID })
-			if index >= 0 && entry.Panel != nil {
-				current.Rank[index] = entry
-				uids[entry.UID] = true
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	return event.SendText("本群排名已刷新，共刷新" + strconv.Itoa(len(uids)) + "个UID数据...")
 }
 
 // rankView is the ranking in text, for replies without images.
@@ -418,54 +247,4 @@ func rankView(game Game, character Entry, mode string, entries []RankEntry) View
 		v.Rows = append(v.Rows, Row{Label: label, Value: value + " · UID " + entry.UID})
 	}
 	return v
-}
-
-// RankSetName is miao's set label: a single set by its name and piece count
-// when that fits in seven characters, otherwise up to two sets by their
-// abbreviations. Sets upstream gives no abbreviation keep their name.
-func RankSetName(catalog Catalog, panel CharacterPanel) string {
-	counts, order := map[string]int{}, []string{}
-	for _, piece := range panel.Equipment {
-		if piece.SetName == "" {
-			continue
-		}
-		if counts[piece.SetName] == 0 {
-			order = append(order, piece.SetName)
-		}
-		counts[piece.SetName]++
-	}
-	short, full := []string{}, []string{}
-	for _, name := range order {
-		if counts[name] < 2 {
-			continue
-		}
-		count := "2"
-		if counts[name] >= 4 {
-			count = "4"
-		}
-		abbr := catalog.SetAbbrs[name]
-		if abbr == "" {
-			abbr = name
-		}
-		short, full = append(short, abbr+count), append(full, name+count)
-	}
-	if len(full) == 0 {
-		return ""
-	}
-	if len(short) > 1 || utf8.RuneCountInString(full[0]) > 7 {
-		return strings.Join(short[:min(2, len(short))], "+")
-	}
-	return full[0]
-}
-
-// RankDamageTitle shortens a detail title as miao's rank list does: past ten
-// characters without spaces and dots, then without a trailing 伤害.
-func RankDamageTitle(title string) string {
-	if utf8.RuneCountInString(title) > 10 {
-		title = strings.NewReplacer(" ", "", "·", "").Replace(title)
-	}
-	if utf8.RuneCountInString(title) > 10 {
-		title = strings.TrimSuffix(title, "伤害")
-	}
-	return title
 }
