@@ -1365,7 +1365,8 @@
   ],
   "help": {
     "title": "绝区零",
-    "summary": "米游社账号统一扫码授权；公开资料和导入档案可独立使用。"
+    "summary": "米游社账号统一扫码授权；公开资料和导入档案可独立使用。",
+    "command": "help"
   },
   "management_ui": {
     "entry": "ui/index.html",
