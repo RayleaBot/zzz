@@ -187,6 +187,33 @@
       }
     },
     {
+      "id": "gacha-help",
+      "name": "抽卡帮助",
+      "description": "抽卡记录的获取与查看方法",
+      "usage": "#抽卡帮助",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "抽卡帮助"
+        ]
+      }
+    },
+    {
+      "id": "gacha-link",
+      "name": "抽卡链接",
+      "description": "说明抽卡链接不在聊天中收发",
+      "usage": "#抽卡链接",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "抽卡链接",
+          "获取抽卡链接"
+        ]
+      }
+    },
+    {
       "id": "gacha",
       "name": "抽卡分析",
       "description": "分析已导入的抽卡记录",
@@ -1152,7 +1179,9 @@
         "gacha-background",
         "gacha-schedule",
         "gacha-progress",
-        "gacha-stop"
+        "gacha-stop",
+        "gacha-help",
+        "gacha-link"
       ]
     },
     {
