@@ -474,58 +474,6 @@
       }
     },
     {
-      "id": "challenge-submit",
-      "name": "提交挑战",
-      "description": "主动向当前群公开本人成绩",
-      "usage": "#提交挑战 玩法 [本期/上期] [UID]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "提交挑战"
-        ]
-      }
-    },
-    {
-      "id": "challenge-rank",
-      "name": "挑战排行",
-      "description": "分期查看群挑战榜",
-      "usage": "#挑战排行 玩法 [期次] [指标] [页码]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "挑战排行"
-        ]
-      }
-    },
-    {
-      "id": "challenge-withdraw",
-      "name": "退出挑战",
-      "description": "移除本人的群榜记录",
-      "usage": "#退出挑战 [玩法]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "退出挑战"
-        ]
-      }
-    },
-    {
-      "id": "challenge-clear",
-      "name": "清空挑战",
-      "description": "群管理员清空挑战群榜",
-      "usage": "#清空挑战 [玩法]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "清空挑战"
-        ]
-      }
-    },
-    {
       "id": "challenge-remind",
       "name": "挑战提醒",
       "description": "显式开启本人挑战完成提醒",
@@ -1199,11 +1147,7 @@
         "query-rank",
         "query-rank-help",
         "query-rank-switch",
-        "rank",
-        "challenge-submit",
-        "challenge-rank",
-        "challenge-withdraw",
-        "challenge-clear"
+        "rank"
       ]
     },
     {
