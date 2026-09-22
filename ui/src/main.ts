@@ -1,4 +1,4 @@
 import { createApp } from 'vue'
-import GamePanel from '@rayleabot/game-ui'
-import '@rayleabot/game-ui/style.css'
+import GamePanel from './GamePanel.vue'
+import './style.css'
 createApp(GamePanel).mount('#app')

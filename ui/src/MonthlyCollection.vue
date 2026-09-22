@@ -1,0 +1,19 @@
+<script setup lang="ts">
+import {ref,watch} from 'vue'
+interface Task {ref:string;role:{uid:string;nickname:string};owner:{actor_id:string};hour:number;minute?:number;enabled:boolean;last_code:string;next_check_ms:number;expires_at_ms:number}
+const props=defineProps<{choices:{key:string;label:string;role:{ref:string};account:{ref:string}}[];invoke:<T>(action:string,payload?:Record<string,unknown>)=>Promise<T>}>()
+const items=ref<Task[]>([]),selected=ref(''),hour=ref(23),minute=ref(50),days=ref(30),confirmed=ref(false),notify=ref(false),busy=ref(false),error=ref(''),notice=ref('')
+watch([selected,hour,minute,days,notify],()=>{confirmed.value=false})
+async function load(){items.value=(await props.invoke<{items:Task[]}>('monthly.task.list')).items}
+async function run(fn:()=>Promise<void>){if(busy.value)return;busy.value=true;error.value='';notice.value='';try{await fn()}catch(e){error.value=e instanceof Error?e.message:'月报收集操作未完成。'}finally{busy.value=false}}
+async function create(){const c=props.choices.find(v=>v.key===selected.value);if(!c||!confirmed.value)return;await run(async()=>{await props.invoke('monthly.task.create',{account_ref:c.account.ref,role_ref:c.role.ref,hour:Number(hour.value),minute:Number(minute.value),days:Number(days.value),notify:notify.value,confirm:true});confirmed.value=false;await load();notice.value='每日月报收集已开启。'})}
+async function remove(ref:string){await run(async()=>{await props.invoke('monthly.task.remove',{ref});await load();notice.value='月报收集已停止。'})}
+void run(load)
+</script>
+<template>
+ <section class="monthly-collection"><h2>每日月报收集</h2><p class="hint">默认关闭。按北京时间每天保存官方默认月份，累计档案在游戏查询的月报入口查看。历史可用月份可在月报页手动补存。</p><p v-if="error" role="alert" class="feedback danger">{{error}}</p><p v-if="notice" role="status">{{notice}}</p>
+ <form @submit.prevent="create"><fieldset :disabled="busy"><legend>收集账号与时间</legend><label>月报收集账号<select v-model="selected" required><option value="" disabled>选择角色</option><option v-for="c in choices" :key="c.key" :value="c.key">{{c.label}}</option></select></label><div class="fields"><label>每天几时<input v-model="hour" type="number" min="0" max="23" required></label><label>几分<input v-model="minute" type="number" min="0" max="59" required></label><label>收集授权天数<input v-model="days" type="number" min="1" max="90" required></label></div><label class="check"><input v-model="notify" type="checkbox">保存成功后私聊通知账号所属用户</label><label class="check"><input v-model="confirmed" type="checkbox">允许按以上设置定时读取并保存月报</label><button class="primary" :disabled="!selected||!confirmed">开启每日月报收集</button></fieldset></form>
+ <div class="section-heading"><h3>已保存的月报任务</h3><button :disabled="busy" @click="run(load)">刷新月报任务</button></div><p v-if="!items.length" class="hint">没有月报收集任务。</p><ul><li v-for="t in items" :key="t.ref"><strong>{{t.role.nickname}} · {{t.role.uid}}</strong><p>{{t.enabled?'已开启':'已暂停'}} · 每日 {{String(t.hour).padStart(2,'0')}}:{{String(t.minute??0).padStart(2,'0')}} · 所属用户 {{t.owner.actor_id}}</p><p class="hint">{{t.last_code==='collected'?'月报已保存':t.last_code||'等待首次执行'}} · 下次 {{new Date(t.next_check_ms).toLocaleString()}} · 到期 {{new Date(t.expires_at_ms).toLocaleString()}}</p><button :disabled="busy" @click="remove(t.ref)">停止此月报收集</button></li></ul>
+ </section>
+</template>
+<style scoped>.monthly-collection{display:grid;gap:18px;border-top:1px solid var(--raylea-color-border);padding-top:24px}.monthly-collection fieldset{display:grid;gap:16px;min-width:0;padding:18px;border:1px solid var(--raylea-color-border);border-radius:12px}.monthly-collection label:not(.check){display:grid;gap:8px;min-width:0}.monthly-collection select{min-width:0;width:100%}.fields{display:flex;flex-wrap:wrap;gap:14px}.fields label{flex:1 1 130px}.monthly-collection ul{display:grid;gap:16px;list-style:none;padding:0}.monthly-collection li{border-top:1px solid var(--raylea-color-border);padding-top:16px;overflow-wrap:anywhere}.monthly-collection li p{margin:10px 0}</style>

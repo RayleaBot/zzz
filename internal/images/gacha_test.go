@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
-	"github.com/RayleaBot/game-plugin-kit/gacha"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/plugin-zzz/internal/gacha"
 )
 
 func TestGachaFollowsZZZPlugin(t *testing.T) {
@@ -21,7 +21,7 @@ func TestGachaFollowsZZZPlugin(t *testing.T) {
 	add(1, "2", "1191", "艾莲", "4")
 	add(10, "2", "1011", "安比", "3")
 	add(1, "1", "1021", "猫又", "4")
-	image, ok := Gacha(gamekit.ImageContext{}, gamekit.GachaImage{UID: "10000001", Role: gamekit.Role{Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Archive: gacha.Archive{Records: records}})
+	image, ok := Gacha(app.ImageContext{}, app.GachaImage{UID: "10000001", Role: app.Role{Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Archive: gacha.Archive{Records: records}})
 	if !ok || image.Data["player"].(map[string]any)["region"] != "新艾利都" {
 		t.Fatalf("image = %+v", image.Data)
 	}

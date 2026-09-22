@@ -3,7 +3,7 @@ package images
 import (
 	"fmt"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // talentIcon is the official image ZZZ-Plugin shows for the combat talents.
@@ -21,29 +21,29 @@ var (
 // challenge record with its time, damage, agents and Bangboo. The frame image
 // upstream's stylesheet names is not in its repository, so the page has none
 // there either.
-func HollowZero(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func HollowZero(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	data := result.Data
 	if len(data) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork)
 	level, _ := data["abyss_level"].(map[string]any)
 	talent, _ := data["abyss_talent"].(map[string]any)
 	image := map[string]any{
-		"player": playerCard(result.Role), "level": gamekit.Text(level["cur_level"]) + " / " + gamekit.Text(level["max_level"]), "level_icon": resources.official(level["icon"]),
-		"talent": gamekit.Text(talent["cur_talent"]) + " / " + gamekit.Text(talent["max_talent"]), "talent_icon": resources.official(talentIcon),
+		"player": playerCard(result.Role), "level": app.Text(level["cur_level"]) + " / " + app.Text(level["max_level"]), "level_icon": resources.official(level["icon"]),
+		"talent": app.Text(talent["cur_talent"]) + " / " + app.Text(talent["max_talent"]), "talent_icon": resources.official(talentIcon),
 		"collections": collections(data, witheredCollections),
 	}
-	if throne, _ := data["abyss_throne"].(map[string]any); gamekit.Int(throne["max_damage"]) != 0 && context.Query != nil {
+	if throne, _ := data["abyss_throne"].(map[string]any); app.Int(throne["max_damage"]) != 0 && context.Query != nil {
 		challenge, err := context.Query("zzz.hollow_zero_detail", nil)
 		if err != nil {
-			return gamekit.Image{}, false
+			return app.Image{}, false
 		}
 		if best, _ := challenge.Data["abyss_throne_max"].(map[string]any); best != nil {
 			image["throne"] = throneRun(resources, best)
 		}
 	}
-	return gamekit.Image{Template: "hollow-zero", Data: image, Resources: resources.List}, true
+	return app.Image{Template: "hollow-zero", Data: image, Resources: resources.List}, true
 }
 
 // throneRun is the best Slash-and-Burn run: its time, the damage dealt to
@@ -57,30 +57,30 @@ func throneRun(resources *recordResources, best map[string]any) map[string]any {
 			continue
 		}
 		avatar, _ := avatars[index].(map[string]any)
-		slots = append(slots, map[string]any{"rarity": gamekit.Text(avatar["rarity"]), "rank": gamekit.Int(avatar["rank"]), "icon": resources.official(avatar["role_square_url"]),
-			"level": gamekit.Text(avatar["level"]), "damage": gamekit.Text(avatar["damage_rate"])})
+		slots = append(slots, map[string]any{"rarity": app.Text(avatar["rarity"]), "rank": app.Int(avatar["rank"]), "icon": resources.official(avatar["role_square_url"]),
+			"level": app.Text(avatar["level"]), "damage": app.Text(avatar["damage_rate"])})
 	}
 	var buddy any
 	if buddies, _ := best["buddy_list"].([]any); len(buddies) > 0 {
 		item, _ := buddies[0].(map[string]any)
-		buddy = map[string]any{"rarity": gamekit.Text(item["rarity"]), "icon": resources.official(item["bangboo_rectangle_url"]), "level": gamekit.Text(item["level"])}
+		buddy = map[string]any{"rarity": app.Text(item["rarity"]), "icon": resources.official(item["bangboo_rectangle_url"]), "level": app.Text(item["level"])}
 	}
 	// Upstream formats the time only when there is one.
 	time := ""
-	if gamekit.Int(best["time"]) != 0 {
+	if app.Int(best["time"]) != 0 {
 		time = clockTime(best["time"])
 	}
-	return map[string]any{"time": time, "damage": gamekit.Text(best["max_damage"]), "slots": slots, "buddy": buddy}
+	return map[string]any{"time": time, "damage": app.Text(best["max_damage"]), "slots": slots, "buddy": buddy}
 }
 
 // LostVoid draws 迷失之地 the way ZZZ-Plugin's hollowZeroS2 page does: the
 // player card, license level, bounty and exploration progress, the seven
 // collections, and the hardest Matrix Operation and Task Force Investigation
 // cleared with their clear counts and best times.
-func LostVoid(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func LostVoid(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	data := result.Data
 	if len(data) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork)
 	level, _ := data["abyss_level"].(map[string]any)
@@ -91,11 +91,11 @@ func LostVoid(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		if item == nil {
 			return map[string]any{}
 		}
-		return map[string]any{"name": gamekit.Text(item["max_name"]), "heat": gamekit.Text(item["heat_count"]), "count": gamekit.Text(item["max_count"]), "time": clockTime(item["best_time"])}
+		return map[string]any{"name": app.Text(item["max_name"]), "heat": app.Text(item["heat_count"]), "count": app.Text(item["max_count"]), "time": clockTime(item["best_time"])}
 	}
-	return gamekit.Image{Template: "lost-void", Data: map[string]any{
-		"player": playerCard(result.Role), "level": gamekit.Text(level["cur_level"]) + " / " + gamekit.Text(level["max_level"]), "level_icon": resources.official(level["icon"]),
-		"duty": gamekit.Text(duty["cur_duty"]) + " / " + gamekit.Text(duty["max_duty"]), "task": gamekit.Text(task["cur_task"]) + " / " + gamekit.Text(task["max_task"]),
+	return app.Image{Template: "lost-void", Data: map[string]any{
+		"player": playerCard(result.Role), "level": app.Text(level["cur_level"]) + " / " + app.Text(level["max_level"]), "level_icon": resources.official(level["icon"]),
+		"duty": app.Text(duty["cur_duty"]) + " / " + app.Text(duty["max_duty"]), "task": app.Text(task["cur_task"]) + " / " + app.Text(task["max_task"]),
 		"collections": collections(data, lostVoidCollections), "matrix": best("abyss_max"), "investigation": best("abyss_task_force_investigation_max"),
 	}, Resources: resources.List}, true
 }
@@ -110,13 +110,13 @@ func collections(data map[string]any, names []string) []any {
 		if index < len(list) {
 			item, _ = list[index].(map[string]any)
 		}
-		out = append(out, map[string]any{"name": name, "value": gamekit.Text(item["cur_collect"]) + " / " + gamekit.Text(item["max_collect"])})
+		out = append(out, map[string]any{"name": name, "value": app.Text(item["cur_collect"]) + " / " + app.Text(item["max_collect"])})
 	}
 	return out
 }
 
 // clockTime is upstream's formatTime: seconds as HH:MM:SS.
 func clockTime(value any) string {
-	seconds := gamekit.Int(value)
+	seconds := app.Int(value)
 	return fmt.Sprintf("%02d:%02d:%02d", seconds/3600, seconds%3600/60, seconds%60)
 }

@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // zenkovArtwork maps the images the zenkov pages name to ZZZ-Plugin's paths.
@@ -25,10 +25,10 @@ var zenkovDifficulties = map[string]string{"Hell": "高危", "Hard": "困难"}
 // with the time left and haul totals, each map's High-Risk extraction rate
 // and best haul with the season's best rank, and the medal wall and
 // collection.
-func Zenkov(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func Zenkov(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	data := result.Data
 	if len(data) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, zenkovArtwork)
 	image := zenkovMaps(data, "迷宫诡域")
@@ -40,8 +40,8 @@ func Zenkov(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.I
 	if season != nil {
 		quest, _ := season["season_quest"].(map[string]any)
 		coin, _ := season["season_coin"].(map[string]any)
-		summary = map[string]any{"id": gamekit.Text(season["cur_season_id"]), "level": gamekit.Text(season["season_level"]), "refresh": zenkovDays(season["refresh_time"]),
-			"stage": gamekit.Text(season["season_stage"]), "quest": zenkovCount(quest["cur_quest"]), "quest_max": zenkovCount(quest["max_quest"]),
+		summary = map[string]any{"id": app.Text(season["cur_season_id"]), "level": app.Text(season["season_level"]), "refresh": zenkovDays(season["refresh_time"]),
+			"stage": app.Text(season["season_stage"]), "quest": zenkovCount(quest["cur_quest"]), "quest_max": zenkovCount(quest["max_quest"]),
 			"coin": zenkovCount(coin["cur_coin"]) + "/" + zenkovCount(coin["max_coin"])}
 		summary["unlocked"] = unlocked
 	}
@@ -57,9 +57,9 @@ func Zenkov(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.I
 			for _, raw := range list {
 				item, _ := raw.(map[string]any)
 				unlocked, _ := item["unlock"].(bool)
-				items = append(items, map[string]any{"name": gamekit.Text(item["name"]), "unlocked": unlocked, "icon": resources.official(item["medal_icon"])})
+				items = append(items, map[string]any{"name": app.Text(item["name"]), "unlocked": unlocked, "icon": resources.official(item["medal_icon"])})
 			}
-			entry["medals"] = map[string]any{"progress": gamekit.Text(medals["cur"]) + " / " + gamekit.Text(medals["total"]), "list": items}
+			entry["medals"] = map[string]any{"progress": app.Text(medals["cur"]) + " / " + app.Text(medals["total"]), "list": items}
 		}
 		if goods, _ := collection["goods_data"].(map[string]any); goods != nil {
 			list, _ := goods["list"].([]any)
@@ -68,25 +68,25 @@ func Zenkov(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.I
 				item, _ := raw.(map[string]any)
 				unlocked, _ := item["unlock"].(bool)
 				number := ""
-				if gamekit.Int(item["number"]) > 0 {
-					number = gamekit.Text(item["number"])
+				if app.Int(item["number"]) > 0 {
+					number = app.Text(item["number"])
 				}
-				items = append(items, map[string]any{"name": gamekit.Text(item["name"]), "unlocked": unlocked, "icon": resources.official(item["goods_icon"]), "number": number})
+				items = append(items, map[string]any{"name": app.Text(item["name"]), "unlocked": unlocked, "icon": resources.official(item["goods_icon"]), "number": number})
 			}
-			entry["goods"] = map[string]any{"progress": gamekit.Text(goods["cur"]) + " / " + gamekit.Text(goods["total"]), "list": items}
+			entry["goods"] = map[string]any{"progress": app.Text(goods["cur"]) + " / " + app.Text(goods["total"]), "list": items}
 		}
 		image["collection"] = entry
 	}
-	return gamekit.Image{Template: "zenkov", Data: image, Resources: resources.List}, true
+	return app.Image{Template: "zenkov", Data: image, Resources: resources.List}, true
 }
 
 // ZenkovDetail draws 迷宫诡域战绩 the way ZZZ-Plugin's zenkov detail page
 // does: the maps and best rank, then each run with its map, start time,
 // difficulty, result, duration, haul value, agents and the items found.
-func ZenkovDetail(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func ZenkovDetail(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	data := result.Data
 	if len(data) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, zenkovArtwork)
 	image := zenkovMaps(data, "迷宫诡域战绩")
@@ -95,7 +95,7 @@ func ZenkovDetail(context gamekit.ImageContext, result gamekit.QueryResult) (gam
 	list, _ := data["record_list"].([]any)
 	for _, raw := range list {
 		record, _ := raw.(map[string]any)
-		difficulty := gamekit.Text(record["difficult"])
+		difficulty := app.Text(record["difficult"])
 		name := zenkovDifficulties[difficulty]
 		if name == "" {
 			name = orText(record["difficult"], "普通")
@@ -105,24 +105,24 @@ func ZenkovDetail(context gamekit.ImageContext, result gamekit.QueryResult) (gam
 		avatars, _ := record["avatar_list"].([]any)
 		for _, rawAvatar := range avatars {
 			avatar, _ := rawAvatar.(map[string]any)
-			agents = append(agents, map[string]any{"icon": resources.official(avatar["role_square_url"]), "rank": gamekit.Int(avatar["rank"])})
+			agents = append(agents, map[string]any{"icon": resources.official(avatar["role_square_url"]), "rank": app.Int(avatar["rank"])})
 		}
 		items := []any{}
 		itemList, _ := record["item_list"].([]any)
 		for _, rawItem := range itemList {
 			item, _ := rawItem.(map[string]any)
 			class := "no-bg"
-			if rarity := gamekit.Int(item["rarity"]); rarity >= 3 && rarity <= 5 {
+			if rarity := app.Int(item["rarity"]); rarity >= 3 && rarity <= 5 {
 				class = "rarity-" + strconv.Itoa(rarity)
 			}
-			items = append(items, map[string]any{"class": class, "title": gamekit.Text(item["name"]) + " (" + gamekit.Text(item["price"]) + ")", "icon": resources.official(item["icon_url"])})
+			items = append(items, map[string]any{"class": class, "title": app.Text(item["name"]) + " (" + app.Text(item["price"]) + ")", "icon": resources.official(item["icon_url"])})
 		}
-		records = append(records, map[string]any{"map": gamekit.Text(record["map_name"]), "start": zenkovDateTime(record["start_time"]),
+		records = append(records, map[string]any{"map": app.Text(record["map_name"]), "start": zenkovDateTime(record["start_time"]),
 			"difficulty": name, "hell": difficulty == "Hell", "success": success, "duration": zenkovDuration(record["challenge_time"]),
 			"value": zenkovThousands(record["material_total_value"]), "agents": agents, "items": items})
 	}
 	image["detail"], image["records"] = true, records
-	return gamekit.Image{Template: "zenkov", Data: image, Resources: resources.List}, true
+	return app.Image{Template: "zenkov", Data: image, Resources: resources.List}, true
 }
 
 // zenkovMaps is what both pages share: the title, each map's High-Risk
@@ -136,7 +136,7 @@ func zenkovMaps(data map[string]any, title string) map[string]any {
 		unlocked, _ := item["hell_unlock"].(bool)
 		leave := "0%"
 		if value, ok := item["leave_percent"]; ok && value != nil {
-			if number, err := strconv.ParseFloat(gamekit.Text(value), 64); err == nil {
+			if number, err := strconv.ParseFloat(app.Text(value), 64); err == nil {
 				percent := number / 100
 				digits := 2
 				if percent == math.Trunc(percent) {
@@ -144,13 +144,13 @@ func zenkovMaps(data map[string]any, title string) map[string]any {
 				}
 				leave = strconv.FormatFloat(percent, 'f', digits, 64) + "%"
 			} else {
-				leave = gamekit.Text(value)
+				leave = app.Text(value)
 			}
 		}
-		maps = append(maps, map[string]any{"name": gamekit.Text(item["map_name"]), "unlocked": unlocked, "leave": leave, "price": gamekit.Text(item["max_price"])})
+		maps = append(maps, map[string]any{"name": app.Text(item["map_name"]), "unlocked": unlocked, "leave": leave, "price": app.Text(item["max_price"])})
 	}
 	rank := map[string]any{}
-	if number, err := strconv.ParseFloat(gamekit.Text(data["max_rank"]), 64); err == nil && number != 0 {
+	if number, err := strconv.ParseFloat(app.Text(data["max_rank"]), 64); err == nil && number != 0 {
 		if percent, _ := data["is_show_percent"].(bool); percent {
 			rank = map[string]any{"percent": rankText(int(number)), "background": rankBackground(int(number))}
 		} else {
@@ -165,7 +165,7 @@ func zenkovCount(value any) string { return orText(value, "0") }
 
 // orText is the official value as text, or fallback when it is missing.
 func orText(value any, fallback string) string {
-	if text := gamekit.Text(value); text != "" {
+	if text := app.Text(value); text != "" {
 		return text
 	}
 	return fallback
@@ -173,7 +173,7 @@ func orText(value any, fallback string) string {
 
 // zenkovDaysHours is upstream's formatTimeDaysHours: seconds left as XX天YY时.
 func zenkovDaysHours(value any) string {
-	seconds := gamekit.Int(value)
+	seconds := app.Int(value)
 	if seconds <= 0 {
 		return "00天00时"
 	}
@@ -182,7 +182,7 @@ func zenkovDaysHours(value any) string {
 
 // zenkovDays is upstream's formatTimeDays: whole days left.
 func zenkovDays(value any) string {
-	seconds := gamekit.Int(value)
+	seconds := app.Int(value)
 	if seconds <= 0 {
 		return "0天"
 	}
@@ -195,8 +195,8 @@ func zenkovDateTime(value any) string {
 	if fields == nil {
 		return "-"
 	}
-	return fmt.Sprintf("%s-%02d-%02d %02d:%02d:%02d", gamekit.Text(fields["year"]), gamekit.Int(fields["month"]), gamekit.Int(fields["day"]),
-		gamekit.Int(fields["hour"]), gamekit.Int(fields["minute"]), gamekit.Int(fields["second"]))
+	return fmt.Sprintf("%s-%02d-%02d %02d:%02d:%02d", app.Text(fields["year"]), app.Int(fields["month"]), app.Int(fields["day"]),
+		app.Int(fields["hour"]), app.Int(fields["minute"]), app.Int(fields["second"]))
 }
 
 // zenkovDuration is upstream's formatDurationObj: MM:SS, with hours only when
@@ -207,16 +207,16 @@ func zenkovDuration(value any) string {
 		return "00:00"
 	}
 	hours := ""
-	if hour := gamekit.Int(fields["hour"]); hour != 0 {
+	if hour := app.Int(fields["hour"]); hour != 0 {
 		hours = fmt.Sprintf("%02d:", hour)
 	}
-	return fmt.Sprintf("%s%02d:%02d", hours, gamekit.Int(fields["minute"]), gamekit.Int(fields["second"]))
+	return fmt.Sprintf("%s%02d:%02d", hours, app.Int(fields["minute"]), app.Int(fields["second"]))
 }
 
 // zenkovThousands is upstream's formatNumberCommas: the haul value with
 // thousands separators.
 func zenkovThousands(value any) string {
-	text := gamekit.Text(value)
+	text := app.Text(value)
 	if text == "" {
 		return "0"
 	}

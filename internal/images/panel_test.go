@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 	"github.com/RayleaBot/plugin-zzz/internal/images"
 )
 
@@ -24,8 +24,8 @@ func TestPanelFollowsZZZPluginRules(t *testing.T) {
 	raw, _ := json.Marshal(map[string]any{"total": 30.5, "grade": "S", "weights": map[string]float64{"11102": 1, "12102": 0.75},
 		"stats":  []any{map[string]any{"name": "暴击", "weight": 1, "value": "7.2%", "count": 3}, map[string]any{"name": "攻击", "weight": 0.5, "value": "3.0%", "count": 1}, map[string]any{"name": "防御", "weight": 0, "value": "4.8%", "count": 1}},
 		"pieces": []any{map[string]any{"slot": 2, "score": 30.5, "grade": "S", "props": []any{map[string]any{"id": 20103, "count": 2, "weight": 1}, map[string]any{"id": 12102, "count": 0, "weight": 0.75}}}}})
-	panel := gamekit.CharacterPanel{Official: official, ScoreDetail: &gamekit.ScoreDetail{Raw: raw}}
-	drawn, ok := images.Panel(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}, Now: time.Now()}, gamekit.PanelImage{Panel: panel, UID: "10000001"})
+	panel := app.CharacterPanel{Official: official, ScoreDetail: &app.ScoreDetail{Raw: raw}}
+	drawn, ok := images.Panel(app.ImageContext{Game: app.Game{Prefix: "%"}, Now: time.Now()}, app.PanelImage{Panel: panel, UID: "10000001"})
 	if !ok || drawn.Template != "panel" {
 		t.Fatalf("drawn = %+v", drawn)
 	}
@@ -61,7 +61,7 @@ func TestPanelFollowsZZZPluginRules(t *testing.T) {
 	if subs[0].(map[string]any)["hit"] != "hit100" || len(subs[0].(map[string]any)["count"].([]struct{})) != 2 || subs[1].(map[string]any)["hit"] != "hit75" {
 		t.Errorf("subs = %v", subs)
 	}
-	if _, ok := images.Panel(gamekit.ImageContext{}, gamekit.PanelImage{}); ok {
+	if _, ok := images.Panel(app.ImageContext{}, app.PanelImage{}); ok {
 		t.Error("a panel without the official entry should keep the summary card")
 	}
 }

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // dataURL is ZZZ-Plugin's DATA_URL.
@@ -21,7 +21,7 @@ const dataURL = "https://raw.githubusercontent.com/iaoongin/GachaClock/main/spid
 
 var cache = struct {
 	sync.Mutex
-	pools   []gamekit.PoolInfo
+	pools   []app.PoolInfo
 	fetched time.Time
 }{}
 
@@ -49,7 +49,7 @@ func stamp(value string) string {
 
 // Source reads GachaClock's history, kept for six hours; a failed read keeps
 // the last answer.
-func Source(ctx context.Context) ([]gamekit.PoolInfo, string, error) {
+func Source(ctx context.Context) ([]app.PoolInfo, string, error) {
 	cache.Lock()
 	defer cache.Unlock()
 	if cache.pools != nil && time.Since(cache.fetched) < 6*time.Hour {
@@ -66,7 +66,7 @@ func Source(ctx context.Context) ([]gamekit.PoolInfo, string, error) {
 	return pools, "GachaClock", nil
 }
 
-func fetch(ctx context.Context) ([]gamekit.PoolInfo, error) {
+func fetch(ctx context.Context) ([]app.PoolInfo, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, dataURL, nil)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func fetch(ctx context.Context) ([]gamekit.PoolInfo, error) {
 // pools reads GachaClock entries the way the bundled snapshot was imported:
 // a banner without a start begins at eleven the day after the previous one
 // ends, and is marked as estimated.
-func pools(entries []entry) []gamekit.PoolInfo {
+func pools(entries []entry) []app.PoolInfo {
 	type dated struct {
 		entry    entry
 		from, to string
@@ -111,9 +111,9 @@ func pools(entries []entry) []gamekit.PoolInfo {
 		list = append(list, dated{item, from, to, match[1], match[2]})
 	}
 	slices.SortStableFunc(list, func(a, b dated) int { return strings.Compare(a.to, b.to) })
-	pools := []gamekit.PoolInfo{}
+	pools := []app.PoolInfo{}
 	for index, item := range list {
-		pool := gamekit.PoolInfo{Version: item.version, Half: item.half, From: item.from, To: item.to, Kind: "character", Characters5: []string{}, Characters4: []string{}, Weapons5: []string{}, Weapons4: []string{}}
+		pool := app.PoolInfo{Version: item.version, Half: item.half, From: item.from, To: item.to, Kind: "character", Characters5: []string{}, Characters4: []string{}, Weapons5: []string{}, Weapons4: []string{}}
 		if pool.From == "" {
 			if strings.HasPrefix(item.entry.Timer, "公测开启后") {
 				pool.From = "2024-07-04 10:00:00"

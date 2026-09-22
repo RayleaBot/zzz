@@ -5,8 +5,8 @@ import (
 	"embed"
 	"io/fs"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
-	"github.com/RayleaBot/game-plugin-kit/reference"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/plugin-zzz/internal/reference"
 	plugin "github.com/RayleaBot/plugin-zzz"
 	"github.com/RayleaBot/plugin-zzz/internal/banners"
 	"github.com/RayleaBot/plugin-zzz/internal/images"
@@ -55,7 +55,7 @@ func dataFile(name string) []byte {
 	return raw
 }
 
-// Kit is everything the shared game library needs from this plugin.
-func Kit() gamekit.Assets {
-	return gamekit.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Queries: images.Queries(), Panel: images.Panel, Gacha: images.Gacha, Help: images.Help, MonthlyStats: images.MonthlyCollect, Calendar: images.Calendar, QueryRank: images.QueryRank, Entry: images.Entry, Showcase: showcase.Source, PanelList: images.PanelList, UIDList: images.UIDList, Banners: banners.Source}
+// Load is the compiled-in game data and image builders the app runs with.
+func Load() app.Assets {
+	return app.Assets{Game: game, Catalog: catalog, Manifest: plugin.Info, Calc: CalcProfile(), Resources: dataFile("resources.json"), Images: images.Builders(), Queries: images.Queries(), Panel: images.Panel, Gacha: images.Gacha, Help: images.Help, MonthlyStats: images.MonthlyCollect, Calendar: images.Calendar, QueryRank: images.QueryRank, Entry: images.Entry, Showcase: showcase.Source, PanelList: images.PanelList, UIDList: images.UIDList, Banners: banners.Source}
 }

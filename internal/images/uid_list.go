@@ -1,7 +1,7 @@
 package images
 
 import (
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // uidListArtwork maps the images named in the converted stylesheets (miao's
@@ -18,8 +18,8 @@ var uidListArtwork = [][3]string{
 // UIDList draws 我的uid the way the Yunzai 原神插件's html/user/uid-list
 // does, for 绝区零: each UID with its number and CK or bound tag, the one in
 // use marked, and the player's name and level with miao's common face and the 绝区零 banner.
-func UIDList(context gamekit.ImageContext, list gamekit.UIDListImage) (gamekit.Image, bool) {
-	resources := &gamekit.ImageResources{Context: context}
+func UIDList(context app.ImageContext, list app.UIDListImage) (app.Image, bool) {
+	resources := &app.ImageResources{Context: context}
 	for _, item := range uidListArtwork {
 		resources.Artwork(item[0], item[1], item[2])
 	}
@@ -39,5 +39,5 @@ func UIDList(context gamekit.ImageContext, list gamekit.UIDListImage) (gamekit.I
 		}
 		uids = append(uids, item)
 	}
-	return gamekit.Image{Template: "uid-list", Data: map[string]any{"mark": context.Game.Prefix, "name": "绝区零", "no_info": "暂无uid信息", "uids": uids}, Resources: resources.List}, true
+	return app.Image{Template: "uid-list", Data: map[string]any{"mark": context.Game.Prefix, "name": "绝区零", "no_info": "暂无uid信息", "uids": uids}, Resources: resources.List}, true
 }

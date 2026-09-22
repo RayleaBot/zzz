@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // nanoka reads ZZZ-Plugin's wiki data source: static.nanoka.cc publishes each
@@ -199,18 +199,18 @@ func wikiLevels(word string) ([6]int, bool) {
 // skills, with every skill's descriptions and its values at the levels asked
 // for, and the core skill; 影画, 意象 and 命座 as cinema, the six Mindscape
 // Cinema levels beside the third Mindscape's art.
-func Entry(context gamekit.ImageContext, page gamekit.EntryImage) (gamekit.Image, bool) {
+func Entry(context app.ImageContext, page app.EntryImage) (app.Image, bool) {
 	if page.Command != "talent-wiki" || page.Entry.Kind != "character" {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	cinema := wikiCinemaWord.MatchString(page.Word)
 	levels, ok := wikiLevels(page.Word)
 	if !cinema && !ok {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	agent, ok := nanokaAgentData(page.Entry.ID)
 	if !ok {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork)
 	id := strconv.Itoa(agent.ID)
@@ -238,7 +238,7 @@ func Entry(context gamekit.ImageContext, page gamekit.EntryImage) (gamekit.Image
 		if art, ok := context.FetchArtworkResource("cinema", "nanoka", "assets/zzz/Mindscape_"+id+"_3.webp"); ok {
 			resources.List, data["image"] = append(resources.List, art), "cinema"
 		}
-		return gamekit.Image{Template: "cinema", Data: data, Resources: resources.List}, true
+		return app.Image{Template: "cinema", Data: data, Resources: resources.List}, true
 	}
 	skills := []any{}
 	for index, slot := range wikiSkills {
@@ -293,7 +293,7 @@ func Entry(context gamekit.ImageContext, page gamekit.EntryImage) (gamekit.Image
 		}
 		data["core"] = map[string]any{"level": levels[5], "items": items}
 	}
-	return gamekit.Image{Template: "skills", Data: data, Resources: resources.List}, true
+	return app.Image{Template: "skills", Data: data, Resources: resources.List}, true
 }
 
 // nanokaText prints an impression line, keeping its line breaks.

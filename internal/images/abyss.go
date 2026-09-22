@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // abyssArtwork is what abyss adds.
@@ -18,11 +18,11 @@ var abyssArtwork = [][2]string{
 // card and period, the fifth frontier with its score, rank, rating and clear
 // times, each of its rooms with the monster, score, buff and team, then
 // frontiers four to one with their ratings and teams.
-func Abyss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func Abyss(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	// Upstream answers in text for an older version or an empty period.
 	data, _ := result.Data["hadal_info_v2"].(map[string]any)
-	if gamekit.Text(result.Data["hadal_ver"]) != "v2" || data == nil {
-		return gamekit.Image{}, false
+	if app.Text(result.Data["hadal_ver"]) != "v2" || data == nil {
+		return app.Image{}, false
 	}
 	names := []string{"first", "second", "third", "fourth", "fitfh"}
 	empty := true
@@ -32,7 +32,7 @@ func Abyss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Im
 		}
 	}
 	if empty {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, abyssArtwork)
 	const clock = "2006-01-02 15:04:05"
@@ -45,18 +45,18 @@ func Abyss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Im
 		for index, raw := range list {
 			item, _ := raw.(map[string]any)
 			buffer, _ := item["buffer"].(map[string]any)
-			score := gamekit.Int(item["score"])
-			rooms = append(rooms, map[string]any{"no": index + 1, "rating": gamekit.Text(item["rating"]), "monster": resources.official(item["monster_pic"]),
+			score := app.Int(item["score"])
+			rooms = append(rooms, map[string]any{"no": index + 1, "rating": app.Text(item["rating"]), "monster": resources.official(item["monster_pic"]),
 				"score": score, "max_score": score == 50000, "time": recordTime(item["challenge_time"], clock),
-				"buff": gamekit.Text(buffer["title"]), "team": resources.team(item)})
+				"buff": app.Text(buffer["title"]), "team": resources.team(item)})
 		}
-		score, percent := gamekit.Int(brief["score"]), gamekit.Int(brief["rank_percent"])
+		score, percent := app.Int(brief["score"]), app.Int(brief["rank_percent"])
 		battle := ""
-		if seconds := gamekit.Int(brief["battle_time"]); seconds > 0 {
+		if seconds := app.Int(brief["battle_time"]); seconds > 0 {
 			battle = fmt.Sprintf("%02d:%02d", seconds/60, seconds%60)
 		}
 		fifth = map[string]any{"score": score, "max_score": score == 150000, "rank_bg": rankBackground(percent), "rank": rankText(percent),
-			"rating": strings.ReplaceAll(gamekit.Text(brief["rating"]), "+", "P"), "time": recordTime(brief["challenge_time"], clock),
+			"rating": strings.ReplaceAll(app.Text(brief["rating"]), "+", "P"), "time": recordTime(brief["challenge_time"], clock),
 			"battle_time": battle, "rooms": rooms}
 	}
 	lower := []any{}
@@ -72,9 +72,9 @@ func Abyss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Im
 			teams = append(teams, map[string]any{"no": number + 1, "team": resources.team(item)})
 		}
 		lower = append(lower, map[string]any{"name": "剧变节点第" + []string{"一", "二", "三", "四"}[index] + "防线",
-			"rating": gamekit.Text(detail["rating"]), "time": recordTime(detail["challenge_time"], clock), "teams": teams})
+			"rating": app.Text(detail["rating"]), "time": recordTime(detail["challenge_time"], clock), "teams": teams})
 	}
-	return gamekit.Image{Template: "abyss", Data: map[string]any{
+	return app.Image{Template: "abyss", Data: map[string]any{
 		"player": playerCard(result.Role), "begin": recordTime(data["hadal_begin_time"], clock), "end": recordTime(data["hadal_end_time"], clock),
 		"fifth": fifth, "lower": lower, "rank_note": rankNote(context),
 	}, Resources: resources.List}, true

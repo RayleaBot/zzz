@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestVoidFrontFollowsZZZPlugin(t *testing.T) {
@@ -19,8 +19,8 @@ func TestVoidFrontFollowsZZZPlugin(t *testing.T) {
 		"boss_challenge_record":      map[string]any{"boss_info": map[string]any{"name": "首领"}, "main_challenge_record": stage("最终", "90000", "100000")},
 		"main_challenge_record_list": []any{stage("STAGE 03", "65000", "65000"), stage("STAGE 02", "60000", "65000")},
 	}}
-	context := gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}
-	image, ok := VoidFront(context, gamekit.QueryResult{Data: data})
+	context := app.ImageContext{Game: app.Game{Prefix: "%"}}
+	image, ok := VoidFront(context, app.QueryResult{Data: data})
 	if !ok || image.Data["end"] != "超过42天" || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
@@ -38,10 +38,10 @@ func TestVoidFrontFollowsZZZPlugin(t *testing.T) {
 	}
 	// Upstream notes the ranking only for the current period.
 	context.Input = map[string]any{"schedule_type": 2}
-	if image, _ := VoidFront(context, gamekit.QueryResult{Data: data}); image.Data["rank_note"].(map[string]any) != nil {
+	if image, _ := VoidFront(context, app.QueryResult{Data: data}); image.Data["rank_note"].(map[string]any) != nil {
 		t.Errorf("last period = %v", image.Data["rank_note"])
 	}
-	if _, ok := VoidFront(context, gamekit.QueryResult{Data: map[string]any{}}); ok {
+	if _, ok := VoidFront(context, app.QueryResult{Data: map[string]any{}}); ok {
 		t.Error("a period without data answers in text like upstream")
 	}
 }

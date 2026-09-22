@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestTowerFollowsZZZPlugin(t *testing.T) {
@@ -19,7 +19,7 @@ func TestTowerFollowsZZZPlugin(t *testing.T) {
 			"display_avatar_rank_list": []any{agent("1"), agent("2"), agent("3"), agent("4")},
 		},
 	}
-	image, ok := Tower(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, gamekit.QueryResult{Data: data})
+	image, ok := Tower(app.ImageContext{Game: app.Game{Prefix: "%"}}, app.QueryResult{Data: data})
 	if !ok || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
@@ -32,7 +32,7 @@ func TestTowerFollowsZZZPlugin(t *testing.T) {
 	if s4["layer"] != "50" || s4["score"] != "98765" || s4["mvp"] != "40" || s4["rank"] != "5.12%" || len(s4["agents"].([]any)) != 3 {
 		t.Errorf("s4 = %v", s4)
 	}
-	if _, ok := Tower(gamekit.ImageContext{}, gamekit.QueryResult{Data: map[string]any{}}); ok {
+	if _, ok := Tower(app.ImageContext{}, app.QueryResult{Data: map[string]any{}}); ok {
 		t.Error("no season answers in text")
 	}
 }

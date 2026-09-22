@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // rankPage is one of ZZZ-Plugin's rank pages: what it keeps of a record and
@@ -47,13 +47,13 @@ var rankPages = map[string]rankPage{
 // records of the current period only, ordered by the page's rules, the first
 // fifteen, each with the member's avatar and the player card beside the
 // result upstream shows for that mode.
-func QueryRank(context gamekit.ImageContext, rank gamekit.QueryRankImage) (gamekit.Image, []gamekit.QueryRankRecord, bool) {
+func QueryRank(context app.ImageContext, rank app.QueryRankImage) (app.Image, []app.QueryRankRecord, bool) {
 	page, ok := rankPages[rank.Type.Page]
 	if !ok {
-		return gamekit.Image{}, nil, false
+		return app.Image{}, nil, false
 	}
 	type scored struct {
-		record gamekit.QueryRankRecord
+		record app.QueryRankRecord
 		keys   []float64
 	}
 	list := []scored{}
@@ -64,7 +64,7 @@ func QueryRank(context gamekit.ImageContext, rank gamekit.QueryRankImage) (gamek
 		}
 	}
 	if len(list) == 0 {
-		return gamekit.Image{}, nil, false
+		return app.Image{}, nil, false
 	}
 	slices.SortStableFunc(list, func(a, b scored) int {
 		for index := range a.keys {
@@ -76,7 +76,7 @@ func QueryRank(context gamekit.ImageContext, rank gamekit.QueryRankImage) (gamek
 	})
 	list = list[:min(15, len(list))]
 	resources := newRecordResources(context, commonArtwork, page.artwork)
-	rows, ranked := []any{}, []gamekit.QueryRankRecord{}
+	rows, ranked := []any{}, []app.QueryRankRecord{}
 	for index, item := range list {
 		row := page.row(resources, item.record.Data)
 		player := playerCard(item.record.Role)
@@ -88,17 +88,17 @@ func QueryRank(context gamekit.ImageContext, rank gamekit.QueryRankImage) (gamek
 		ranked = append(ranked, item.record)
 	}
 	data := map[string]any{"rows": rows, "prefix": context.Game.Prefix, "bars": make([]int, 8)}
-	return gamekit.Image{Template: "rank-" + rank.Type.Page, Data: data, Resources: resources.List}, ranked, true
+	return app.Image{Template: "rank-" + rank.Type.Page, Data: data, Resources: resources.List}, ranked, true
 }
 
 // rankTime reads the official {year, month, …} time of the China servers.
 func rankTime(value any) (time.Time, bool) {
 	fields, _ := value.(map[string]any)
-	if gamekit.Int(fields["year"]) == 0 {
+	if app.Int(fields["year"]) == 0 {
 		return time.Time{}, false
 	}
-	return time.Date(gamekit.Int(fields["year"]), time.Month(gamekit.Int(fields["month"])), gamekit.Int(fields["day"]),
-		gamekit.Int(fields["hour"]), gamekit.Int(fields["minute"]), gamekit.Int(fields["second"]), 0, time.FixedZone("UTC+8", 8*3600)), true
+	return time.Date(app.Int(fields["year"]), time.Month(app.Int(fields["month"])), app.Int(fields["day"]),
+		app.Int(fields["hour"]), app.Int(fields["minute"]), app.Int(fields["second"]), 0, time.FixedZone("UTC+8", 8*3600)), true
 }
 
 // rankInPeriod is whether now falls in the record's start and end time.
@@ -126,7 +126,7 @@ func rankLatest(now time.Time, list []any, field string) float64 {
 
 func abyssRankScore(now time.Time, data map[string]any) ([]float64, string, bool) {
 	info, _ := data["hadal_info_v2"].(map[string]any)
-	if gamekit.Text(data["hadal_ver"]) != "v2" || info == nil || now.Unix() < int64(gamekit.Int(info["begin_time"])) || now.Unix() > int64(gamekit.Int(info["end_time"])) {
+	if app.Text(data["hadal_ver"]) != "v2" || info == nil || now.Unix() < int64(app.Int(info["begin_time"])) || now.Unix() > int64(app.Int(info["end_time"])) {
 		return nil, "", false
 	}
 	brief, _ := info["brief"].(map[string]any)
@@ -134,16 +134,16 @@ func abyssRankScore(now time.Time, data map[string]any) ([]float64, string, bool
 	layers, _ := detail["layer_challenge_info_list"].([]any)
 	latest := int64(0)
 	for _, raw := range layers {
-		latest = max(latest, int64(gamekit.Int(raw.(map[string]any)["challenge_time"])))
+		latest = max(latest, int64(app.Int(raw.(map[string]any)["challenge_time"])))
 	}
 	if latest == 0 {
 		latest = now.Unix()
 	}
-	rating := gamekit.Text(brief["rating"])
+	rating := app.Text(brief["rating"])
 	if rating == "" {
 		rating = "C"
 	}
-	score := gamekit.Int(brief["score"])
+	score := app.Int(brief["score"])
 	return []float64{float64(score), rankRatings[rating], -float64(latest)}, fmt.Sprintf("%d · %s", score, rating), true
 }
 
@@ -160,12 +160,12 @@ func abyssRankRow(resources *recordResources, data map[string]any) map[string]an
 		}
 		layer, _ := list[index].(map[string]any)
 		buffer, _ := layer["buffer"].(map[string]any)
-		score := gamekit.Int(layer["score"])
-		layers = append(layers, map[string]any{"name": gamekit.Text(buffer["title"]), "score": score, "max": score == 50000,
-			"rating": strings.ReplaceAll(gamekit.Text(layer["rating"]), "+", "P"), "team": bangbooTeam(resources, layer)})
+		score := app.Int(layer["score"])
+		layers = append(layers, map[string]any{"name": app.Text(buffer["title"]), "score": score, "max": score == 50000,
+			"rating": strings.ReplaceAll(app.Text(layer["rating"]), "+", "P"), "team": bangbooTeam(resources, layer)})
 	}
-	score := gamekit.Int(brief["score"])
-	rating := gamekit.Text(brief["rating"])
+	score := app.Int(brief["score"])
+	rating := app.Text(brief["rating"])
 	if rating == "" {
 		rating = "C"
 	}
@@ -185,7 +185,7 @@ func deadlyRankScore(now time.Time, data map[string]any) ([]float64, string, boo
 		return nil, "", false
 	}
 	list, _ := data["list"].([]any)
-	stars, score := gamekit.Int(data["total_star"]), gamekit.Int(data["total_score"])
+	stars, score := app.Int(data["total_star"]), app.Int(data["total_score"])
 	return []float64{float64(stars), float64(score), -rankLatest(now, list, "challenge_time")}, fmt.Sprintf("%d 星 · %d", stars, score), true
 }
 
@@ -201,13 +201,13 @@ func deadlyTeam(resources *recordResources, item map[string]any) map[string]any 
 	if len(bosses) > 0 {
 		boss, _ = bosses[0].(map[string]any)
 	}
-	star, total := gamekit.Int(item["star"]), gamekit.Int(item["total_star"])
+	star, total := app.Int(item["star"]), app.Int(item["total_star"])
 	stars := []any{}
 	for index := range max(total, star) {
 		stars = append(stars, index < star)
 	}
-	team := map[string]any{"name": gamekit.Text(boss["name"]), "score": gamekit.Int(item["score"]), "stars": stars, "team": bangbooTeam(resources, item)}
-	if icon := gamekit.Text(buffer["icon"]); icon != "" {
+	team := map[string]any{"name": app.Text(boss["name"]), "score": app.Int(item["score"]), "stars": stars, "team": bangbooTeam(resources, item)}
+	if icon := app.Text(buffer["icon"]); icon != "" {
 		team["pop"] = resources.official(icon)
 	}
 	return team
@@ -224,7 +224,7 @@ func deadlyRankRow(resources *recordResources, data map[string]any) map[string]a
 		item, _ := list[index].(map[string]any)
 		teams = append(teams, deadlyTeam(resources, item))
 	}
-	return map[string]any{"score": gamekit.Int(data["total_score"]), "stars": gamekit.Int(data["total_star"]), "teams": teams}
+	return map[string]any{"score": app.Int(data["total_score"]), "stars": app.Int(data["total_star"]), "teams": teams}
 }
 
 func deadlyHardRankScore(now time.Time, data map[string]any) ([]float64, string, bool) {
@@ -234,7 +234,7 @@ func deadlyHardRankScore(now time.Time, data map[string]any) ([]float64, string,
 	}
 	score := 0
 	for _, raw := range hard {
-		score += gamekit.Int(raw.(map[string]any)["score"])
+		score += app.Int(raw.(map[string]any)["score"])
 	}
 	return []float64{float64(score), -rankLatest(now, hard, "challenge_time")}, strconv.Itoa(score), true
 }
@@ -261,8 +261,8 @@ func holoTotals(list []any) (stars, seconds, flawless int) {
 		spent, _ := item["challenge_time"].(map[string]any)
 		boss, _ := item["boss"].(map[string]any)
 		medal, _ := boss["medal"].(map[string]any)
-		stars += gamekit.Int(item["star"])
-		seconds += gamekit.Int(spent["minute"])*60 + gamekit.Int(spent["second"])
+		stars += app.Int(item["star"])
+		seconds += app.Int(spent["minute"])*60 + app.Int(spent["second"])
 		if medal["is_no_injured"] == true {
 			flawless++
 		}
@@ -285,14 +285,14 @@ func holoRankRow(resources *recordResources, data map[string]any) map[string]any
 		boss, _ := item["boss"].(map[string]any)
 		medal, _ := boss["medal"].(map[string]any)
 		spent, _ := item["challenge_time"].(map[string]any)
-		star := gamekit.Int(item["star"])
+		star := app.Int(item["star"])
 		row := []any{}
 		for slot := range 4 {
 			row = append(row, slot < star)
 		}
-		team := map[string]any{"name": gamekit.Text(boss["name"]), "flawless": medal["is_no_injured"] == true, "stars": row,
-			"time": holoClock(gamekit.Int(spent["minute"])*60 + gamekit.Int(spent["second"])), "team": resources.team(item)}
-		if icon := gamekit.Text(medal["medal_icon"]); icon != "" {
+		team := map[string]any{"name": app.Text(boss["name"]), "flawless": medal["is_no_injured"] == true, "stars": row,
+			"time": holoClock(app.Int(spent["minute"])*60 + app.Int(spent["second"])), "team": resources.team(item)}
+		if icon := app.Text(medal["medal_icon"]); icon != "" {
 			team["pop"] = resources.official(icon)
 		}
 		teams = append(teams, team)
@@ -302,14 +302,14 @@ func holoRankRow(resources *recordResources, data map[string]any) map[string]any
 
 func voidRankScore(now time.Time, data map[string]any) ([]float64, string, bool) {
 	brief, _ := data["void_front_battle_abstract_info_brief"].(map[string]any)
-	if brief == nil || now.Unix() > int64(gamekit.Int(brief["end_ts"])) || brief["has_ending_record"] != true {
+	if brief == nil || now.Unix() > int64(app.Int(brief["end_ts"])) || brief["has_ending_record"] != true {
 		return nil, "", false
 	}
 	boss, _ := data["boss_challenge_record"].(map[string]any)
 	main, _ := boss["main_challenge_record"].(map[string]any)
 	list, _ := data["main_challenge_record_list"].([]any)
 	latest := rankLatest(now, append([]any{main}, list...), "challenge_time")
-	score := gamekit.Int(brief["total_score"])
+	score := app.Int(brief["total_score"])
 	return []float64{float64(score), -latest}, strconv.Itoa(score), true
 }
 
@@ -317,10 +317,10 @@ func voidRankScore(now time.Time, data map[string]any) ([]float64, string, bool)
 // team; full is the score upstream shows as its full-score badge.
 func voidStage(resources *recordResources, item map[string]any, name string, full int) map[string]any {
 	buffer, _ := item["buffer"].(map[string]any)
-	score := gamekit.Int(item["score"])
+	score := app.Int(item["score"])
 	stage := map[string]any{"name": name, "score": score, "max": score == full, "full": full,
-		"rating": strings.ReplaceAll(gamekit.Text(item["star"]), "+", "P"), "team": bangbooTeam(resources, item)}
-	if icon := gamekit.Text(buffer["icon"]); icon != "" {
+		"rating": strings.ReplaceAll(app.Text(item["star"]), "+", "P"), "team": bangbooTeam(resources, item)}
+	if icon := app.Text(buffer["icon"]); icon != "" {
 		stage["pop"] = resources.official(icon)
 	}
 	return stage
@@ -343,10 +343,10 @@ func voidRankRow(resources *recordResources, data map[string]any) map[string]any
 		if index == 0 {
 			full = 182000
 		}
-		stages = append(stages, voidStage(resources, item, gamekit.Text(item["name"]), full))
+		stages = append(stages, voidStage(resources, item, app.Text(item["name"]), full))
 	}
-	score := gamekit.Int(brief["total_score"])
-	return map[string]any{"score": score, "max": score == 663000, "boss": voidStage(resources, main, gamekit.Text(info["name"]), 182000), "stages": stages}
+	score := app.Int(brief["total_score"])
+	return map[string]any{"score": score, "max": score == 663000, "boss": voidStage(resources, main, app.Text(info["name"]), 182000), "stages": stages}
 }
 
 // towerRankPage is a Simulated Battle Trial season's page: S1 ranks by floor,
@@ -372,7 +372,7 @@ func towerRankPage(season string) rankPage {
 			if !ok {
 				return nil, "", false
 			}
-			floor, flawless, score := gamekit.Int(layer["climbing_tower_layer"]), gamekit.Int(mvp["floor_mvp_num"]), gamekit.Int(layer["total_score"])
+			floor, flawless, score := app.Int(layer["climbing_tower_layer"]), app.Int(mvp["floor_mvp_num"]), app.Int(layer["total_score"])
 			switch season {
 			case "s1":
 				return []float64{float64(floor)}, fmt.Sprintf("%d 层", floor), true
@@ -383,8 +383,8 @@ func towerRankPage(season string) rankPage {
 		},
 		row: func(resources *recordResources, data map[string]any) map[string]any {
 			layer, mvp, _ := fields(data)
-			return map[string]any{"floor": gamekit.Int(layer["climbing_tower_layer"]), "flawless": gamekit.Int(mvp["floor_mvp_num"]),
-				"score": gamekit.Int(layer["total_score"]), "medal": resources.official(layer["medal_icon"])}
+			return map[string]any{"floor": app.Int(layer["climbing_tower_layer"]), "flawless": app.Int(mvp["floor_mvp_num"]),
+				"score": app.Int(layer["total_score"]), "medal": resources.official(layer["medal_icon"])}
 		},
 	}
 }

@@ -1,6 +1,6 @@
 package images
 
-import gamekit "github.com/RayleaBot/game-plugin-kit"
+import "github.com/RayleaBot/plugin-zzz/internal/app"
 
 // voidFrontArtwork is what voidFrontBattle adds.
 var voidFrontArtwork = [][2]string{
@@ -13,31 +13,31 @@ var voidFrontArtwork = [][2]string{
 // page does: the player card and period, the total score with its rank and
 // ending, the final boss stage with its score, ratio, clear time, team, rating
 // and sub-stages, then every earlier stage the same way.
-func VoidFront(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func VoidFront(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	detail, _ := result.Data["void_front_battle_detail"].(map[string]any)
 	// Upstream answers in text while the period has no data.
 	if detail == nil {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, voidFrontArtwork)
 	const clock = "2006-01-02 15:04:05"
 	score := func(item map[string]any) map[string]any {
-		value, maximum := gamekit.Int(item["score"]), gamekit.Int(item["max_score"])
+		value, maximum := app.Int(item["score"]), app.Int(item["max_score"])
 		return map[string]any{"value": value, "max": maximum, "full": value == maximum}
 	}
 	buff := func(item map[string]any) map[string]any {
 		buffer, _ := item["buffer"].(map[string]any)
-		return map[string]any{"icon": resources.official(buffer["icon"]), "name": gamekit.Text(buffer["name"])}
+		return map[string]any{"icon": resources.official(buffer["icon"]), "name": app.Text(buffer["name"])}
 	}
 	stage := func(item map[string]any) map[string]any {
 		subs := []any{}
 		records, _ := item["sub_challenge_record"].([]any)
 		for _, raw := range records {
 			sub, _ := raw.(map[string]any)
-			subs = append(subs, map[string]any{"rating": gamekit.Text(sub["star"]), "name": gamekit.Text(sub["name"]), "buff": buff(sub), "team": resources.team(sub)})
+			subs = append(subs, map[string]any{"rating": app.Text(sub["star"]), "name": app.Text(sub["name"]), "buff": buff(sub), "team": resources.team(sub)})
 		}
-		return map[string]any{"name": gamekit.Text(item["name"]), "buff": buff(item), "score": score(item), "ratio": gamekit.Text(item["score_ratio"]),
-			"time": recordTime(item["challenge_time"], clock), "team": resources.team(item), "rating": gamekit.Text(item["star"]), "subs": subs}
+		return map[string]any{"name": app.Text(item["name"]), "buff": buff(item), "score": score(item), "ratio": app.Text(item["score_ratio"]),
+			"time": recordTime(item["challenge_time"], clock), "team": resources.team(item), "rating": app.Text(item["star"]), "subs": subs}
 	}
 
 	brief, _ := detail["void_front_battle_abstract_info_brief"].(map[string]any)
@@ -48,14 +48,14 @@ func VoidFront(context gamekit.ImageContext, result gamekit.QueryResult) (gameki
 	var total, boss any
 	bossChallenge, _ := detail["boss_challenge_record"].(map[string]any)
 	if brief != nil && bossChallenge != nil {
-		percent := gamekit.Int(brief["rank_percent"])
+		percent := app.Int(brief["rank_percent"])
 		totalScore := score(map[string]any{"score": brief["total_score"], "max_score": brief["max_score"]})
 		total = map[string]any{"score": totalScore, "rank_bg": rankBackground(percent), "rank": rankText(percent),
-			"ending": gamekit.Text(brief["ending_record_name"]), "ending_bg": resources.official(brief["ending_record_bg_pic"])}
+			"ending": app.Text(brief["ending_record_name"]), "ending_bg": resources.official(brief["ending_record_bg_pic"])}
 		main, _ := bossChallenge["main_challenge_record"].(map[string]any)
 		info, _ := bossChallenge["boss_info"].(map[string]any)
 		record := stage(main)
-		record["name"], record["icon"] = gamekit.Text(info["name"]), resources.official(info["icon"])
+		record["name"], record["icon"] = app.Text(info["name"]), resources.official(info["icon"])
 		boss = record
 	}
 	stages := []any{}
@@ -66,10 +66,10 @@ func VoidFront(context gamekit.ImageContext, result gamekit.QueryResult) (gameki
 	}
 	// Upstream notes the group ranking only for the current period.
 	var note map[string]any
-	if gamekit.Int(context.Input["schedule_type"]) != 2 {
+	if app.Int(context.Input["schedule_type"]) != 2 {
 		note = rankNote(context)
 	}
-	return gamekit.Image{Template: "void-front", Data: map[string]any{
+	return app.Image{Template: "void-front", Data: map[string]any{
 		"player": playerCard(result.Role), "begin": recordTime(brief["start_time"], clock), "end": end,
 		"total": total, "boss": boss, "stages": stages, "rank_note": note,
 	}, Resources: resources.List}, true

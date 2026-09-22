@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/RayleaBot/game-plugin-kit/reference"
+	"github.com/RayleaBot/plugin-zzz/internal/reference"
 )
 
 // score-vectors.json holds three shared panels and the expected per-slot scores

@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@rayleabot/game-ui':
-        specifier: link:../.rayleabot/game-ui
-        version: link:../.rayleabot/game-ui
       '@rayleabot/plugin-ui':
         specifier: link:../.rayleabot/sdk/vue
         version: link:../.rayleabot/sdk/vue

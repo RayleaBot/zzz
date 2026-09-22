@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func zzzTime(day int) map[string]any {
@@ -24,8 +24,8 @@ func TestAbyssFollowsZZZPlugin(t *testing.T) {
 		"fitfh_layer_detail":  map[string]any{"layer_challenge_info_list": []any{room("50000"), room("48000"), room("47000")}},
 		"fourth_layer_detail": map[string]any{"rating": "S", "challenge_time": zzzTime(10), "layer_challenge_info_list": []any{room("0"), room("0")}},
 	}}
-	context := gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}
-	image, ok := Abyss(context, gamekit.QueryResult{Role: gamekit.Role{UID: "10000001", Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Data: data})
+	context := app.ImageContext{Game: app.Game{Prefix: "%"}}
+	image, ok := Abyss(context, app.QueryResult{Role: app.Role{UID: "10000001", Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Data: data})
 	if !ok {
 		t.Fatal("abyss")
 	}
@@ -52,7 +52,7 @@ func TestAbyssFollowsZZZPlugin(t *testing.T) {
 		t.Errorf("data = %v", image.Data)
 	}
 	data["hadal_ver"] = "v1"
-	if _, ok := Abyss(context, gamekit.QueryResult{Data: data}); ok {
+	if _, ok := Abyss(context, app.QueryResult{Data: data}); ok {
 		t.Error("an older version answers in text like upstream")
 	}
 }

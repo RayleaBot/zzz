@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 	"github.com/RayleaBot/plugin-zzz/internal/assets"
 	"github.com/RayleaBot/plugin-zzz/internal/showcase"
 )
@@ -19,11 +19,11 @@ const enkaFixture = `{"ttl":60,"PlayerInfo":{"SocialDetail":{"ProfileDetail":{"N
 {"Id":1,"Level":1,"TalentLevel":0,"PromotionLevel":1,"SkillLevelList":[],"EquippedList":[]}]}}}`
 
 func TestParseRunsZZZPluginsEnkaFormat(t *testing.T) {
-	app, err := gamekit.New(assets.Kit(), t.TempDir())
+	application, err := app.New(assets.Load(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile, err := showcase.Parse(t.Context(), app.Game, app.Catalog, []byte(enkaFixture))
+	profile, err := showcase.Parse(t.Context(), application.Game, application.Catalog, []byte(enkaFixture))
 	if err != nil || profile.Nickname != "绳匠" {
 		t.Fatal(profile, err)
 	}
@@ -48,7 +48,7 @@ func TestParseRunsZZZPluginsEnkaFormat(t *testing.T) {
 	if levels[0] != 10 || levels[5] != 7 {
 		t.Fatalf("skills = %v", levels)
 	}
-	if _, err = showcase.Parse(t.Context(), app.Game, app.Catalog, []byte(`{"PlayerInfo":{"ShowcaseDetail":{"AvatarList":[]}}}`)); !errors.Is(err, gamekit.ErrShowcaseEmpty) {
+	if _, err = showcase.Parse(t.Context(), application.Game, application.Catalog, []byte(`{"PlayerInfo":{"ShowcaseDetail":{"AvatarList":[]}}}`)); !errors.Is(err, app.ErrShowcaseEmpty) {
 		t.Fatal(err)
 	}
 }

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // recordResources collects a record image's resources: ZZZ-Plugin art and the
 // official images the response links to, cached on demand.
-type recordResources struct{ gamekit.ImageResources }
+type recordResources struct{ app.ImageResources }
 
-func newRecordResources(context gamekit.ImageContext, tables ...[][2]string) *recordResources {
-	resources := &recordResources{gamekit.ImageResources{Context: context}}
+func newRecordResources(context app.ImageContext, tables ...[][2]string) *recordResources {
+	resources := &recordResources{app.ImageResources{Context: context}}
 	for _, table := range tables {
 		for _, item := range table {
 			resources.Artwork(item[0], "zzz-plugin", item[1])
@@ -34,10 +34,10 @@ func (r *recordResources) team(item map[string]any) map[string]any {
 			continue
 		}
 		avatar, _ := avatars[index].(map[string]any)
-		slots = append(slots, map[string]any{"rank": gamekit.Int(avatar["rank"]), "rarity": rarity(avatar["rarity"]), "icon": r.official(avatar["role_square_url"])})
+		slots = append(slots, map[string]any{"rank": app.Int(avatar["rank"]), "rarity": rarity(avatar["rarity"]), "icon": r.official(avatar["role_square_url"])})
 	}
 	var buddy any
-	if raw, _ := item["buddy"].(map[string]any); raw != nil && gamekit.Int(raw["id"]) != 0 {
+	if raw, _ := item["buddy"].(map[string]any); raw != nil && app.Int(raw["id"]) != 0 {
 		buddy = map[string]any{"rarity": rarity(raw["rarity"]), "icon": r.official(raw["bangboo_rectangle_url"])}
 	}
 	return map[string]any{"slots": slots, "buddy": buddy}
@@ -46,14 +46,14 @@ func (r *recordResources) team(item map[string]any) map[string]any {
 // rarity is a character's or Bangboo's rank letter; ZZZ-Plugin reads a missing
 // one as A.
 func rarity(value any) string {
-	if text := gamekit.Text(value); text != "" {
+	if text := app.Text(value); text != "" {
 		return text
 	}
 	return "A"
 }
 
 // playerCard is what ZZZ-Plugin's player info header shows.
-func playerCard(role gamekit.Role) map[string]any {
+func playerCard(role app.Role) map[string]any {
 	region := regionNames[role.Region]
 	if region == "" {
 		region = role.Region
@@ -85,19 +85,19 @@ func rankText(percent int) string { return fmt.Sprintf("%.2f%%", float64(percent
 // time; "" when missing.
 func recordTime(value any, layout string) string {
 	fields, _ := value.(map[string]any)
-	year := gamekit.Int(fields["year"])
+	year := app.Int(fields["year"])
 	if year == 0 {
 		return ""
 	}
-	return time.Date(year, time.Month(gamekit.Int(fields["month"])), gamekit.Int(fields["day"]),
-		gamekit.Int(fields["hour"]), gamekit.Int(fields["minute"]), gamekit.Int(fields["second"]), 0, time.UTC).Format(layout)
+	return time.Date(year, time.Month(app.Int(fields["month"])), app.Int(fields["day"]),
+		app.Int(fields["hour"]), app.Int(fields["minute"]), app.Int(fields["second"]), 0, time.UTC).Format(layout)
 }
 
 // rankNote is what ZZZ-Plugin's closing note says of the group ranking: the
 // requester's 显示 or 隐藏 state after a query in a group, otherwise "" and
 // the note asks for a query in a group. The reply prefix fills the commands
 // it names.
-func rankNote(context gamekit.ImageContext) map[string]any {
+func rankNote(context app.ImageContext) map[string]any {
 	state := ""
 	if context.RankShown != nil {
 		state = "隐藏"

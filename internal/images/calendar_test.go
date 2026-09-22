@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
-	"github.com/RayleaBot/game-plugin-kit/artwork"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/plugin-zzz/internal/artwork"
 )
 
 func TestCalendarShowsTheOfficialCalendarPicture(t *testing.T) {
@@ -20,8 +20,8 @@ func TestCalendarShowsTheOfficialCalendarPicture(t *testing.T) {
 	if err := os.WriteFile(cached, png, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	context := gamekit.ImageContext{Artwork: &artwork.Store{Root: root, Sources: []artwork.Source{{ID: "mihoyo", Mirrors: []string{"https://"}}}}}
-	calendar := gamekit.CalendarImage{Announcements: gamekit.Announcements{Contents: []any{
+	context := app.ImageContext{Artwork: &artwork.Store{Root: root, Sources: []artwork.Source{{ID: "mihoyo", Mirrors: []string{"https://"}}}}}
+	calendar := app.CalendarImage{Announcements: app.Announcements{Contents: []any{
 		map[string]any{"title": "版本日历", "subtitle": "版本说明", "content": `<img src="https://example.invalid/other.png">`},
 		map[string]any{"title": "9月日历", "subtitle": "活动日历", "content": `<p><img class="x" src="https://example.invalid/calendar.png" /></p>`},
 	}}}

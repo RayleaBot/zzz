@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestNoteFollowsZZZPlugin(t *testing.T) {
@@ -15,7 +15,7 @@ func TestNoteFollowsZZZPlugin(t *testing.T) {
 		"vhs_sale":  map[string]any{"sale_state": "SaleStateDoing"},
 		"card_sign": "CardSignNo",
 	}
-	image, ok := Note(gamekit.ImageContext{Now: time.Now()}, gamekit.QueryResult{Role: gamekit.Role{UID: "10000001", Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Data: data})
+	image, ok := Note(app.ImageContext{Now: time.Now()}, app.QueryResult{Role: app.Role{UID: "10000001", Nickname: "绳匠", Level: 60, Region: "prod_gf_cn"}, Data: data})
 	if !ok || image.Template != "note" {
 		t.Fatalf("image = %+v", image)
 	}
@@ -33,7 +33,7 @@ func TestNoteFollowsZZZPlugin(t *testing.T) {
 			t.Errorf("activity %d = %v", index, item)
 		}
 	}
-	if _, ok := Note(gamekit.ImageContext{}, gamekit.QueryResult{Data: map[string]any{}}); ok {
+	if _, ok := Note(app.ImageContext{}, app.QueryResult{Data: map[string]any{}}); ok {
 		t.Error("a result without energy should keep the summary card")
 	}
 }

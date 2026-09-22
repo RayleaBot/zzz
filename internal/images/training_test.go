@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestTrainingFollowsZZZPlugin(t *testing.T) {
@@ -17,18 +17,18 @@ func TestTrainingFollowsZZZPlugin(t *testing.T) {
 		}
 		return entry
 	}
-	context := gamekit.ImageContext{
-		Query: func(operation string, input map[string]any) (gamekit.QueryResult, error) {
-			return gamekit.QueryResult{Data: map[string]any{"avatar_list": []any{agent("1011", "A", 6, "A"), agent("1191", "S", 0, "S"), agent("1021", "S", 5, "")}}}, nil
+	context := app.ImageContext{
+		Query: func(operation string, input map[string]any) (app.QueryResult, error) {
+			return app.QueryResult{Data: map[string]any{"avatar_list": []any{agent("1011", "A", 6, "A"), agent("1191", "S", 0, "S"), agent("1021", "S", 5, "")}}}, nil
 		},
-		Score: func(panel gamekit.CharacterPanel) (gamekit.CharacterPanel, error) {
+		Score: func(panel app.CharacterPanel) (app.CharacterPanel, error) {
 			raw, _ := json.Marshal(map[string]any{"pieces": []any{map[string]any{"slot": 1, "score": 60, "grade": "SSS"}, map[string]any{"slot": 2, "score": 45, "grade": "A"}}})
-			panel.ScoreDetail = &gamekit.ScoreDetail{Raw: raw}
+			panel.ScoreDetail = &app.ScoreDetail{Raw: raw}
 			return panel, nil
 		},
 	}
 	list := map[string]any{"avatar_list": []any{map[string]any{"id": json.Number("1011")}, map[string]any{"id": json.Number("1191")}, map[string]any{"id": json.Number("1021")}}}
-	image, ok := Training(context, gamekit.QueryResult{Role: gamekit.Role{UID: "10000001", Region: "prod_gf_cn"}, Data: list})
+	image, ok := Training(context, app.QueryResult{Role: app.Role{UID: "10000001", Region: "prod_gf_cn"}, Data: list})
 	if !ok {
 		t.Fatal("training")
 	}

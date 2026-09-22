@@ -3,7 +3,7 @@ package images
 import (
 	"strings"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // helpIcons gives each group, by id, the attribute icon of ZZZ-Plugin's help
@@ -13,9 +13,9 @@ var helpIcons = map[string]string{"info": "Fire", "gacha": "Ice", "panel": "Elec
 // Help draws the help menu the way ZZZ-Plugin's help page does: the special
 // title, then each group with its attribute icon and every command's name,
 // usage and description.
-func Help(context gamekit.ImageContext, help gamekit.HelpImage) (gamekit.Image, bool) {
+func Help(context app.ImageContext, help app.HelpImage) (app.Image, bool) {
 	if len(help.Groups) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork)
 	parts := []any{}
@@ -32,5 +32,5 @@ func Help(context gamekit.ImageContext, help gamekit.HelpImage) (gamekit.Image, 
 		}
 		parts = append(parts, map[string]any{"title": group.Title, "icon": icon, "items": items})
 	}
-	return gamekit.Image{Template: "help", Data: map[string]any{"title": help.Title, "parts": parts, "bars": make([]int, 8)}, Resources: resources.List}, true
+	return app.Image{Template: "help", Data: map[string]any{"title": help.Title, "parts": parts, "bars": make([]int, 8)}, Resources: resources.List}, true
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestDeadlyFollowsZZZPlugin(t *testing.T) {
@@ -17,7 +17,7 @@ func TestDeadlyFollowsZZZPlugin(t *testing.T) {
 	data := map[string]any{"has_data": true, "nick_name": "绳匠", "total_score": json.Number("65000"), "rank_percent": json.Number("4999"), "total_star": json.Number("8"),
 		"start_time": zzzTime(1), "end_time": zzzTime(15), "list": []any{boss("冥宁芙·双子"), boss("未知复合侵蚀体")},
 		"has_hard": true, "hard_rank_percent": json.Number("80"), "hard_list": []any{boss("绝境首领")}}
-	image, ok := Deadly(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, gamekit.QueryResult{Data: data})
+	image, ok := Deadly(app.ImageContext{Game: app.Game{Prefix: "%"}}, app.QueryResult{Data: data})
 	if !ok || image.Data["rank_bg"] != 4 || image.Data["rank"] != "49.99%" || image.Data["begin"] != "2026.09.01" || image.Data["rank_note"].(map[string]any)["state"] != "" {
 		t.Fatalf("image = %v", image.Data)
 	}
@@ -37,7 +37,7 @@ func TestDeadlyFollowsZZZPlugin(t *testing.T) {
 		t.Errorf("hard = %v", hard)
 	}
 	data["has_data"] = false
-	if _, ok := Deadly(gamekit.ImageContext{}, gamekit.QueryResult{Data: data}); ok {
+	if _, ok := Deadly(app.ImageContext{}, app.QueryResult{Data: data}); ok {
 		t.Error("a period without data answers in text like upstream")
 	}
 }

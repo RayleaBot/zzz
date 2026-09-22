@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // propertyClasses are ZZZ-Plugin's icon classes by the first three digits of
@@ -20,7 +20,7 @@ var propertyClasses = map[string]string{
 }
 
 func propertyClass(id any) string {
-	text := gamekit.Text(id)
+	text := app.Text(id)
 	return propertyClasses[text[:min(3, len(text))]]
 }
 
@@ -40,10 +40,10 @@ var (
 // portrait with skill levels, rank, level and Mindscape, the property list,
 // the W-Engine, the drive disc rating with substat totals, each disc, and the
 // reference damage table.
-func Panel(context gamekit.ImageContext, image gamekit.PanelImage) (gamekit.Image, bool) {
+func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	official := image.Panel.Official
 	if official == nil {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := []rayleabot.RenderImageResource{}
 	for _, item := range append(append([][2]string{}, commonArtwork...), panelArtwork...) {
@@ -59,7 +59,7 @@ func Panel(context gamekit.ImageContext, image gamekit.PanelImage) (gamekit.Imag
 		return ok
 	}
 	maps := readMaps(context)
-	id := gamekit.Text(official["id"])
+	id := app.Text(official["id"])
 	if sprite := maps.partners[id].SpriteID; sprite != "" {
 		fetch("role-icon", "role/IconRole"+sprite+".png")
 	}
@@ -90,24 +90,24 @@ func Panel(context gamekit.ImageContext, image gamekit.PanelImage) (gamekit.Imag
 		level := ""
 		if index < len(skills) {
 			skill, _ := skills[index].(map[string]any)
-			level = gamekit.Text(skill["level"])
+			level = app.Text(skill["level"])
 		}
 		levels = append(levels, level)
 	}
 
 	data := map[string]any{
-		"uid": image.UID, "rarity": gamekit.Text(official["rarity"]), "name": gamekit.Text(official["full_name_mi18n"]),
-		"level": gamekit.Int(official["level"]), "rank": gamekit.Int(official["rank"]), "skills": levels,
+		"uid": image.UID, "rarity": app.Text(official["rarity"]), "name": app.Text(official["full_name_mi18n"]),
+		"level": app.Int(official["level"]), "rank": app.Int(official["rank"]), "skills": levels,
 		"sub_element": maps.elementName(official["element_type"], official["sub_element_type"]),
 		"properties":  properties(official, maps, label),
-		"damage_hint": context.Game.Prefix + gamekit.Text(official["name_mi18n"]) + "伤害",
+		"damage_hint": context.Game.Prefix + app.Text(official["name_mi18n"]) + "伤害",
 	}
 	if weapon, _ := official["weapon"].(map[string]any); weapon != nil {
-		if code := maps.weapons[gamekit.Text(weapon["id"])].CodeName; code != "" {
+		if code := maps.weapons[app.Text(weapon["id"])].CodeName; code != "" {
 			fetch("weapon-icon", "weapon/"+code+"_High.png")
 		}
 		data["weapon"] = map[string]any{
-			"rarity": gamekit.Text(weapon["rarity"]), "name": gamekit.Text(weapon["name"]), "star": gamekit.Int(weapon["star"]), "level": gamekit.Int(weapon["level"]),
+			"rarity": app.Text(weapon["rarity"]), "name": app.Text(weapon["name"]), "star": app.Int(weapon["star"]), "level": app.Int(weapon["level"]),
 			"main": weaponProperties(weapon["main_properties"]), "sub": weaponProperties(weapon["properties"]),
 		}
 	}
@@ -129,9 +129,9 @@ func Panel(context gamekit.ImageContext, image gamekit.PanelImage) (gamekit.Imag
 			}
 			rows = append(rows, row)
 		}
-		data["damage"] = map[string]any{"rows": rows, "level": gamekit.Int(official["level"])}
+		data["damage"] = map[string]any{"rows": rows, "level": app.Int(official["level"])}
 	}
-	return gamekit.Image{Template: "panel", Data: data, Resources: resources}, true
+	return app.Image{Template: "panel", Data: data, Resources: resources}, true
 }
 
 // properties lists the character property rows in upstream's order; the
@@ -141,9 +141,9 @@ func properties(official map[string]any, maps zzzMaps, label func(string) string
 	list, _ := official["properties"].([]any)
 	for _, raw := range list {
 		property, _ := raw.(map[string]any)
-		byName[gamekit.Text(property["property_name"])] = property
+		byName[app.Text(property["property_name"])] = property
 	}
-	profession := gamekit.Int(official["avatar_profession"])
+	profession := app.Int(official["avatar_profession"])
 	rows := append([]panelRow{}, rowsBefore...)
 	if profession == 7 {
 		rows = append(rows, panelRow{"laceration", "锐暴伤害", "yellow"})
@@ -161,8 +161,8 @@ func properties(official map[string]any, maps zzzMaps, label func(string) string
 	}
 	result := []any{}
 	add := func(icon, iconClass, labelClass, name string, property map[string]any) {
-		base, added := gamekit.Text(property["base"]), gamekit.Text(property["add"])
-		final := gamekit.Text(property["final"])
+		base, added := app.Text(property["base"]), app.Text(property["add"])
+		final := app.Text(property["final"])
 		if property == nil {
 			final = "0"
 		}
@@ -180,8 +180,8 @@ func properties(official map[string]any, maps zzzMaps, label func(string) string
 	if propertyID := maps.elementProperty(official["element_type"]); propertyID != "" {
 		for _, raw := range list {
 			property, _ := raw.(map[string]any)
-			if gamekit.Text(property["property_id"]) == propertyID {
-				add("element-icon", maps.elementName(official["element_type"], 0), label(propertyID+"03"), gamekit.Text(property["property_name"]), property)
+			if app.Text(property["property_id"]) == propertyID {
+				add("element-icon", maps.elementName(official["element_type"], 0), label(propertyID+"03"), app.Text(property["property_name"]), property)
 			}
 		}
 	}
@@ -193,7 +193,7 @@ func weaponProperties(value any) []any {
 	result := []any{}
 	for _, raw := range list {
 		property, _ := raw.(map[string]any)
-		result = append(result, map[string]any{"class": propertyClass(property["property_id"]), "name": gamekit.Text(property["property_name"]), "base": gamekit.Text(property["base"])})
+		result = append(result, map[string]any{"class": propertyClass(property["property_id"]), "name": app.Text(property["property_name"]), "base": app.Text(property["base"])})
 	}
 	return result
 }
@@ -224,7 +224,7 @@ type zzzDetail struct {
 
 // rating is the drive disc score block: the total and its grade, the rule,
 // nine substat totals, and the useful and effective roll counts.
-func rating(detail zzzDetail, score *gamekit.ScoreDetail) map[string]any {
+func rating(detail zzzDetail, score *app.ScoreDetail) map[string]any {
 	stats := []any{}
 	useful, effective := 0, 0.0
 	for _, stat := range detail.Stats[:min(len(detail.Stats), 9)] {
@@ -261,7 +261,7 @@ func discs(official map[string]any, detail zzzDetail, maps zzzMaps, fetch func(i
 	equipment, _ := official["equip"].([]any)
 	for _, raw := range equipment {
 		disc, _ := raw.(map[string]any)
-		bySlot[gamekit.Int(disc["equipment_type"])] = disc
+		bySlot[app.Int(disc["equipment_type"])] = disc
 	}
 	pieces := map[int]int{}
 	for index, piece := range detail.Pieces {
@@ -275,7 +275,7 @@ func discs(official map[string]any, detail zzzDetail, maps zzzMaps, fetch func(i
 			continue
 		}
 		icon := ""
-		if id := gamekit.Text(disc["id"]); len(id) == 5 {
+		if id := app.Text(disc["id"]); len(id) == 5 {
 			if sprite := maps.suits[id[:3]+"00"].SpriteFile; sprite != "" {
 				icon = "suit-" + strconv.Itoa(slot)
 				if !fetch(icon, "suit/"+sprite+".png") {
@@ -283,7 +283,7 @@ func discs(official map[string]any, detail zzzDetail, maps zzzMaps, fetch func(i
 				}
 			}
 		}
-		item := map[string]any{"icon": icon, "level": gamekit.Int(disc["level"]), "rarity": gamekit.Text(disc["rarity"]), "name": gamekit.Text(disc["name"])}
+		item := map[string]any{"icon": icon, "level": app.Int(disc["level"]), "rarity": app.Text(disc["rarity"]), "name": app.Text(disc["name"])}
 		index, scored := pieces[slot]
 		if scored {
 			piece := detail.Pieces[index]
@@ -293,20 +293,20 @@ func discs(official map[string]any, detail zzzDetail, maps zzzMaps, fetch func(i
 		list, _ := disc["main_properties"].([]any)
 		for _, raw := range list {
 			property, _ := raw.(map[string]any)
-			name := gamekit.Text(property["property_name"])
+			name := app.Text(property["property_name"])
 			switch {
 			case strings.Contains(name, "属性伤害加成"):
 				name = strings.ReplaceAll(name, "属性伤害加成", "伤加成")
 			case name == "能量自动回复":
 				name = "能量回复"
 			}
-			mains = append(mains, map[string]any{"class": propertyClass(property["property_id"]), "name": name, "base": gamekit.Text(property["base"])})
+			mains = append(mains, map[string]any{"class": propertyClass(property["property_id"]), "name": name, "base": app.Text(property["base"])})
 		}
 		subs := []any{}
 		list, _ = disc["properties"].([]any)
 		for position, raw := range list {
 			property, _ := raw.(map[string]any)
-			sub := map[string]any{"class": propertyClass(property["property_id"]), "name": gamekit.Text(property["property_name"]), "base": gamekit.Text(property["base"])}
+			sub := map[string]any{"class": propertyClass(property["property_id"]), "name": app.Text(property["property_name"]), "base": app.Text(property["base"])}
 			if scored && position < len(detail.Pieces[index].Props) {
 				prop := detail.Pieces[index].Props[position]
 				sub["hit"] = "hit" + strconv.Itoa(int(prop.Weight*100)/25*25)
@@ -339,7 +339,7 @@ type zzzMaps struct {
 	}
 }
 
-func readMaps(context gamekit.ImageContext) zzzMaps {
+func readMaps(context app.ImageContext) zzzMaps {
 	var maps zzzMaps
 	if context.Artwork == nil {
 		return maps
@@ -354,7 +354,7 @@ func readMaps(context gamekit.ImageContext) zzzMaps {
 
 func (m zzzMaps) elementName(elementType, subType any) string {
 	for _, element := range m.elements {
-		if element.ElementType == gamekit.Int(elementType) && element.SubElementType == gamekit.Int(subType) {
+		if element.ElementType == app.Int(elementType) && element.SubElementType == app.Int(subType) {
 			return element.Name
 		}
 	}
@@ -363,7 +363,7 @@ func (m zzzMaps) elementName(elementType, subType any) string {
 
 func (m zzzMaps) elementProperty(elementType any) string {
 	for _, element := range m.elements {
-		if element.ElementType == gamekit.Int(elementType) && element.SubElementType == 0 {
+		if element.ElementType == app.Int(elementType) && element.SubElementType == 0 {
 			return strconv.Itoa(element.PropertyID)
 		}
 	}

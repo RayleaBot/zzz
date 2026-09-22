@@ -9,8 +9,8 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	gamekit "github.com/RayleaBot/game-plugin-kit"
-	"github.com/RayleaBot/game-plugin-kit/gacha"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/plugin-zzz/internal/gacha"
 )
 
 const timeLayout = "2006-01-02 15:04:05"
@@ -63,9 +63,9 @@ func luckLevel(average float64, thresholds []float64) int {
 // Gacha draws the gacha analysis the way ZZZ-Plugin's gachalog does: the
 // player card, then each channel with pulls since the last S rank, averages,
 // the luck tag and every S-rank item with its pull count.
-func Gacha(context gamekit.ImageContext, image gamekit.GachaImage) (gamekit.Image, bool) {
+func Gacha(context app.ImageContext, image app.GachaImage) (app.Image, bool) {
 	if len(image.Archive.Records) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := []rayleabot.RenderImageResource{}
 	for _, item := range append(append([][2]string{}, commonArtwork...), gachaArtwork...) {
@@ -206,7 +206,7 @@ func Gacha(context gamekit.ImageContext, image gamekit.GachaImage) (gamekit.Imag
 	if region == "" {
 		region = image.Role.Region
 	}
-	return gamekit.Image{Template: "gacha", Data: map[string]any{
+	return app.Image{Template: "gacha", Data: map[string]any{
 		"player":   map[string]any{"nickname": image.Role.Nickname, "level": image.Role.Level, "region": region, "uid": image.UID},
 		"channels": channels,
 	}, Resources: resources}, true

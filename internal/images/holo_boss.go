@@ -3,7 +3,7 @@ package images
 import (
 	"fmt"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // holoBossArtwork is what holoBoss adds.
@@ -17,12 +17,12 @@ var holoBossArtwork = [][2]string{
 // HoloBoss draws Holo Annihilation the way ZZZ-Plugin's holoBoss page does:
 // the total time, stars and flawless clears, the period, then each boss with
 // its medal, clear time, stars out of four, rank and team.
-func HoloBoss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func HoloBoss(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	data := result.Data
 	list, _ := data["list"].([]any)
 	// Upstream answers in text while the mode is locked or the period empty.
 	if unlocked, _ := data["unlock"].(bool); !unlocked || len(list) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, holoBossArtwork)
 	clock := func(seconds int) string { return fmt.Sprintf("%02d:%02d", seconds/60, seconds%60) }
@@ -33,8 +33,8 @@ func HoloBoss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		boss, _ := item["boss"].(map[string]any)
 		medal, _ := boss["medal"].(map[string]any)
 		spent, _ := item["challenge_time"].(map[string]any)
-		used := gamekit.Int(spent["minute"])*60 + gamekit.Int(spent["second"])
-		star := gamekit.Int(item["star"])
+		used := app.Int(spent["minute"])*60 + app.Int(spent["second"])
+		star := app.Int(item["star"])
 		noInjury, _ := medal["is_no_injured"].(bool)
 		stars, seconds = stars+star, seconds+used
 		if noInjury {
@@ -51,23 +51,23 @@ func HoloBoss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 			var slot any
 			if index < len(avatars) {
 				avatar, _ := avatars[index].(map[string]any)
-				if url := gamekit.Text(avatar["role_square_url"]); url != "" {
-					level := gamekit.Text(avatar["rarity"])
+				if url := app.Text(avatar["role_square_url"]); url != "" {
+					level := app.Text(avatar["rarity"])
 					if level == "" {
 						level = "S"
 					}
-					slot = map[string]any{"rank": gamekit.Int(avatar["rank"]), "rarity": level, "icon": resources.official(url)}
+					slot = map[string]any{"rank": app.Int(avatar["rank"]), "rarity": level, "icon": resources.official(url)}
 				}
 			}
 			slots = append(slots, slot)
 		}
-		entry := map[string]any{"name": gamekit.Text(boss["name"]), "icon": resources.official(boss["icon"]), "flawless": noInjury,
+		entry := map[string]any{"name": app.Text(boss["name"]), "icon": resources.official(boss["icon"]), "flawless": noInjury,
 			"time": clock(used), "stars": row, "team": map[string]any{"slots": slots}}
-		if icon := gamekit.Text(medal["medal_icon"]); icon != "" {
+		if icon := app.Text(medal["medal_icon"]); icon != "" {
 			entry["medal"] = resources.official(icon)
 		}
 		// The rank comes in hundredths, or already in percent when small.
-		if rank := gamekit.Int(item["rank"]); rank > 0 {
+		if rank := app.Int(item["rank"]); rank > 0 {
 			value := float64(rank)
 			if rank > 100 {
 				value /= 100
@@ -76,7 +76,7 @@ func HoloBoss(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		}
 		items = append(items, entry)
 	}
-	return gamekit.Image{Template: "holo-boss", Data: map[string]any{
+	return app.Image{Template: "holo-boss", Data: map[string]any{
 		"time": clock(seconds), "stars": stars, "flawless": flawless,
 		"begin": recordTime(data["start_time"], "2006.01.02"), "end": recordTime(data["end_time"], "2006.01.02"),
 		"list": items, "rank_note": rankNote(context),

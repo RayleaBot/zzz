@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestZenkovFollowsZZZPlugin(t *testing.T) {
@@ -16,7 +16,7 @@ func TestZenkovFollowsZZZPlugin(t *testing.T) {
 			map[string]any{"map_name": "丙", "hell_unlock": false},
 		},
 		"max_rank": json.Number("345"), "is_show_percent": true}
-	image, ok := Zenkov(gamekit.ImageContext{}, gamekit.QueryResult{Data: data})
+	image, ok := Zenkov(app.ImageContext{}, app.QueryResult{Data: data})
 	if !ok {
 		t.Fatal("zenkov")
 	}
@@ -32,7 +32,7 @@ func TestZenkovFollowsZZZPlugin(t *testing.T) {
 		t.Errorf("rank = %v", rank)
 	}
 	data["is_show_percent"] = false
-	image, _ = Zenkov(gamekit.ImageContext{}, gamekit.QueryResult{Data: data})
+	image, _ = Zenkov(app.ImageContext{}, app.QueryResult{Data: data})
 	if rank := image.Data["rank"].(map[string]any); rank["top"] != "TOP 345" {
 		t.Errorf("absolute rank = %v", rank)
 	}
@@ -46,7 +46,7 @@ func TestZenkovDetailFormatsRuns(t *testing.T) {
 			"item_list":      []any{map[string]any{"rarity": json.Number("5")}, map[string]any{"rarity": json.Number("2")}}},
 		map[string]any{"difficult": "", "challenge_time": map[string]any{"hour": json.Number("1"), "minute": json.Number("2"), "second": json.Number("3")}},
 	}}
-	image, ok := ZenkovDetail(gamekit.ImageContext{}, gamekit.QueryResult{Data: data})
+	image, ok := ZenkovDetail(app.ImageContext{}, app.QueryResult{Data: data})
 	records := image.Data["records"].([]any)
 	first, second := records[0].(map[string]any), records[1].(map[string]any)
 	items := first["items"].([]any)
@@ -63,7 +63,7 @@ func TestExplorationShowsFourCollectionsASubArea(t *testing.T) {
 	collection := map[string]any{"num": json.Number("1"), "total": json.Number("2")}
 	data := map[string]any{"area_collections": []any{map[string]any{"name": "区域", "collection_progress": json.Number("80"),
 		"map_collections": []any{map[string]any{"collection_progress": json.Number("75"), "collections": []any{collection, collection, collection, collection, collection}}}}}}
-	image, ok := Exploration(gamekit.ImageContext{}, gamekit.QueryResult{Data: data})
+	image, ok := Exploration(app.ImageContext{}, app.QueryResult{Data: data})
 	area := image.Data["areas"].([]any)[0].(map[string]any)
 	sub := area["maps"].([]any)[0].(map[string]any)
 	if !ok || area["progress"] != "80" || len(sub["collections"].([]any)) != 4 || sub["collections"].([]any)[0].(map[string]any)["count"] != "1/2" {

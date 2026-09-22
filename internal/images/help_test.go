@@ -3,15 +3,15 @@ package images
 import (
 	"testing"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestHelpFollowsZZZPlugin(t *testing.T) {
-	help := gamekit.HelpImage{Title: "绝区零帮助", Groups: []gamekit.HelpGroup{
-		{ID: "records", Title: "战绩查询", Commands: []gamekit.HelpCommand{{ID: "challenge", Name: "式舆防卫战", Usage: "%式舆防卫战", Description: "式舆防卫战"}}},
-		{ID: "images", Title: "图片与互动", Commands: []gamekit.HelpCommand{{ID: "poke", Name: "戳一戳"}}},
+	help := app.HelpImage{Title: "绝区零帮助", Groups: []app.HelpGroup{
+		{ID: "records", Title: "战绩查询", Commands: []app.HelpCommand{{ID: "challenge", Name: "式舆防卫战", Usage: "%式舆防卫战", Description: "式舆防卫战"}}},
+		{ID: "images", Title: "图片与互动", Commands: []app.HelpCommand{{ID: "poke", Name: "戳一戳"}}},
 	}}
-	image, ok := Help(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, help)
+	image, ok := Help(app.ImageContext{Game: app.Game{Prefix: "%"}}, help)
 	if !ok {
 		t.Fatal("help")
 	}

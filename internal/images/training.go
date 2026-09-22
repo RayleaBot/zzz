@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	gamekit "github.com/RayleaBot/game-plugin-kit"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 // trainingArtwork is what proficiency adds.
@@ -44,10 +44,10 @@ func discComment(score float64) string {
 // with Mindscape, level, attribute, portrait, the six skill levels, the
 // W-Engine and the disc grade. Upstream reads its saved panels; this reads
 // every agent's details directly.
-func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit.Image, bool) {
+func Training(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	list, _ := result.Data["avatar_list"].([]any)
 	if len(list) == 0 || context.Query == nil {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, trainingArtwork)
 	maps := readMaps(context)
@@ -59,20 +59,20 @@ func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		resources.List = append(resources.List, resource)
 		return id
 	}
-	panels := []gamekit.CharacterPanel{}
+	panels := []app.CharacterPanel{}
 	// The detail query takes at most 50 agents at a time.
 	for start := 0; start < len(list); start += 50 {
 		ids := []any{}
 		for _, raw := range list[start:min(start+50, len(list))] {
 			agent, _ := raw.(map[string]any)
-			ids = append(ids, gamekit.Text(agent["id"]))
+			ids = append(ids, app.Text(agent["id"]))
 		}
 		if detail, err := context.Query("zzz.character", map[string]any{"id_list": ids}); err == nil {
-			panels = append(panels, gamekit.NormalizePanels("zzz", detail, context.Catalog)...)
+			panels = append(panels, app.NormalizePanels("zzz", detail, context.Catalog)...)
 		}
 	}
 	if len(panels) == 0 {
-		return gamekit.Image{}, false
+		return app.Image{}, false
 	}
 
 	type row struct {
@@ -86,8 +86,8 @@ func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		if official == nil {
 			continue
 		}
-		id, rarity := gamekit.Text(official["id"]), gamekit.Text(official["rarity"])
-		level, rank := gamekit.Int(official["level"]), gamekit.Int(official["rank"])
+		id, rarity := app.Text(official["id"]), app.Text(official["rarity"])
+		level, rank := app.Int(official["level"]), app.Int(official["rank"])
 		base := trainingBase(rarity)
 		discScore := 0.0
 		if context.Score != nil {
@@ -107,14 +107,14 @@ func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		skills, _ := official["skills"].([]any)
 		for _, raw := range skills {
 			skill, _ := raw.(map[string]any)
-			score += float64(gamekit.Int(skill["level"])) * base
+			score += float64(app.Int(skill["level"])) * base
 		}
 		levels := []any{}
 		for _, index := range []int{0, 2, 5, 1, 3, 4} {
 			level := ""
 			if index < len(skills) {
 				skill, _ := skills[index].(map[string]any)
-				level = gamekit.Text(skill["level"])
+				level = app.Text(skill["level"])
 			}
 			levels = append(levels, level)
 		}
@@ -127,15 +127,15 @@ func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		data["comment"] = discComment(discScore)
 		if weapon, _ := official["weapon"].(map[string]any); weapon != nil {
 			weapons++
-			weaponRarity := gamekit.Text(weapon["rarity"])
+			weaponRarity := app.Text(weapon["rarity"])
 			if weaponRarity == "S" {
 				weaponsS++
 			}
-			weaponLevel, star := gamekit.Int(weapon["level"]), gamekit.Int(weapon["star"])
+			weaponLevel, star := app.Int(weapon["level"]), app.Int(weapon["star"])
 			score += float64(weaponLevel)*2 + float64(star)*2*trainingBase(weaponRarity)
-			engine := map[string]any{"rarity": weaponRarity, "name": gamekit.Text(weapon["name"]), "star": star, "level": weaponLevel, "level_rank": weaponLevel / 10}
-			if code := maps.weapons[gamekit.Text(weapon["id"])].CodeName; code != "" {
-				engine["icon"] = fetch("weapon-"+gamekit.Text(weapon["id"]), "weapon/"+code+"_High.png")
+			engine := map[string]any{"rarity": weaponRarity, "name": app.Text(weapon["name"]), "star": star, "level": weaponLevel, "level_rank": weaponLevel / 10}
+			if code := maps.weapons[app.Text(weapon["id"])].CodeName; code != "" {
+				engine["icon"] = fetch("weapon-"+app.Text(weapon["id"]), "weapon/"+code+"_High.png")
 			}
 			data["weapon"] = engine
 		}
@@ -157,7 +157,7 @@ func Training(context gamekit.ImageContext, result gamekit.QueryResult) (gamekit
 		rate = float64(weaponsS) / float64(weapons) * 100
 	}
 	total := len(items)
-	return gamekit.Image{Template: "training", Data: map[string]any{
+	return app.Image{Template: "training", Data: map[string]any{
 		"player": playerCard(result.Role), "list": items, "bars": make([]int, 8),
 		"general": []any{
 			map[string]any{"value": fmt.Sprintf("%d/%d", agentsS, total), "label": "S级代理人"},
