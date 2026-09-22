@@ -4,4 +4,4 @@ ui/node_modules/
 .rayleabot/
 go.work
 go.work.sum
-data/
+/data/
