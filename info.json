@@ -117,17 +117,12 @@
     {
       "id": "accounts",
       "name": "账号",
-      "description": "查看已授权角色与默认 UID",
-      "usage": "#uid",
+      "description": "查看已绑定的 UID（账号与无 CK 绑定），uid加序号切换",
+      "usage": "#uid / #uid2",
       "permission": "everyone",
       "trigger": {
-        "type": "exact",
-        "names": [
-          "账号",
-          "uid",
-          "UID",
-          "我的uid"
-        ]
+        "type": "pattern",
+        "pattern": "^(?:账号|(?i:(?:我的)?uid)[0-9]{0,2})$"
       }
     },
     {
@@ -871,12 +866,23 @@
     {
       "id": "select",
       "name": "绑定",
-      "description": "选择已验证的默认游戏角色",
+      "description": "绑定 UID：账号角色设为默认，其他 UID 无需 CK 直接绑定",
       "usage": "#绑定<UID>",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^绑定(?:uid|UID)?(?P<uid>[0-9]*)$"
+        "pattern": "^绑定(?i:uid)?[s+]*(?P<uid>[0-9]*)$"
+      }
+    },
+    {
+      "id": "uid-remove",
+      "name": "删除uid",
+      "description": "按序号删除无 CK 绑定的 UID",
+      "usage": "#删除uid1",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?i:(?:删除|解绑)uid)[s+]*(?P<index>[0-9]{1,2})?$"
       }
     },
     {
@@ -1057,6 +1063,7 @@
         "buddies",
         "accounts",
         "select",
+        "uid-remove",
         "monthly",
         "monthly-history",
         "monthly-save",
