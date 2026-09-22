@@ -6,9 +6,9 @@ import (
 	gamekit "github.com/RayleaBot/game-plugin-kit"
 )
 
-// helpIcons gives each group the attribute icon of ZZZ-Plugin's help part on
-// the same subject; the rest take the icon of its 其他 part.
-var helpIcons = map[string]string{"信息查询": "Fire", "抽卡": "Ice", "角色面板": "Electric", "战绩": "Ether", "排名": "Fire", "提醒": "HonedEdge", "图鉴与养成": "Ice"}
+// helpIcons gives each group, by id, the attribute icon of ZZZ-Plugin's help
+// part on the same subject; the rest take the icon of its 其他 part.
+var helpIcons = map[string]string{"info": "Fire", "gacha": "Ice", "panel": "Electric", "records": "Ether", "group-rank": "Fire", "banners": "Frost", "remind": "HonedEdge", "guides": "Ice"}
 
 // Help draws the help menu the way ZZZ-Plugin's help page does: the special
 // title, then each group with its attribute icon and every command's name,
@@ -20,7 +20,7 @@ func Help(context gamekit.ImageContext, help gamekit.HelpImage) (gamekit.Image, 
 	resources := newRecordResources(context, commonArtwork)
 	parts := []any{}
 	for _, group := range help.Groups {
-		icon := helpIcons[group.Title]
+		icon := helpIcons[group.ID]
 		if icon == "" {
 			icon = "Fire"
 		}

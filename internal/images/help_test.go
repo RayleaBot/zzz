@@ -8,8 +8,8 @@ import (
 
 func TestHelpFollowsZZZPlugin(t *testing.T) {
 	help := gamekit.HelpImage{Title: "绝区零帮助", Groups: []gamekit.HelpGroup{
-		{Title: "战绩", Commands: []gamekit.HelpCommand{{ID: "challenge", Name: "式舆防卫战", Usage: "%式舆防卫战", Description: "式舆防卫战"}}},
-		{Title: "互动", Commands: []gamekit.HelpCommand{{ID: "poke", Name: "戳一戳"}}},
+		{ID: "records", Title: "战绩查询", Commands: []gamekit.HelpCommand{{ID: "challenge", Name: "式舆防卫战", Usage: "%式舆防卫战", Description: "式舆防卫战"}}},
+		{ID: "images", Title: "图片与互动", Commands: []gamekit.HelpCommand{{ID: "poke", Name: "戳一戳"}}},
 	}}
 	image, ok := Help(gamekit.ImageContext{Game: gamekit.Game{Prefix: "%"}}, help)
 	if !ok {
