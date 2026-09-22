@@ -1046,10 +1046,35 @@
       }
     },
     {
+      "id": "guide-help",
+      "name": "攻略帮助",
+      "description": "攻略的用法与各来源序号",
+      "usage": "#攻略帮助",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "攻略帮助",
+          "攻略说明"
+        ]
+      }
+    },
+    {
+      "id": "guide-default",
+      "name": "设置默认攻略",
+      "description": "设置默认使用的攻略来源序号",
+      "usage": "#设置默认攻略<来源序号>",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置默认攻略(?P<source>[0-9]+)?$"
+      }
+    },
+    {
       "id": "guides",
       "name": "攻略",
-      "description": "米游社社区攻略图",
-      "usage": "#<角色>攻略",
+      "description": "发送米游社攻略合集中该角色的攻略图，可接来源序号，all 为前几个来源",
+      "usage": "#[更新]<角色>攻略[来源序号]",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
@@ -1190,6 +1215,8 @@
       "title": "角色攻略",
       "commands": [
         "guides",
+        "guide-help",
+        "guide-default",
         "talent-wiki",
         "catalog"
       ]
