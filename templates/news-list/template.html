@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+  <div class="container">
+    <div class="head_box">
+      <h1>米游社·{{ .game }}{{ .kind }}列表</h1>
+    </div>
+    <div class="body_box">
+      <div class="data_box">
+        {{ range .items }}
+        <div class="newscard"{{ if .last }} style="border-bottom: 0px"{{ end }}>
+          <div class="newscard-left">
+            <div style="height:100%;display:table;width:100%">
+              <span class="newscard-num">{{ .num }}</span>
+            </div>
+          </div>
+          <div class="newscard-info">
+            <h3 class="newscard-title">{{ .subject }}</h3>
+            <div class="newscard-content">{{ .content }}</div>
+            <div class="newscard-time">{{ .created }}</div>
+          </div>
+          <div class="newscard-cover">
+            <div class="newscard-img"{{ with .cover }} data-render-resource="{{ . }}"{{ end }}></div>
+          </div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    <div class="logo">{{ .hint }}</div>
+    {{ with .render_footer }}<div class="logo">{{ . }}</div>{{ end }}
+  </div>
+</div>
+</body>
+</html>

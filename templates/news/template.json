@@ -1,0 +1,11 @@
+{
+  "id": "news",
+  "name": "绝区零米游社帖子",
+  "description": "公告、资讯、活动、米游社搜索、帖子与预估的图片，布局参照 Yunzai 原神插件 html/mysNews",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 900,
+  "height": 2000
+}

@@ -1,0 +1,11 @@
+{
+  "id": "news-list",
+  "name": "绝区零米游社公告列表",
+  "description": "公告、资讯与活动列表的图片，布局参照 Yunzai 原神插件 html/mysNews-list",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 840,
+  "height": 1200
+}

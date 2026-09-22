@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "game",
+    "kind",
+    "items",
+    "hint"
+  ],
+  "properties": {
+    "game": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array"
+    },
+    "hint": {
+      "type": "string"
+    },
+    "render_footer": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

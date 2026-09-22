@@ -723,44 +723,34 @@
     {
       "id": "news",
       "name": "公告",
-      "description": "米游社官方公告",
-      "usage": "#公告",
+      "description": "米游社官方公告，带序号看第几篇，列表看最新五篇",
+      "usage": "#公告[序号] / #公告列表",
       "permission": "everyone",
       "trigger": {
-        "type": "exact",
-        "names": [
-          "公告",
-          "公告列表",
-          "官方公告"
-        ]
+        "type": "pattern",
+        "pattern": "^(?:官方)?公告(?P<page>(?:列表|[0-9])*)$"
       }
     },
     {
       "id": "info",
       "name": "资讯",
-      "description": "米游社官方资讯",
-      "usage": "#资讯",
+      "description": "米游社官方资讯，带序号看第几篇，列表看最新五篇",
+      "usage": "#资讯[序号] / #资讯列表",
       "permission": "everyone",
       "trigger": {
-        "type": "exact",
-        "names": [
-          "资讯",
-          "资讯列表"
-        ]
+        "type": "pattern",
+        "pattern": "^(?:官方)?资讯(?P<page>(?:列表|[0-9])*)$"
       }
     },
     {
       "id": "events",
       "name": "活动",
-      "description": "米游社官方活动",
-      "usage": "#活动",
+      "description": "米游社官方活动，带序号看第几篇，列表看最新五篇",
+      "usage": "#活动[序号] / #活动列表",
       "permission": "everyone",
       "trigger": {
-        "type": "exact",
-        "names": [
-          "活动",
-          "活动列表"
-        ]
+        "type": "pattern",
+        "pattern": "^(?:官方)?活动(?P<page>(?:列表|[0-9])*)$"
       }
     },
     {
@@ -803,6 +793,17 @@
         "names": [
           "帖子"
         ]
+      }
+    },
+    {
+      "id": "estimate",
+      "name": "预估",
+      "description": "米游社作者整理的本版本可获取抽数统计",
+      "usage": "#预估",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:菲林)?(?:预估|盘点)$"
       }
     },
     {
@@ -1272,6 +1273,7 @@
         "live-calendar",
         "search",
         "post",
+        "estimate",
         "subscribe",
         "unsubscribe"
       ]

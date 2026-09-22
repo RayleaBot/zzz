@@ -235,11 +235,16 @@
       ],
       "include": [
         "resources/ZZZero/img/other/",
-        "resources/img/icon/"
+        "resources/img/icon/",
+        "resources/html/mysNews/",
+        "resources/html/mysNews-list/",
+        "resources/font/tttgbnumber.ttf"
       ],
       "extensions": [
         ".png",
-        ".webp"
+        ".webp",
+        ".woff2",
+        ".ttf"
       ]
     }
   ],

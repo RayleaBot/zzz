@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "qr",
+    "avatar",
+    "nickname",
+    "level",
+    "certified",
+    "label",
+    "subject",
+    "forum",
+    "views",
+    "likes",
+    "replies",
+    "created",
+    "content",
+    "topics"
+  ],
+  "properties": {
+    "qr": {
+      "type": "string"
+    },
+    "avatar": {
+      "type": "string"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string"
+    },
+    "certified": {
+      "type": "boolean"
+    },
+    "label": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "forum": {
+      "type": "string"
+    },
+    "views": {
+      "type": "string"
+    },
+    "likes": {
+      "type": "string"
+    },
+    "replies": {
+      "type": "string"
+    },
+    "created": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "topics": {
+      "type": "array"
+    },
+    "render_footer": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
