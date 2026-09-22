@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="char-info">
+  <div class="avatar">{{ with .avatar }}<img data-render-resource="{{ . }}" alt="Avatar">{{ end }}</div>
+  <div class="info">
+    <div class="name">
+      <div class="simple">{{ .name }}</div>
+      <div class="full">{{ .full }}</div>
+    </div>
+    <div class="description no-zzz-font">
+      <div class="f">{{ safeHTML .female }}</div>
+      <div class="m">{{ safeHTML .male }}</div>
+    </div>
+  </div>
+</div>
+<div class="cinema">
+  <div class="header">
+    <h1 class="title">意象影画</h1>
+    <h2 class="subtitle">CINEMA</h2>
+  </div>
+  <div class="content">
+    {{ range .talents }}
+    <div class="section">
+      <h3 class="section-title">{{ .level }}. {{ .name }}</h3>
+      <div class="section-content no-zzz-font">{{ safeHTML .desc }}</div>
+    </div>
+    {{ end }}
+  </div>
+  <div class="image-container">{{ with .image }}<img data-render-resource="{{ . }}" alt="角色插图" class="character-image">{{ end }}</div>
+  <div style="text-align: center; font-size: 1em; color: #666; margin: 2em 0;">数据来源于Nanoka</div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

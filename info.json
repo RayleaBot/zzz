@@ -1007,6 +1007,17 @@
       }
     },
     {
+      "id": "talent-wiki",
+      "name": "角色技能",
+      "description": "角色的技能与意象影画资料（来自 Nanoka），技能可接等级",
+      "usage": "%艾莲技能 [普攻.闪避.支援.特殊.连携.核心] / %艾莲影画",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?P<character>.+?)(?:(?:天赋|技能)[0-9A-Za-z.\\s]*|意象影画|意象|影画|命座)$"
+      }
+    },
+    {
       "id": "catalog",
       "name": "图鉴",
       "description": "查询离线角色和装备资料",
@@ -1091,6 +1102,7 @@
       "id": "wiki",
       "title": "图鉴与养成",
       "commands": [
+        "talent-wiki",
         "catalog",
         "guides",
         "image-library",

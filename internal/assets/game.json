@@ -156,6 +156,13 @@
       ]
     },
     {
+      "id": "nanoka",
+      "name": "Nanoka 意象影画图",
+      "mirrors": [
+        "https://static.nanoka.cc/"
+      ]
+    },
+    {
       "id": "mihoyo",
       "name": "官方图片缓存",
       "mirrors": [

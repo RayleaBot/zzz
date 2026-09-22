@@ -1,0 +1,11 @@
+{
+  "id": "skills",
+  "name": "绝区零角色技能",
+  "description": "技能与天赋命令的图片，布局参照 ZZZ-Plugin skills",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 8000
+}

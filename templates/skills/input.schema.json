@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["name", "full", "female", "male", "skills"],
+  "properties": {
+    "skills": { "type": "array" },
+    "core": { "type": "object" },
+    "name": { "type": "string" },
+    "full": { "type": "string" },
+    "female": { "type": "string" },
+    "male": { "type": "string" },
+    "avatar": { "type": "string" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

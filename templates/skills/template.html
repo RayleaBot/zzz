@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+<div class="char-info">
+  <div class="avatar">{{ with .avatar }}<img data-render-resource="{{ . }}" alt="Avatar">{{ end }}</div>
+  <div class="info">
+    <div class="name">
+      <div class="simple">{{ .name }}</div>
+      <div class="full">{{ .full }}</div>
+    </div>
+    <div class="description no-zzz-font">
+      <div class="f">{{ safeHTML .female }}</div>
+      <div class="m">{{ safeHTML .male }}</div>
+    </div>
+  </div>
+</div>
+<div class="skills">
+  {{ range .skills }}
+  <div class="skill">
+    <div class="description">
+      <div class="icon"><div class="skill-icon {{ .icon }}"></div></div>
+      <div class="info">
+        <div class="name">{{ .name }}</div>
+        {{ range .items }}
+        <div class="item">
+          <div class="title">{{ .title }}</div>
+          <div class="content no-zzz-font">{{ safeHTML .content }}</div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    <div class="detail">
+      <div class="title">详细属性<span class="level">Lv.{{ .level }}</span></div>
+      {{ range .rates }}
+      <div class="item">
+        <div class="name">{{ .name }}</div>
+        <div class="rate no-zzz-font">
+          {{ range .rows }}<div class="tb-tr"><div class="tb-td">{{ .label }}</div><div class="tb-td">{{ .value }}</div></div>{{ end }}
+        </div>
+        <div class="detail no-zzz-font">
+          <div class="tb-tr"><div class="tb-td">#</div><div class="tb-td">A</div><div class="tb-td">B</div><div class="tb-td">C</div><div class="tb-td">D</div><div class="tb-td">E</div><div class="tb-td">F</div><div class="tb-td">G</div></div>
+          {{ range .details }}<div class="tb-tr"><div class="tb-td">{{ .no }}</div><div class="tb-td">{{ .a }}</div><div class="tb-td">{{ .b }}</div><div class="tb-td">{{ .c }}</div><div class="tb-td">{{ .d }}</div><div class="tb-td">{{ .e }}</div><div class="tb-td">{{ .f }}</div><div class="tb-td"></div></div>{{ end }}
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+  {{ with .core }}
+  <div class="skill">
+    <div class="description">
+      <div class="icon"><div class="skill-icon core"></div></div>
+      <div class="info">
+        <div class="name">核心技</div>
+        <div class="detail"><div class="title">详细属性<span class="level">Lv.{{ .level }}</span></div></div>
+        {{ range .items }}
+        <div class="item">
+          <div class="title">{{ .title }}</div>
+          <div class="content no-zzz-font">{{ safeHTML .content }}</div>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+  {{ end }}
+</div>
+<div style="text-align: center; font-size: 1em; color: #666; margin: 2em 0;">数据来源于Nanoka</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>
