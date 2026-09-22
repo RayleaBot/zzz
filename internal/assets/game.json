@@ -287,7 +287,7 @@
       "name": "爬塔S1",
       "page": "tower-s1",
       "operation": "zzz.tower",
-      "words": "(爬塔 ?[S1s1]|拟真鏖战试炼)(群内?)?排名$",
+      "words": "(爬塔 ?[Ss]1|拟真鏖战试炼)(群内?)?排名$",
       "empty": "没有爬塔S1排名，请先 {prefix}显示爬塔S1排名，并且用 {prefix}爬塔 查询战绩"
     },
     {
@@ -295,7 +295,7 @@
       "name": "爬塔S2",
       "page": "tower-s2",
       "operation": "zzz.tower",
-      "words": "(爬塔 ?[S2s2]|鏖战试炼[：:]?末路)(群内?)?排名$",
+      "words": "(爬塔 ?[Ss]2|鏖战试炼[：:]?末路)(群内?)?排名$",
       "empty": "没有爬塔S2排名，请先 {prefix}显示爬塔S2排名，并且用 {prefix}爬塔 查询战绩"
     },
     {
@@ -303,7 +303,7 @@
       "name": "爬塔S3",
       "page": "tower-s3",
       "operation": "zzz.tower",
-      "words": "(爬塔 ?[S3s3]|鏖战试炼[：:]?荣耀)(群内?)?排名$",
+      "words": "(爬塔 ?[Ss]3|鏖战试炼[：:]?荣耀)(群内?)?排名$",
       "empty": "没有爬塔S3排名，请先 {prefix}显示爬塔S3排名，并且用 {prefix}爬塔 查询战绩"
     },
     {
@@ -311,7 +311,7 @@
       "name": "爬塔S4",
       "page": "tower-s4",
       "operation": "zzz.tower",
-      "words": "(爬塔 ?[S4s4]|鏖战试炼[：:]?狂澜)(群内?)?排名$",
+      "words": "(爬塔 ?[Ss]4|鏖战试炼[：:]?狂澜)(群内?)?排名$",
       "empty": "没有爬塔S4排名，请先 {prefix}显示爬塔S4排名，并且用 {prefix}爬塔 查询战绩"
     }
   ],

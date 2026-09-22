@@ -885,7 +885,9 @@
           "下载素材",
           "素材下载",
           "图鉴升级",
-          "图鉴更新"
+          "图鉴更新",
+          "下载全部资源",
+          "下载所有资源"
         ]
       }
     },
@@ -910,7 +912,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^绑定(?i:uid)?[s+]*(?P<uid>[0-9]*)$"
+        "pattern": "^绑定(?i:uid)?\\+*(?P<uid>[0-9]*)$"
       }
     },
     {
@@ -921,7 +923,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?i:(?:删除|解绑)uid)[s+]*(?P<index>[0-9]{1,2})?$"
+        "pattern": "^(?i:(?:删除|解绑)uid)\\+*(?P<index>[0-9]{1,2})?$"
       }
     },
     {
