@@ -397,6 +397,39 @@
       }
     },
     {
+      "id": "alias-set",
+      "name": "添加别名",
+      "description": "给角色添加对所有群生效的别名",
+      "usage": "#添加艾莲别名鲨鲨",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^添加(?P<character>\\S+)别名(?P<alias>\\S+)$"
+      }
+    },
+    {
+      "id": "alias-remove",
+      "name": "删除别名",
+      "description": "删除自定义别名，角色本名与内置别名不能删除",
+      "usage": "#删除别名鲨鲨",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^删除别名(?P<alias>\\S+)$"
+      }
+    },
+    {
+      "id": "aliases",
+      "name": "角色别名",
+      "description": "查看角色的全部别名",
+      "usage": "#艾莲别名",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?P<character>\\S+)别名$"
+      }
+    },
+    {
       "id": "query-rank",
       "name": "深渊排名",
       "description": "本群成员在群内查询过的式舆防卫战、危局强袭战（含绝境）、拟境湮灭战、临界推演与拟真鏖战试炼排名",
@@ -1323,7 +1356,10 @@
         "version",
         "group-settings",
         "artwork",
-        "artwork-status"
+        "artwork-status",
+        "alias-set",
+        "alias-remove",
+        "aliases"
       ]
     }
   ],
