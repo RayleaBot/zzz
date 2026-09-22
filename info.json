@@ -126,6 +126,45 @@
       }
     },
     {
+      "id": "device-bind",
+      "name": "绑定设备",
+      "description": "出现 10041 时绑定设备（由米游社账号插件在管理页加密导入）",
+      "usage": "#绑定设备",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "绑定设备"
+        ]
+      }
+    },
+    {
+      "id": "device-help",
+      "name": "绑定设备帮助",
+      "description": "如何获取与导入设备信息",
+      "usage": "#绑定设备帮助",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "绑定设备帮助"
+        ]
+      }
+    },
+    {
+      "id": "device-unbind",
+      "name": "解绑设备",
+      "description": "恢复本人账号的默认设备",
+      "usage": "#解绑设备",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "解绑设备"
+        ]
+      }
+    },
+    {
       "id": "panel-refresh",
       "name": "更新面板",
       "description": "更新面板：已绑定账号读取米游社数据，否则或写“展柜”时读取 Enka 展柜",
@@ -1062,6 +1101,9 @@
         "training",
         "buddies",
         "accounts",
+        "device-bind",
+        "device-help",
+        "device-unbind",
         "select",
         "uid-remove",
         "monthly",

@@ -130,7 +130,10 @@
   },
   "hints": {
     "hollow-zero": "当前可供查询的零号空洞数据有：\n- {prefix}枯萎苗圃\n- {prefix}迷失之地",
-    "query-rank-help": "当前可供查询的爬塔排名有：\n- {prefix}爬塔S1排名（{prefix}拟真鏖战试炼排名）\n- {prefix}爬塔S2排名（{prefix}鏖战试炼：末路排名）\n- {prefix}爬塔S3排名（{prefix}鏖战试炼：荣耀排名）\n- {prefix}爬塔S4排名（{prefix}鏖战试炼：狂澜排名）"
+    "query-rank-help": "当前可供查询的爬塔排名有：\n- {prefix}爬塔S1排名（{prefix}拟真鏖战试炼排名）\n- {prefix}爬塔S2排名（{prefix}鏖战试炼：末路排名）\n- {prefix}爬塔S3排名（{prefix}鏖战试炼：荣耀排名）\n- {prefix}爬塔S4排名（{prefix}鏖战试炼：狂澜排名）",
+    "device-bind": "设备信息由米游社账号插件保存：请在账号管理页该账号的“设备信息与重置”中加密导入，不要在聊天中发送。私聊发送“绑定设备帮助”查看如何获取。",
+    "device-help": "请私聊发送“绑定设备帮助”查看如何获取设备信息，并在账号管理页该账号的“设备信息与重置”中加密导入。",
+    "device-unbind": "请私聊发送“解绑设备”，恢复本人账号的默认设备。"
   },
   "artwork": [
     {
