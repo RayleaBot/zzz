@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body class="elem-hydro default-mode">
+<div class="container elem-bg" id="container">
+<div class="uid-list">
+  <div class="game-cont">
+    <div class="game-title">
+      <strong>{{ .mark }}{{ .name }}</strong>
+      <span>使用<nobr>{{ .mark }}uid1</nobr>切换uid</span>
+    </div>
+    <div class="game-ul">
+      {{ if .uids }}
+      {{ range .uids }}
+      <div class="game-li{{ if .active }} active{{ end }}">
+        <div class="game-idx">
+          <span>{{ .index }}</span>
+        </div>
+        <div class="game-bar"{{ with .banner }} data-render-resource="{{ . }}"{{ end }}>
+          <div class="game-inner">
+            <div class="face"{{ with .face }} data-render-resource="{{ . }}"{{ end }}></div>
+            <div class="info">
+              <div class="uid-info">
+                <div class="uid shadow">{{ .uid }}<span>{{ .uid }}</span></div>
+                <div class="type {{ .type }}">{{ if eq .type "ck" }}CK{{ else }}绑定{{ end }}</div>
+              </div>
+              <div class="detail">
+                {{ if .name }}
+                <div class="name">{{ .name }} Lv.{{ .level }}</div>
+                {{ else }}
+                <div class="no-info">{{ $.no_info }}</div>
+                {{ end }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+      {{ else }}
+      <div class="no-uid">暂无uid，请发送CK或通过
+        <nobr>{{ .mark }}绑定123456789</nobr>
+        来绑定UID
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+<ul class="tips">
+  <li>原神及通用命令以#开头，星铁命令以*开头。发送CK可绑定CK对应uid</li>
+  <li>游戏信息来自面板数据，如无信息或不准确请更新面板</li>
+  <li>
+    <nobr>{{ .mark }}删除uid1</nobr>
+    删除指定序号uid
+
+    <nobr>{{ .mark }}绑定123456789</nobr>
+    绑定对应uid
+  </li>
+  <li>
+    <nobr>#我的ck</nobr>
+    查看ck信息
+
+    <nobr>#删除ck</nobr>
+    删除当前ck
+  </li>
+</ul>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

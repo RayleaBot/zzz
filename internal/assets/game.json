@@ -204,6 +204,41 @@
         ".json",
         ".yaml"
       ]
+    },
+    {
+      "id": "miao-plugin",
+      "name": "喵喵插件图片",
+      "archives": [
+        "https://codeload.github.com/yoimiya-kokomi/miao-plugin/tar.gz/HEAD"
+      ],
+      "include": [
+        "resources/common/"
+      ],
+      "extensions": [
+        ".webp",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".ttf",
+        ".otf",
+        ".woff",
+        ".woff2"
+      ]
+    },
+    {
+      "id": "yunzai-genshin",
+      "name": "原神插件图片",
+      "archives": [
+        "https://codeload.github.com/TimeRainStarSky/Yunzai-genshin/tar.gz/HEAD"
+      ],
+      "include": [
+        "resources/ZZZero/img/other/",
+        "resources/img/icon/"
+      ],
+      "extensions": [
+        ".png",
+        ".webp"
+      ]
     }
   ],
   "query_ranks": [

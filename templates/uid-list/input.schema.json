@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "mark",
+    "name",
+    "uids",
+    "no_info"
+  ],
+  "properties": {
+    "mark": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "no_info": {
+      "type": "string"
+    },
+    "uids": {
+      "type": "array"
+    },
+    "render_footer": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
