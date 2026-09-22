@@ -18,7 +18,7 @@
 
 ## 模拟与固定资料
 
-绝区零卡池历史使用 [GachaClock 固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746) 的 JSON 数据，保留 `LICENSES/GachaClock-MIT.txt`。110 条收录中 54 个起点按参考规则推算并标记；当前快照末期结束日为 2026-05-05，不能代表最新官方排期。仅转换文字和日期，没有下载或分发关联图片。原神/星铁仍使用 miao 同一固定快照的数据。
+绝区零卡池历史与 ZZZ-Plugin 一样运行时读取 [GachaClock](https://github.com/iaoongin/GachaClock) 的 `spider/data/zzz/history.json`（缓存六小时，读取失败时沿用上次结果），读不到时使用随插件的[固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746)快照，保留 `LICENSES/GachaClock-MIT.txt`。缺少起点的卡池按参考规则推算并标记；2026-09-22 时上游数据的末期结束日仍为 2026-05-05。仅转换文字和日期，没有下载或分发关联图片。原神/星铁仍使用 miao 同一固定快照的数据。
 
 ## 计算脚本的兼容修正
 
