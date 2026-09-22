@@ -279,5 +279,14 @@
       "words": "(爬塔 ?[S4s4]|鏖战试炼[：:]?狂澜)(群内?)?排名$",
       "empty": "没有爬塔S4排名，请先 {prefix}显示爬塔S4排名，并且用 {prefix}爬塔 查询战绩"
     }
-  ]
+  ],
+  "pictures": {
+    "photos": [],
+    "atlas": [
+      {
+        "source": "zzz-atlas",
+        "index": "path.json"
+      }
+    ]
+  }
 }

@@ -781,7 +781,7 @@
     {
       "id": "photo",
       "name": "照片",
-      "description": "随机发送该角色的图库照片",
+      "description": "随机发送导入图库中该角色的照片",
       "usage": "#照片 角色名",
       "permission": "everyone",
       "trigger": {
@@ -1070,7 +1070,7 @@
     {
       "id": "catalog",
       "name": "图鉴",
-      "description": "查询离线角色和装备资料",
+      "description": "查看资料；已下载 Atlas 绝区零图鉴时发送对应图鉴图",
       "usage": "#<名称>图鉴",
       "permission": "everyone",
       "trigger": {
