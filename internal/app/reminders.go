@@ -272,8 +272,9 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 			params["write_confirmed"] = true
 		}
 		if task.Kind == "challenge" {
-			// ZZZ-Plugin's global switch stops every challenge reminder.
-			if !settings(event).ChallengeRemind {
+			// ZZZ-Plugin's global switch stops the reminders of its own
+			// 开启挑战提醒, not the detailed ones.
+			if task.Pair && !settings(event).ChallengeRemind {
 				return result, gameError("remind_disabled", challengeRemindOff)
 			}
 			kind, ok := challengeKind(task.ChallengeKind)

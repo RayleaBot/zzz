@@ -296,9 +296,6 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 		}
 		return event.SendText(a.Game.Name + "挑战提醒\n" + strings.Join(lines, "\n") + "\n发送“" + a.Game.Prefix + "关闭挑战提醒 [UID]”停止。")
 	}
-	if !settings(event).ChallengeRemind {
-		return event.SendText(challengeRemindOff)
-	}
 	if len(args) < 3 || len(args) > 5 {
 		return event.SendText(a.challengeUsage())
 	}

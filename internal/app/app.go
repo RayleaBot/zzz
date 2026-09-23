@@ -92,8 +92,8 @@ type Settings struct {
 	ImageReplies    bool              `json:"image_replies"`
 	CustomAliases   map[string]string `json:"custom_aliases"`
 	// ChallengeRemind and the three after it are ZZZ-Plugin's remind.yaml:
-	// the switch of every challenge reminder, and the time and thresholds
-	// 开启挑战提醒 uses for users who set none.
+	// the switch of the reminders 开启挑战提醒 creates, and the time and
+	// thresholds they use for users who set none.
 	ChallengeRemind      bool   `json:"challenge_remind_enabled"`
 	ChallengeRemindTime  string `json:"challenge_remind_time"`
 	ChallengeAbyssLevel  int    `json:"challenge_abyss_level"`
