@@ -27,13 +27,13 @@ func TestDamagePicksTheSkillAsZZZPlugin(t *testing.T) {
 	a := &App{Game: testGame(t)}
 	ctx := context.Background()
 	panel := damagePanel(t, "1011")
-	chosen, err := a.panelDamages(ctx, panel, "")
+	chosen, err := a.panelDamages(ctx, panel, new(""))
 	if err != nil || len(chosen.Damages) < 3 {
 		t.Fatalf("damages = %+v, %v", chosen, err)
 	}
 	// Without a number the page is the one of the skill the comparison was
 	// made for, the same as writing that skill's number.
-	written, err := a.panelDamages(ctx, panel, strconv.Itoa(chosen.Skill+1))
+	written, err := a.panelDamages(ctx, panel, new(strconv.Itoa(chosen.Skill+1)))
 	if err != nil || !reflect.DeepEqual(written, chosen) {
 		t.Errorf("no number chose %d, unlike writing its number", chosen.Skill)
 	}
@@ -41,7 +41,7 @@ func TestDamagePicksTheSkillAsZZZPlugin(t *testing.T) {
 	// Upstream turns 0 into the first skill and a number past the list into
 	// the last; the number right after the last, which fails upstream, too.
 	for word, want := range map[string]int{"1": 0, "0": 0, "3": 2, strconv.Itoa(last + 1): last, strconv.Itoa(last + 2): last, "99999999999": last} {
-		result, err := a.panelDamages(ctx, panel, word)
+		result, err := a.panelDamages(ctx, panel, &word)
 		if err != nil || result.Skill != want {
 			t.Errorf("伤害%s chose %d, want %d (%v)", word, result.Skill, want, err)
 		}
@@ -67,6 +67,22 @@ func TestDamagePicksTheSkillAsZZZPlugin(t *testing.T) {
 	}
 }
 
+func TestPanelCardCalculatesAsDamage(t *testing.T) {
+	a := &App{Game: testGame(t)}
+	ctx := context.Background()
+	// 丽娜's rule shows the Penetration Ratio she gives the team in the panel.
+	panel := damagePanel(t, "1211")
+	card, err := a.panelDamages(ctx, panel, nil)
+	if err != nil || len(card.PanelBuffs) != 1 || card.PanelBuffs[0].Type != "穿透率" || card.PanelBuffs[0].Value == 0 || card.PanelBuffs[0].Max != 0.3 {
+		t.Fatalf("card = %+v, %v", card, err)
+	}
+	// The card lists the damages 伤害 draws.
+	page, err := a.panelDamages(ctx, panel, new(""))
+	if err != nil || len(card.Damages) == 0 || !reflect.DeepEqual(card.Damages, page.Damages) {
+		t.Errorf("card damages %+v, 伤害 %+v", card.Damages, page.Damages)
+	}
+}
+
 func TestDamageKeepsToUpstreamRules(t *testing.T) {
 	a := &App{Game: testGame(t)}
 	ctx := context.Background()
@@ -79,7 +95,7 @@ func TestDamageKeepsToUpstreamRules(t *testing.T) {
 	}
 	official["weapon"] = map[string]any{"id": 13018, "name": "咚哒回声", "level": 60, "star": 5, "rarity": "S", "properties": []any{}, "main_properties": []any{}}
 	panel.Official = official
-	result, err := a.panelDamages(ctx, panel, "")
+	result, err := a.panelDamages(ctx, panel, new(""))
 	if err != nil || len(result.Damages) == 0 {
 		t.Fatal(err)
 	}
@@ -94,7 +110,7 @@ func TestDamageKeepsToUpstreamRules(t *testing.T) {
 		official[key] = value
 	}
 	official["id"] = 1341
-	if result, err = a.panelDamages(ctx, CharacterPanel{ID: "1341", Official: official}, ""); err != nil || len(result.Damages) != 0 {
+	if result, err = a.panelDamages(ctx, CharacterPanel{ID: "1341", Official: official}, new("")); err != nil || len(result.Damages) != 0 {
 		t.Errorf("score-only agent = %+v, %v", result, err)
 	}
 }

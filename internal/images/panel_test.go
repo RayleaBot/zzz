@@ -25,7 +25,11 @@ func TestPanelFollowsZZZPluginRules(t *testing.T) {
 		"stats":  []any{map[string]any{"name": "暴击", "weight": 1, "value": "7.2%", "count": 3}, map[string]any{"name": "攻击", "weight": 0.5, "value": "3.0%", "count": 1}, map[string]any{"name": "防御", "weight": 0, "value": "4.8%", "count": 1}},
 		"pieces": []any{map[string]any{"slot": 2, "score": 30.5, "grade": "S", "props": []any{map[string]any{"id": 20103, "count": 2, "weight": 1}, map[string]any{"id": 12102, "count": 0, "weight": 0.75}}}}})
 	panel := app.CharacterPanel{Official: official, ScoreDetail: &app.ScoreDetail{Raw: raw}}
-	drawn, ok := images.Panel(app.ImageContext{Game: app.Game{Prefix: "%"}, Now: time.Now()}, app.PanelImage{Panel: panel, UID: "10000001"})
+	damage := app.DamageResult{
+		Damages:    []app.DamageRow{{Name: "感电每段", Expected: 6551.5}, {Name: "终结技", Critical: 96464.2, Expected: 75802.7}},
+		PanelBuffs: []app.DamageBuff{{Name: "核心被动：迷你毁灭拍档", Type: "穿透率", Value: 0.156, Max: 0.3}, {Name: "技能：加油！", Type: "攻击力", Value: 568.928}},
+	}
+	drawn, ok := images.Panel(app.ImageContext{Game: app.Game{Prefix: "%"}, Now: time.Now()}, app.PanelImage{Panel: panel, UID: "10000001", Damage: damage})
 	if !ok || drawn.Template != "panel" {
 		t.Fatalf("drawn = %+v", drawn)
 	}
@@ -60,6 +64,19 @@ func TestPanelFollowsZZZPluginRules(t *testing.T) {
 	}
 	if subs[0].(map[string]any)["hit"] != "hit100" || len(subs[0].(map[string]any)["count"].([]struct{})) != 2 || subs[1].(map[string]any)["hit"] != "hit75" {
 		t.Errorf("subs = %v", subs)
+	}
+	// Damages and buffs read as upstream's card shows them: anomaly damage
+	// has no crit, and a buff's maximum follows its value.
+	table := drawn.Data["damage"].(map[string]any)
+	rows, buffs := table["rows"].([]any), table["buffs"].([]any)
+	if first := rows[0].(map[string]any); first["crit"] != nil || first["expect"] != "6552" || rows[1].(map[string]any)["crit"] != "96464" {
+		t.Errorf("rows = %v", rows)
+	}
+	if buffs[0].(map[string]any)["value"] != "16%/30%" || buffs[1].(map[string]any)["value"] != "568.93" || table["hint"] != "%安比伤害" {
+		t.Errorf("damage = %v", table)
+	}
+	if drawn, _ = images.Panel(app.ImageContext{}, app.PanelImage{Panel: panel}); drawn.Data["damage"] != nil {
+		t.Errorf("no damage calculated still shows %v", drawn.Data["damage"])
 	}
 	if _, ok := images.Panel(app.ImageContext{}, app.PanelImage{}); ok {
 		t.Error("a panel without the official entry should keep the summary card")

@@ -32,20 +32,3 @@ func TestRankKeepsOneEntryPerUIDAndCharacter(t *testing.T) {
 		t.Fatal("invalid score accepted")
 	}
 }
-
-func TestRankScoresTakesTheDefaultDetail(t *testing.T) {
-	a := &App{}
-	total := 180.5
-	expected := 12345.0
-	damage := &BuildResult{Baseline: BuildScenario{Results: []BuildSkillResult{{Title: "E伤害", Expected: new(float64)}, {Title: "Q伤害", Expected: &expected, Default: true}, {Title: "治疗", Text: "12.5%"}}}}
-	entry := RankEntry{}
-	a.rankScores(&entry, CharacterPanel{ID: "1", TotalScore: &total, ScoredEquipment: 5, ScoreDetail: &ScoreDetail{Grade: "SS"}}, damage)
-	if entry.Score != total || entry.Grade != "SS" || entry.Damage == nil || entry.Damage.Title != "Q伤害" || entry.Damage.Value != expected || entry.Panel == nil {
-		t.Fatalf("entry = %+v", entry)
-	}
-	damage.Baseline.Results[1].Default, damage.Baseline.Results[2].Default = false, true
-	a.rankScores(&entry, CharacterPanel{ID: "1"}, damage)
-	if entry.Score != 0 || entry.Damage == nil || entry.Damage.Value != 12.5 || entry.Damage.Text != "12.5%" {
-		t.Fatalf("text entry = %+v", entry)
-	}
-}

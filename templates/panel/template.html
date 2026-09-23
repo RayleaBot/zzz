@@ -132,6 +132,25 @@
         <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
       </div>
     </div>
+    {{ with .buffs }}
+    <div class="damagelist">
+      <div class="dmg-tr column4 titlebar no-zzz-font">
+        <div class="td dmg-td">%</div>
+        <div class="dmg-td">增益名称</div>
+        <div class="dmg-td">增益类型</div>
+        <div class="dmg-td">增益数值</div>
+      </div>
+      {{ range . }}
+      <div class="dmg-tr column4">
+        <div class="dmg-td">-</div>
+        <div class="dmg-td no-zzz-font">{{ .name }}</div>
+        <div class="dmg-td no-zzz-font">{{ .type }}</div>
+        <div class="dmg-td">{{ .value }}</div>
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+    {{ with .rows }}
     <div class="damagelist">
       <div class="dmg-tr column4 titlebar no-zzz-font">
         <div class="td dmg-td">%</div>
@@ -139,7 +158,7 @@
         <div class="dmg-td">暴击伤害</div>
         <div class="dmg-td">期望伤害</div>
       </div>
-      {{ range .rows }}
+      {{ range . }}
       <div class="dmg-tr {{ if .crit }}column4{{ else }}column3{{ end }}">
         <div class="dmg-td">{{ .index }}</div>
         <div class="dmg-td no-zzz-font">{{ .name }}</div>
@@ -148,10 +167,11 @@
       </div>
       {{ end }}
       <div class="tr dmg-tr info-tr no-zzz-font">
-        <div>伤害计算取有弱点、敌人等级{{ .level }}、1级基础防御力为50的敌方数据，且不考虑失衡易伤区</div>
-        <div>可通过<span>{{ $.damage_hint }}+序号</span>查看指定技能伤害详情 如<span>{{ $.damage_hint }}1</span></div>
+        <div>伤害计算取有弱点、敌人等级{{ $.damage.level }}、1级基础防御力为50的敌方数据，且不考虑失衡易伤区</div>
+        <div>可通过<span>{{ $.damage.hint }}+序号</span>查看指定技能伤害详情 如<span>{{ $.damage.hint }}1</span></div>
       </div>
     </div>
+    {{ end }}
     {{ end }}
   </div>
 </div>

@@ -39,7 +39,7 @@ var (
 // Panel draws a single agent the way ZZZ-Plugin's panel card does: the agent
 // portrait with skill levels, rank, level and Mindscape, the property list,
 // the W-Engine, the drive disc rating with substat totals, each disc, and the
-// reference damage table.
+// buffs the agent's rule shows in the panel with every skill's damage.
 func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	official := image.Panel.Official
 	if official == nil {
@@ -51,26 +51,24 @@ func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	}
 	card := newAgentCard(context)
 	data := card.basic(official, image.UID, image.Portrait, detail.Weights)
-	data["damage_hint"] = context.Game.Prefix + app.Text(official["name_mi18n"]) + "伤害"
 	if image.Panel.ScoreDetail != nil {
 		data["rating"] = rating(detail, image.Panel.ScoreDetail)
 	}
 	data["discs"] = discs(official, detail, card.maps, card.fetch)
-	if image.Damage != nil {
-		rows := []any{}
-		for index, result := range image.Damage.Baseline.Results {
-			row := map[string]any{"index": index + 1, "name": result.Title}
-			if result.Expected != nil {
-				row["expect"] = strconv.FormatFloat(*result.Expected, 'f', 0, 64)
-			} else {
-				row["expect"] = result.Text
+	if result := image.Damage; len(result.Damages) > 0 || len(result.PanelBuffs) > 0 {
+		buffs := []any{}
+		for _, buff := range result.PanelBuffs {
+			value := buffValue(buff.Value)
+			if buff.Max != 0 {
+				value += "/" + buffValue(buff.Max)
 			}
-			if result.Critical != nil && *result.Critical != 0 {
-				row["crit"] = strconv.FormatFloat(*result.Critical, 'f', 0, 64)
-			}
-			rows = append(rows, row)
+			buffs = append(buffs, map[string]any{"name": buff.Name, "type": buff.Type, "value": value})
 		}
-		data["damage"] = map[string]any{"rows": rows, "level": app.Int(official["level"])}
+		rows := []any{}
+		for index, damage := range result.Damages {
+			rows = append(rows, damageRow(index, damage))
+		}
+		data["damage"] = map[string]any{"buffs": buffs, "rows": rows, "level": app.Int(official["level"]), "hint": context.Game.Prefix + app.Text(official["name_mi18n"]) + "伤害"}
 	}
 	return app.Image{Template: "panel", Data: data, Resources: card.resources}, true
 }

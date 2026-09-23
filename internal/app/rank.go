@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -15,12 +14,10 @@ import (
 
 // Group panel ranks follow miao-plugin's ProfileRank: every panel a member
 // views in a group enters that group's ranking under its UID and character,
-// ranked by the expected damage of the character's default detail or by the
-// equipment score.
+// ranked by the equipment score.
 
 // RankEntry is one UID's character in a group's ranking: the panel viewed last
-// in the group with its equipment score and grade and the damage of the
-// default detail.
+// in the group with its equipment score and grade.
 type RankEntry struct {
 	ActorID     string          `json:"actor_id"`
 	Nickname    string          `json:"nickname"`
@@ -29,19 +26,10 @@ type RankEntry struct {
 	Name        string          `json:"name"`
 	Score       float64         `json:"score"`
 	Grade       string          `json:"grade,omitempty"`
-	Damage      *RankDamage     `json:"damage,omitempty"`
 	Panel       *CharacterPanel `json:"panel,omitempty"`
 	UpdatedAtMS int64           `json:"updated_at_ms"`
 	// Avatar is the member's chat avatar for rank images; it is not stored.
 	Avatar string `json:"-"`
-}
-
-// RankDamage is the default detail's title and expected damage; Text keeps
-// the result of a detail upstream shows as text.
-type RankDamage struct {
-	Title string  `json:"title"`
-	Value float64 `json:"value"`
-	Text  string  `json:"text,omitempty"`
 }
 
 // rankLength is miao's default rankNumber, the rows a character's ranking
@@ -52,13 +40,7 @@ const rankLength = 15
 // longer carries crit or weighted-roll counts, so upstream's 双爆 and 词条
 // rankings stay empty; they do here too.
 func rankValue(entry RankEntry, mode string) (float64, bool) {
-	switch mode {
-	case "dmg":
-		if entry.Damage == nil {
-			return 0, false
-		}
-		return entry.Damage.Value, true
-	case "mark":
+	if mode == "mark" {
 		return entry.Score, entry.Score > 0
 	}
 	return 0, false
@@ -111,9 +93,8 @@ func (a *App) rankEntries(all []RankEntry, id, mode string) []RankEntry {
 }
 
 // recordRank puts a panel viewed in a group into that group's ranking, with
-// its equipment score and the damage of the default detail when either could
-// be calculated.
-func (a *App) recordRank(event *rayleabot.EventContext, uid string, panel CharacterPanel, damage *BuildResult) {
+// its equipment score when it could be calculated.
+func (a *App) recordRank(event *rayleabot.EventContext, uid string, panel CharacterPanel) {
 	scope := groupScope(event)
 	if event.Event.EventType != "message.group" || !scope.valid() || event.Event.Actor.ID == "" || uid == "" || panel.ID == "" {
 		return
@@ -123,38 +104,23 @@ func (a *App) recordRank(event *rayleabot.EventContext, uid string, panel Charac
 		name = event.Event.Actor.ID
 	}
 	entry := RankEntry{ActorID: event.Event.Actor.ID, Nickname: name, UID: uid, CharacterID: panel.ID, Name: panel.Name, UpdatedAtMS: time.Now().UnixMilli()}
-	a.rankScores(&entry, panel, damage)
-	if entry.Score == 0 && entry.Damage == nil {
+	a.rankScores(&entry, panel)
+	if entry.Score == 0 {
 		return
 	}
 	// A failed record must not cost the user the panel reply.
 	_ = a.Groups.Submit(scope, entry)
 }
 
-// rankScores fills an entry's panel, score and damage from a scored panel and
-// its damage.
-func (a *App) rankScores(entry *RankEntry, panel CharacterPanel, damage *BuildResult) {
+// rankScores fills an entry's panel, score and grade from a scored panel.
+func (a *App) rankScores(entry *RankEntry, panel CharacterPanel) {
 	stored := panel
 	entry.Panel = &stored
-	entry.Score, entry.Grade, entry.Damage = 0, "", nil
+	entry.Score, entry.Grade = 0, ""
 	if panel.TotalScore != nil && panel.ScoredEquipment > 0 {
 		entry.Score = *panel.TotalScore
 		if panel.ScoreDetail != nil {
 			entry.Grade = panel.ScoreDetail.Grade
-		}
-	}
-	if damage == nil {
-		return
-	}
-	for _, result := range damage.Baseline.Results {
-		if !result.Default {
-			continue
-		}
-		if result.Expected != nil {
-			entry.Damage = &RankDamage{Title: result.Title, Value: *result.Expected}
-		} else if value, err := strconv.ParseFloat(strings.ReplaceAll(result.Text, "%", ""), 64); err == nil {
-			// miao ranks a text result by its number, without the percent sign.
-			entry.Damage = &RankDamage{Title: result.Title, Value: value, Text: result.Text}
 		}
 	}
 }
@@ -162,7 +128,7 @@ func (a *App) rankScores(entry *RankEntry, panel CharacterPanel, damage *BuildRe
 // Submit keeps one entry per UID and character, replacing the older one.
 func (s *GroupStore) Submit(scope GroupScope, entry RankEntry) error {
 	return s.Update(scope, func(data *GroupData) error {
-		if entry.UID == "" || entry.CharacterID == "" || entry.Panel == nil || !finiteRange(entry.Score, 0, 100000) || entry.Damage != nil && math.IsInf(entry.Damage.Value, 0) {
+		if entry.UID == "" || entry.CharacterID == "" || entry.Panel == nil || !finiteRange(entry.Score, 0, 100000) {
 			return gameError("input_invalid", "排名数据不完整。")
 		}
 		if data.RankSinceMS == 0 {
@@ -234,12 +200,6 @@ func rankView(game Game, character Entry, mode string, entries []RankEntry) View
 	v := View{Title: game.Name + " · " + title, Rows: []Row{}, Note: "本群成员在群内查看过的面板。"}
 	for index, entry := range entries {
 		value := fmt.Sprintf("评分 %.1f", entry.Score)
-		if mode == "dmg" && entry.Damage != nil {
-			value = entry.Damage.Title + " " + entry.Damage.Text
-			if entry.Damage.Text == "" {
-				value = entry.Damage.Title + " " + strconv.FormatFloat(entry.Damage.Value, 'f', 1, 64)
-			}
-		}
 		label := strconv.Itoa(index+1) + ". " + entry.Nickname
 		if character.ID == "" {
 			label = entry.Name + " · " + entry.Nickname

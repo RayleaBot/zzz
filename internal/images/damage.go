@@ -52,10 +52,8 @@ func Damage(context app.ImageContext, image app.DamageImage) (app.Image, bool) {
 	name := app.Text(official["name_mi18n"])
 	damages := []any{}
 	for index, damage := range result.Damages {
-		row := map[string]any{"index": index + 1, "name": damage.Name, "expect": fixed(damage.Expected, 0), "current": index == result.Skill}
-		if damage.Critical != 0 {
-			row["crit"] = fixed(damage.Critical, 0)
-		}
+		row := damageRow(index, damage)
+		row["current"] = index == result.Skill
 		damages = append(damages, row)
 	}
 	areas := append([]damageArea{}, damageAreas...)
@@ -85,6 +83,16 @@ func Damage(context app.ImageContext, image app.DamageImage) (app.Image, bool) {
 		data["main"] = differenceTable(result.Main)
 	}
 	return app.Image{Template: "damage", Data: data, Resources: card.resources}, true
+}
+
+// damageRow is a skill's damage as upstream's damage tables show it, numbered
+// from 1; anomaly damage that cannot crit has no crit cell.
+func damageRow(index int, damage app.DamageRow) map[string]any {
+	row := map[string]any{"index": index + 1, "name": damage.Name, "expect": fixed(damage.Expected, 0)}
+	if damage.Critical != 0 {
+		row["crit"] = fixed(damage.Critical, 0)
+	}
+	return row
 }
 
 // areaCells shows the areas as upstream does, a missing or zero area as 1.

@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"slices"
 	"strconv"
@@ -77,8 +76,6 @@ type BuildSkillResult struct {
 	Title    string   `json:"title"`
 	Expected *float64 `json:"expected"`
 	Text     string   `json:"text,omitempty"`
-	// Default marks the detail upstream ranks the group by.
-	Default  bool     `json:"default,omitempty"`
 	Critical *float64 `json:"critical"`
 	Buffs    []string `json:"buffs"`
 	Kind     string   `json:"kind"`
@@ -243,30 +240,11 @@ func applyBuildIdentity(result *BuildResult, panel CharacterPanel) {
 	result.Character = panel.Name
 }
 
-// panelDamage calculates the reference damage of a panel already read from the
-// account, so a panel reply does not query it twice.
-func (a *App) panelDamage(ctx context.Context, panel CharacterPanel) (BuildResult, error) {
-	record, err := findBuildCharacter(a.Game.Calc, panel)
-	if err != nil {
-		return BuildResult{}, err
-	}
-	profile, err := buildProfile(a.Game.Calc, panel, record)
-	if err != nil {
-		return BuildResult{}, err
-	}
-	result, err := referenceBuild(ctx, a.Game.Calc, record, profile)
-	if err != nil {
-		return BuildResult{}, err
-	}
-	applyBuildIdentity(&result, panel)
-	return result, nil
-}
-
 // fullPanelView answers a single-character panel the way upstream's
 // <角色>面板 does: attributes and equipment with their scores, then the
-// reference damage. A part that cannot be calculated is named in the note
-// instead of failing the whole reply. A panel viewed in a group also enters
-// the group ranking.
+// damage 伤害 calculates alike. A part that cannot be calculated is named in
+// the note instead of failing the whole reply. A panel viewed in a group also
+// enters the group ranking.
 func (a *App) fullPanelView(ctx context.Context, event *rayleabot.EventContext, panel CharacterPanel, uid string) View {
 	missing := []string{}
 	if scored, err := a.scorePanel(ctx, panel); err == nil {
@@ -276,21 +254,19 @@ func (a *App) fullPanelView(ctx context.Context, event *rayleabot.EventContext, 
 	}
 	view := PanelView(a.Game, []CharacterPanel{panel}, uid)
 	image := PanelImage{Panel: panel, UID: uid, Portrait: a.PanelImages.Random(panel.ID)}
-	if result, err := a.panelDamage(ctx, panel); err == nil {
-		damage := BuildView(a.Game, result)
-		view.Sections = append(view.Sections, Section{Title: "参考伤害 · " + result.Version, Rows: damage.Rows})
-		image.Damage = &result
+	if result, err := a.panelDamages(ctx, panel, nil); err == nil {
+		if len(result.Damages) > 0 {
+			view.Sections = append(view.Sections, Section{Title: "伤害统计", Rows: damageRows(result.Damages)})
+		}
+		image.Damage = result
 	} else {
 		missing = append(missing, "伤害："+friendlyError(err))
 	}
-	a.recordRank(event, uid, panel, image.Damage)
+	a.recordRank(event, uid, panel)
 	if len(missing) > 0 {
 		view.Note += "\n" + strings.Join(missing, "\n")
 	}
 	if a.panel != nil {
-		if a.Game.Calc != nil {
-			image.Record, _ = findReferenceCharacter(a.Game.Calc, panel)
-		}
 		if drawn, ok := a.panel(a.imageContext(ctx), image); ok {
 			view.Image = &drawn
 			// As upstream, 原图 then sends the portrait the panel shows.
@@ -300,21 +276,6 @@ func (a *App) fullPanelView(ctx context.Context, event *rayleabot.EventContext, 
 		}
 	}
 	return view
-}
-
-func BuildView(game Game, result BuildResult) View {
-	rows := []Row{}
-	for _, item := range result.Baseline.Results {
-		value := item.Text
-		if item.Expected != nil {
-			value = fmt.Sprintf("期望 %.1f", *item.Expected)
-		}
-		if item.Critical != nil {
-			value += fmt.Sprintf(" · 暴击 %.1f", *item.Critical)
-		}
-		rows = append(rows, Row{Label: item.Title, Value: value})
-	}
-	return View{Title: result.Character + " · 参考伤害", Subtitle: game.Name + " · " + result.Version, Rows: rows, Note: "按固定参考列出的战斗情境自动应用角色、武器和套装增益。"}
 }
 
 // PanelTalent is a skill level as miao's panel shows it: Level includes

@@ -16,7 +16,7 @@
 
 `internal/assets/calc/` 保存完整的绝区零计算运行时：`data.js`（上游 ID 映射）、`common.js`（Calculator、BuffManager 与“伤害”用来读取面板的 `ZZZAvatarInfo` 等代理人模型，去掉下载图片的方法）、`buffs.js`（音擎与驱动盘效果）、手写的 `bootstrap.js` 与 `runner.js`，以及角色脚本 `characters/<ID>-<角色名>.js`。除手写的两个文件外均由 `scripts/bundle-reference-calculation.mjs` 从 ZZZ-Plugin dev 固定快照生成。`scripts/generate-reference-build-vectors.mjs` 以合成代理人对照打包后的计算与上游流程，结果写入 `internal/assets/testdata/calc-vectors.json`。
 
-聊天“伤害”运行 `runner.js` 的 `runDamage`，与 ZZZ-Plugin 的 apps/damage 相同：由保存的官方面板构造 `ZZZAvatarInfo`，`avatar_calc` 计算各技能伤害，`calc_sub_differences` 与 `calc_main_differences` 比较词条，词条按角色评分权重选取，因此同时加载该角色的伤害与评分脚本。上游没有效果的音擎在这里同样没有效果，下文的音擎补充不参与。上游对序号只判断是否大于技能数，写最后一个技能之后的序号时没有可画的伤害而出错，这里取最后一个技能。
+聊天“面板”图的伤害统计与“伤害”都运行 `runner.js` 的 `runDamage`，与 ZZZ-Plugin 的 panel/card 与 apps/damage 相同：由保存的官方面板构造 `ZZZAvatarInfo`，`avatar_calc` 计算各技能伤害；面板图另列角色规则标为在面板显示的增益（`calc_showInPanel_buffs`），“伤害”再以 `calc_sub_differences` 与 `calc_main_differences` 比较词条，词条按角色评分权重选取，因此同时加载该角色的伤害与评分脚本。上游没有效果的音擎在这里同样没有效果，下文的音擎补充不参与。上游对序号只判断是否大于技能数，写最后一个技能之后的序号时没有可画的伤害而出错，这里取最后一个技能。
 
 ## 卡池资料
 
@@ -32,7 +32,7 @@
 
 ## 音擎补充与自定义条件
 
-`scripts/calc-supplements/weapons.js` 为固定描述完整的 33 项音擎补充被动，使用五档原始数值，不外推后续版本。现有可计算音擎资料由 67 项扩展为 100 项；14004 的名称为占位符且无效果描述，不伪造被动。锋御的四份音擎使用独立数值/技能范围测试，因为同快照没有对应职业角色计算脚本。
+`scripts/calc-supplements/weapons.js` 为固定描述完整的 33 项音擎补充被动，使用五档原始数值，不外推后续版本；它们只用于管理页的配装试算（`runBuild`），聊天回复不使用。现有可计算音擎资料由 67 项扩展为 100 项；14004 的名称为占位符且无效果描述，不伪造被动。锋御的四份音擎使用独立数值/技能范围测试，因为同快照没有对应职业角色计算脚本。
 
 非伤害的能量、失衡、防护、积蓄与持续时间保留完整说明；比格气缸附加伤害只显示描述可确定的防御倍率基础值，未指定的元素不作猜测。血髓秘匣读取截断前暴击率后再计算增伤上限；元素、职业和技能限定保留，未来异常类型不冒充已有异常。
 

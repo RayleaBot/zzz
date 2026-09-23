@@ -11,7 +11,6 @@ import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/plugin-zzz/internal/artwork"
 	"github.com/RayleaBot/plugin-zzz/internal/gacha"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
 )
 
 // Image is a reply drawn with one of the game plugin's own templates, laid out
@@ -51,13 +50,12 @@ type ImageContext struct {
 
 // PanelImage is one character's panel with what the upstream panel image
 // shows beside it. Panel carries its score detail when scoring succeeded;
-// Record is the pinned calculation record (zero when the character has none);
-// Damage is nil when no reference damage could be calculated.
+// Damage is the card's calculation, without damages when none could be
+// calculated.
 type PanelImage struct {
 	Panel  CharacterPanel
 	UID    string
-	Record reference.Character
-	Damage *BuildResult
+	Damage DamageResult
 	// Portrait is a custom picture of the character, as a path in the plugin
 	// data directory, shown instead of the default portrait; "" for none.
 	Portrait string

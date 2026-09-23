@@ -11,7 +11,6 @@
     "skills": { "type": "array" },
     "sub_element": { "type": "string" },
     "properties": { "type": "array" },
-    "damage_hint": { "type": "string" },
     "weapon": { "type": "object" },
     "rating": { "type": "object" },
     "discs": { "type": "array" },
