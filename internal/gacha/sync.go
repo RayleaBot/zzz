@@ -27,7 +27,13 @@ type SyncInfo struct {
 	Fetched  int           `json:"fetched"`
 	Result   *ImportResult `json:"result,omitempty"`
 }
-type SyncChoice struct{ AccountRef, RoleRef string }
+
+// SyncChoice is the account role a sync reads, or Link for a gacha link
+// pasted in chat, whose authkey the caller keeps.
+type SyncChoice struct {
+	AccountRef, RoleRef string
+	Link                bool
+}
 type syncJob struct {
 	mu      sync.Mutex
 	view    SyncInfo
@@ -63,7 +69,7 @@ func (s *Syncs) Reset() {
 var syncPools = []string{"1001", "2001", "3001", "5001", "12001", "13001"}
 
 func (s *Syncs) Start(store *Store, choice SyncChoice, uid, region string, full bool) (SyncInfo, error) {
-	if choice.AccountRef == "" || choice.RoleRef == "" {
+	if !choice.Link && (choice.AccountRef == "" || choice.RoleRef == "") {
 		return SyncInfo{}, ErrSync
 	}
 	archive, version, err := store.Snapshot(uid, region)

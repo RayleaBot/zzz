@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/plugin-zzz/internal/gacha"
@@ -12,15 +11,7 @@ func (a *App) manageSync(ctx context.Context, event *rayleabot.EventContext, act
 	return a.syncAction(ctx, a.accountClient(event), action, input)
 }
 func (a *App) syncAction(ctx context.Context, client AccountsClient, action string, input map[string]any) (result map[string]any, err error) {
-	defer func() {
-		if errors.Is(err, gacha.ErrSync) {
-			err = gameError("sync_expired", "同步任务已取消或过期，请重新开始。")
-		} else if errors.Is(err, gacha.ErrConflict) {
-			err = gameError("sync_conflict", "档案已变更或记录冲突，请重新开始同步；现有档案已保留。")
-		} else if errors.Is(err, gacha.ErrInvalid) {
-			err = gameError("sync_invalid", "官方记录结构或分页异常，现有档案已保留。")
-		}
-	}()
+	defer func() { err = syncError(err) }()
 	ref := asText(input["ref"])
 	switch action {
 	case "gacha.sync.start":
@@ -58,8 +49,8 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 			return nil, gameError("input_invalid", "同步进度无效。")
 		}
 		choice, err := a.Syncs.Choice(ref)
-		if err != nil {
-			return nil, err
+		if err != nil || choice.Link {
+			return nil, gacha.ErrSync
 		}
 		info, err := a.Syncs.Step(ctx, a.Gacha, ref, *payload.Sequence, func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
 			response, err := client.Execute(ctx, Selection{AccountRef: choice.AccountRef, RoleRef: choice.RoleRef}, a.Game.ID+".gacha", map[string]any{"gacha_type": pool, "end_id": endID, "page": page})

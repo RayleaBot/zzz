@@ -40,7 +40,7 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"爬塔排名", "query-rank-help", nil},
 			{"隐藏深渊排名", "query-rank-switch", nil},
 			{"下载全部资源", "artwork", nil},
-			{"获取抽卡链接", "gacha-link", nil},
+			{"获取抽卡链接", "gacha-link-get", nil},
 			{"显示排名", "query-rank-switch", nil},
 			{"苗圃", "hollow_zero", nil},
 			{"抽卡", "gacha", nil},

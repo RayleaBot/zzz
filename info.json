@@ -202,13 +202,25 @@
     {
       "id": "gacha-link",
       "name": "抽卡链接",
-      "description": "说明抽卡链接不在聊天中收发",
+      "description": "私聊发送抽卡链接以更新抽卡记录",
       "usage": "#抽卡链接",
       "permission": "everyone",
       "trigger": {
         "type": "exact",
         "names": [
-          "抽卡链接",
+          "抽卡链接"
+        ]
+      }
+    },
+    {
+      "id": "gacha-link-get",
+      "name": "获取抽卡链接",
+      "description": "私聊获取本人国服角色的抽卡链接",
+      "usage": "#获取抽卡链接",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
           "获取抽卡链接"
         ]
       }
@@ -529,7 +541,9 @@
           "刷新抽卡记录",
           "更新抽卡",
           "刷新抽卡",
-          "同步抽卡"
+          "同步抽卡",
+          "更新抽卡链接",
+          "刷新抽卡链接"
         ]
       }
     },
@@ -1215,7 +1229,8 @@
         "gacha-progress",
         "gacha-stop",
         "gacha-help",
-        "gacha-link"
+        "gacha-link",
+        "gacha-link-get"
       ]
     },
     {

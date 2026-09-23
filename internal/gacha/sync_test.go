@@ -14,7 +14,7 @@ func testSync(t *testing.T) (*Store, *Syncs, SyncInfo) {
 	t.Helper()
 	store := &Store{Directory: t.TempDir(), Game: "zzz"}
 	jobs := &Syncs{}
-	info, err := jobs.Start(store, SyncChoice{"account", "role"}, "100000001", "prod_gf_cn", false)
+	info, err := jobs.Start(store, SyncChoice{AccountRef: "account", RoleRef: "role"}, "100000001", "prod_gf_cn", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestSyncFailureCancelAndDeletionPreserveArchives(t *testing.T) {
 func TestSyncKeepsOfficialUTCAndDistinctZZZReturnPools(t *testing.T) {
 	store := &Store{Directory: t.TempDir(), Game: "zzz"}
 	jobs := &Syncs{}
-	info, err := jobs.Start(store, SyncChoice{"account", "role"}, "100000001", "prod_gf_cn", false)
+	info, err := jobs.Start(store, SyncChoice{AccountRef: "account", RoleRef: "role"}, "100000001", "prod_gf_cn", false)
 	if err != nil {
 		t.Fatal(err)
 	}

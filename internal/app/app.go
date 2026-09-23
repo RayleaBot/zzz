@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -104,14 +105,18 @@ type App struct {
 	Gacha         *gacha.Store
 	Transfers     gacha.Transfers
 	Syncs         gacha.Syncs
-	SyncTasks     *SyncTaskStore
-	Showcase      ShowcaseClient
-	Profiles      *PanelStore
-	Reminders     *ReminderStore
-	PanelHistory  *PanelHistoryStore
-	Groups        *GroupStore
-	QueryRanks    *QueryRankStore
-	BuildPresets  *BuildPresetStore
+	// LinkJobs are gacha links whose records are still being fetched;
+	// LinkHTTP reads the official signal search (nil uses a default client).
+	LinkJobs     gachaLinkJobs
+	LinkHTTP     *http.Client
+	SyncTasks    *SyncTaskStore
+	Showcase     ShowcaseClient
+	Profiles     *PanelStore
+	Reminders    *ReminderStore
+	PanelHistory *PanelHistoryStore
+	Groups       *GroupStore
+	QueryRanks   *QueryRankStore
+	BuildPresets *BuildPresetStore
 
 	commands       commandSet
 	images         map[string]ImageBuilder
@@ -221,6 +226,9 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), "game.sync.") {
 			return a.runSyncTask(ctx, event)
 		}
+		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), gachaLinkTask) {
+			return a.runGachaLink(ctx, event)
+		}
 		return a.runReminder(ctx, event)
 	}
 	if event.Event.EventType == "management.action" {
@@ -239,6 +247,9 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	}
 	if event.Event.EventType != "message.private" && event.Event.EventType != "message.group" {
 		return event.Result(map[string]any{"handled": false})
+	}
+	if handled, err := a.gachaLinkMessage(ctx, event); handled {
+		return err
 	}
 	command, args, known := a.commands.resolve(event.Event.Command(), event.Event.Args())
 	if !known {
@@ -407,24 +418,18 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		view = a.fullPanelView(ctx, event, panel, uid)
 	case "accounts", "select", "uid-remove":
 		return a.uidCommand(ctx, event, command, args)
+	case "gacha-link":
+		return a.gachaLinkCommand(event)
+	case "gacha-link-get":
+		return a.gachaLinkGet(ctx, event)
 	case "gacha":
-		listed, listErr := a.accountClient(event).List(ctx, 0)
-		if listErr != nil {
-			err = listErr
-			break
-		}
 		uid := ""
 		if len(args) > 0 {
 			uid = args[0]
 		}
-		_, role, chooseErr := Choose(listed, a.Game.ID, uid)
-		if chooseErr != nil {
-			err = chooseErr
-			break
-		}
-		archive, readErr := a.Gacha.Read(role.UID, role.Region)
+		archive, role, readErr := a.chatArchive(ctx, event, uid)
 		if readErr != nil {
-			err = gameError("archive_missing", "还没有此角色的抽卡档案，请先在游戏管理页导入记录。")
+			err = readErr
 			break
 		}
 		game := a.bannerGame()
