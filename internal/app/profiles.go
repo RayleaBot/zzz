@@ -295,8 +295,9 @@ func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice S
 }
 
 // characterPanel is the panel 面板, 评分 and 伤害 read: the kept one, else
-// the account's official one when the UID is the user's own.
-func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext, owner panelOwner, id string) (CharacterPanel, error) {
+// the account's official one when the UID is the user's own. name is the
+// character as the command wrote it, for upstream's reply when there is none.
+func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext, owner panelOwner, id, name string) (CharacterPanel, error) {
 	saved, err := a.Profiles.Read(owner.UID)
 	if err != nil {
 		return CharacterPanel{}, err
@@ -311,26 +312,36 @@ func (a *App) characterPanel(ctx context.Context, event *rayleabot.EventContext,
 			return panel, nil
 		}
 	}
-	name := id
-	if entry, ok := a.Catalog.Get(id); ok {
-		name = entry.Name
-	}
 	return CharacterPanel{}, gameError("panel_missing", a.panelReply("missing", map[string]string{"uid": owner.UID, "name": name}))
 }
 
 // commandPanel reads the panel a 面板, 评分 or 伤害 command names by its
-// character and optional UID.
+// character and optional UID. As ZZZ-Plugin, the UID comes first, then the
+// name must be a character's name or alias exactly.
 func (a *App) commandPanel(ctx context.Context, event *rayleabot.EventContext, args []string) (CharacterPanel, string, error) {
-	input, uid, err := a.commandInput(Operation{Input: "characters"}, args, a.aliasMap(event))
-	if err != nil {
-		return CharacterPanel{}, "", err
+	uid := ""
+	if len(args) > 1 {
+		uid = args[1]
 	}
 	owner, err := a.panelOwner(ctx, event, uid)
 	if err != nil {
+		if PublicError(err).Code == "plugin.game_role_missing" {
+			err = gameError("uid_missing", a.uidEmptyReply())
+		}
 		return CharacterPanel{}, "", err
 	}
-	panel, err := a.characterPanel(ctx, event, owner, asText(input["character_ids"].([]any)[0]))
+	name := args[0]
+	entry, _, found := a.aliasOwner(name, a.aliasMap(event))
+	if !found || entry.Kind != "character" {
+		return CharacterPanel{}, "", gameError("character_missing", "角色"+name+"不存在，请确保角色名称/别称存在")
+	}
+	panel, err := a.characterPanel(ctx, event, owner, entry.ID, name)
 	return panel, owner.UID, err
+}
+
+// uidEmptyReply is what ZZZ-Plugin's getUID replies to a user without a UID.
+func (a *App) uidEmptyReply() string {
+	return "uid为空，需要CK的功能请先绑定CK或者#扫码登录，需要SK的功能请#扫码登录，若不清楚需要CK或SK，请查看" + a.Game.Prefix + "帮助"
 }
 
 // panelCommand answers 更新面板 and 面板列表. 更新面板 reads a user's own UID

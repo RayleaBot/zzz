@@ -300,7 +300,7 @@ var overseasUID = regexp.MustCompile(`^1[0-9][0-9]{8}`)
 func (a *App) gachaLinkGet(ctx context.Context, event *rayleabot.EventContext) error {
 	owner, err := a.panelOwner(ctx, event, "")
 	if err != nil {
-		return event.SendText("uid为空，需要CK的功能请先绑定CK或者#扫码登录，需要SK的功能请#扫码登录，若不清楚需要CK或SK，请查看" + a.Game.Prefix + "帮助")
+		return event.SendText(a.uidEmptyReply())
 	}
 	if overseasUID.MatchString(owner.UID) {
 		return event.SendText("国际服不支持此功能")
