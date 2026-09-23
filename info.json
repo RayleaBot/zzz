@@ -1205,9 +1205,7 @@
           "下载素材",
           "素材下载",
           "图鉴升级",
-          "图鉴更新",
-          "下载全部资源",
-          "下载所有资源"
+          "图鉴更新"
         ]
       }
     },
@@ -1221,6 +1219,34 @@
         "type": "exact",
         "names": [
           "素材状态"
+        ]
+      }
+    },
+    {
+      "id": "artwork-all",
+      "name": "下载全部资源",
+      "description": "更新素材仓库，并下载模板按需使用的全部代理人、音擎、驱动盘与邦布图片",
+      "usage": "#下载全部资源",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "下载全部资源",
+          "下载所有资源"
+        ]
+      }
+    },
+    {
+      "id": "artwork-delete",
+      "name": "删除全部资源",
+      "description": "删除已下载的全部素材与图片缓存，随插件附带的文件保留",
+      "usage": "#删除全部资源",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "删除全部资源",
+          "删除所有资源"
         ]
       }
     },
@@ -1637,6 +1663,8 @@
         "group-settings",
         "artwork",
         "artwork-status",
+        "artwork-all",
+        "artwork-delete",
         "alias-set",
         "alias-remove",
         "aliases"

@@ -27,6 +27,7 @@ BUNDLES = {
         "resources/map/WeaponId2Data.json",
         "resources/map/SuitData.json",
         "resources/map/ElementData.json",
+        "resources/map/BangbooId2Data.json",
     ]),
     # The UID list page, drawn with miao's frame like Miao-Yunzai's.
     "miao-plugin": ("miao-plugin", [
