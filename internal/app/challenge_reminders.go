@@ -88,11 +88,22 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 	if action != "challenge.reminder.create" || !q.Confirm || q.Days < 1 || q.Days > 90 || q.Hour < 0 || q.Hour > 23 || q.Minute < 0 || q.Minute > 59 || q.Weekday < 0 || q.Weekday > 7 {
 		return nil, gameError("input_invalid", "请确认挑战提醒，并设置有效时间和 1–90 天期限。")
 	}
-	task, err := a.createChallengeReminder(ctx, event, kind, q)
+	task, err := a.createChallengeReminder(ctx, client, eventScheduler(event), kind, q)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"task": task}, nil
+}
+
+// taskScheduler creates the host schedule of a task.
+type taskScheduler func(context.Context, rayleabot.SchedulerCreateRequest) error
+
+// eventScheduler schedules through the event's host actions.
+func eventScheduler(event *rayleabot.EventContext) taskScheduler {
+	return func(ctx context.Context, request rayleabot.SchedulerCreateRequest) error {
+		_, err := event.Actions().SchedulerCreate(ctx, request)
+		return err
+	}
 }
 
 // challengeRequest is a challenge reminder to create or check: the account
@@ -108,23 +119,32 @@ type challengeRequest struct {
 	Weekday   int      `json:"weekday"`
 	Days      int      `json:"days"`
 	Confirm   bool     `json:"confirm"`
-	Pair      bool     `json:"-"`
+	// Pair creates 开启挑战提醒's task, which also checks 危局强袭战 against
+	// DeadlyThreshold.
+	Pair            bool    `json:"-"`
+	DeadlyThreshold float64 `json:"-"`
 }
 
 // createChallengeReminder keeps a checked request as a task with its own
-// delegation and schedule; a failed step removes what was set up.
-func (a *App) createChallengeReminder(ctx context.Context, event *rayleabot.EventContext, kind ChallengeKind, q challengeRequest) (Reminder, error) {
-	client := a.accountClient(event)
+// delegations and schedule: one delegation for the kind's operation, and
+// for a pair a second one for 危局强袭战 under the same task. A failed step
+// removes what was set up.
+func (a *App) createChallengeReminder(ctx context.Context, client AccountsClient, schedule taskScheduler, kind ChallengeKind, q challengeRequest) (Reminder, error) {
 	account, role, err := client.Authorize(ctx, q.Selection)
 	if err != nil {
 		return Reminder{}, err
 	}
 	key := client.Provider + "\x00" + q.AccountRef + "\x00" + q.RoleRef + "\x00" + kind.ID
+	operations := []string{kind.Operation}
 	if q.Pair {
-		key += "\x00pair"
+		key = client.Provider + "\x00" + q.AccountRef + "\x00" + q.RoleRef + "\x00pair"
+		operations = append(operations, a.Game.ID+".deadly")
 	}
 	hash := sha256.Sum256([]byte(key))
 	task := Reminder{Ref: "game.challenge." + a.Game.ID + "." + hex.EncodeToString(hash[:]), Selection: q.Selection, Owner: account.Owner, Role: role, Provider: client.Provider, Kind: "challenge", ChallengeKind: kind.ID, Metric: q.Metric, Threshold: *q.Threshold, Pair: q.Pair, Hour: q.Hour, Minute: q.Minute, Weekday: q.Weekday, NextCheckMS: nextChallengeCheck(time.Now().UnixMilli(), q.Hour, q.Minute, q.Weekday)}
+	if q.Pair {
+		task.DeadlyThreshold = q.DeadlyThreshold
+	}
 	err = a.Reminders.edit(task.Ref, func(items *[]Reminder, i int) error {
 		if i >= 0 {
 			return gameError("reminder_exists", "此角色已有该玩法提醒，请先停止旧任务。")
@@ -138,17 +158,28 @@ func (a *App) createChallengeReminder(ctx context.Context, event *rayleabot.Even
 	if err != nil {
 		return Reminder{}, err
 	}
-	var grant struct {
-		Delegation struct {
-			Ref         string `json:"ref"`
-			ExpiresAtMS int64  `json:"expires_at_ms"`
-		} `json:"delegation"`
+	for index, operation := range operations {
+		var grant struct {
+			Delegation struct {
+				Ref         string `json:"ref"`
+				ExpiresAtMS int64  `json:"expires_at_ms"`
+			} `json:"delegation"`
+		}
+		if err = client.call(ctx, "delegation.create", map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "task_id": task.Ref, "operation": operation, "days": q.Days}, &grant); err != nil {
+			break
+		}
+		if index == 0 {
+			task.DelegationRef, task.ExpiresAtMS = grant.Delegation.Ref, grant.Delegation.ExpiresAtMS
+		} else {
+			task.DeadlyDelegationRef, task.ExpiresAtMS = grant.Delegation.Ref, min(task.ExpiresAtMS, grant.Delegation.ExpiresAtMS)
+		}
 	}
-	err = client.call(ctx, "delegation.create", map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "task_id": task.Ref, "operation": kind.Operation, "days": q.Days}, &grant)
 	if err == nil {
-		task.DelegationRef = grant.Delegation.Ref
-		task.ExpiresAtMS = grant.Delegation.ExpiresAtMS
-		_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + kind.Label + "挑战提醒", Payload: map[string]any{"kind": "challenge_reminder"}})
+		label := kind.Label
+		if q.Pair {
+			label = "式舆/危局"
+		}
+		err = schedule(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + label + "挑战提醒", Payload: map[string]any{"kind": "challenge_reminder"}})
 	}
 	if err == nil {
 		task.Enabled = true
@@ -167,14 +198,32 @@ func (a *App) createChallengeReminder(ctx context.Context, event *rayleabot.Even
 			}
 			return nil
 		})
-		if task.DelegationRef != "" {
-			_ = client.call(ctx, "delegation.revoke", map[string]any{"account_ref": task.AccountRef, "delegation_ref": task.DelegationRef}, nil)
+		for _, ref := range []string{task.DelegationRef, task.DeadlyDelegationRef} {
+			if ref != "" {
+				_ = client.call(ctx, "delegation.revoke", map[string]any{"account_ref": task.AccountRef, "delegation_ref": ref}, nil)
+			}
 		}
 		return Reminder{}, err
 	}
 	return task, nil
 }
+
+// failCheck records a failed check: revoked access pauses the task, and an
+// official verification waits at least a day.
+func (task *Reminder) failCheck(now int64, err error) {
+	task.LastCode = PublicError(err).Code
+	switch task.LastCode {
+	case "plugin.account_delegation_denied", "plugin.account_caller_denied", "plugin.account_not_found", "plugin.account_role_denied", "plugin.upstream_auth_invalid":
+		task.Enabled = false
+	case "plugin.upstream_device_required", "plugin.upstream_challenge_required":
+		task.NextCheckMS = max(task.NextCheckMS, now+int64(24*time.Hour/time.Millisecond))
+	}
+}
+
 func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Reminder) (QueryResult, error), send func(Reminder, string) error, game Game) error {
+	if task.Pair {
+		return s.tickChallengePair(task, now, query, send)
+	}
 	kind, ok := challengeKind(task.ChallengeKind)
 	if !ok {
 		task.Enabled = false
@@ -183,38 +232,9 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 	}
 	task.LastCheckedMS = now
 	task.NextCheckMS = nextChallengeCheck(now, task.Hour, task.Minute, task.Weekday)
-	if task.Pair && task.Threshold <= 0 {
-		// As ZZZ-Plugin, a threshold of 0 leaves that mode unchecked.
-		task.LastCode = "threshold_off"
-		return s.save(*task)
-	}
 	result, err := query(*task)
 	if err != nil {
-		task.LastCode = PublicError(err).Code
-		switch task.LastCode {
-		case "plugin.account_delegation_denied", "plugin.account_caller_denied", "plugin.account_not_found", "plugin.account_role_denied", "plugin.upstream_auth_invalid":
-			task.Enabled = false
-		case "plugin.upstream_device_required", "plugin.upstream_challenge_required":
-			task.NextCheckMS = max(task.NextCheckMS, now+int64(24*time.Hour/time.Millisecond))
-		}
-		return s.save(*task)
-	}
-	if task.Pair {
-		lines := challengePairLines(kind.ID, int(task.Threshold), result.Data, false, time.UnixMilli(now))
-		if len(lines) == 0 {
-			task.LastCode = "target_met"
-			return s.save(*task)
-		}
-		task.LastAttemptMS = now
-		task.LastCode = "notification_attempted"
-		if err = s.save(*task); err != nil {
-			return err
-		}
-		if err = send(*task, "【式舆/危局挑战提醒】\n"+strings.Join(lines, "\n")); err != nil {
-			task.LastCode = "notification_failed"
-		} else {
-			task.LastCode = "notified"
-		}
+		task.failCheck(now, err)
 		return s.save(*task)
 	}
 	value, met, known, err := challengeTarget(kind, task.Metric, task.Threshold, result.Data)
@@ -409,6 +429,11 @@ func challengeReminderLine(task Reminder) string {
 	if !task.Enabled && task.LastCode != "expired" {
 		state = "已暂停（" + state + "）"
 	}
+	target := label + " " + compare + " " + strconv.FormatFloat(task.Threshold, 'f', -1, 64)
+	name := kind.Label
+	if task.Pair {
+		name, target = "式舆/危局", challengePairDescription(int(task.Threshold), int(task.DeadlyThreshold))
+	}
 	expires := time.UnixMilli(task.ExpiresAtMS).In(time.FixedZone("UTC+8", 28800)).Format("01-02")
-	return fmt.Sprintf("%s · UID %s · %s %s %s · %s · %s 到期 · %s", kind.Label, task.Role.UID, label, compare, strconv.FormatFloat(task.Threshold, 'f', -1, 64), challengeSchedule(task.Hour, task.Minute, task.Weekday), expires, state)
+	return fmt.Sprintf("%s · UID %s · %s · %s · %s 到期 · %s", name, task.Role.UID, target, challengeSchedule(task.Hour, task.Minute, task.Weekday), expires, state)
 }

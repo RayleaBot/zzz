@@ -20,7 +20,7 @@ type Reminder struct {
 	Community     CommunityPlan `json:"community,omitempty"`
 	ChallengeKind string        `json:"challenge_kind,omitempty"`
 	Metric        string        `json:"metric,omitempty"`
-	Pair          bool          `json:"pair,omitempty"` // one of the two reminders 开启挑战提醒 creates
+	Pair          bool          `json:"pair,omitempty"` // 开启挑战提醒, checking 式舆 and 危局 together
 	Minute        int           `json:"minute,omitempty"`
 	Weekday       int           `json:"weekday,omitempty"`
 	Kind          string        `json:"kind,omitempty"`
@@ -41,6 +41,10 @@ type Reminder struct {
 	LastCheckedMS int64   `json:"last_checked_ms"`
 	LastAttemptMS int64   `json:"last_attempt_ms"`
 	LastCode      string  `json:"last_code"`
+	// DeadlyThreshold and DeadlyDelegationRef are the 危局强袭战 half of a
+	// pair; Threshold and DelegationRef are its 式舆防卫战 half.
+	DeadlyThreshold     float64 `json:"deadly_threshold,omitempty"`
+	DeadlyDelegationRef string  `json:"deadly_delegation_ref,omitempty"`
 }
 
 func (c AccountsClient) Authorize(ctx context.Context, choice Selection) (Account, Role, error) {
@@ -168,7 +172,12 @@ func (a *App) removeDelegatedTask(ctx context.Context, event *rayleabot.EventCon
 		return map[string]any{"removed": false, "delegation_revoked": false}, err
 	}
 	client.Provider = task.Provider
-	revoked := client.call(ctx, "delegation.revoke", map[string]any{"account_ref": task.AccountRef, "delegation_ref": task.DelegationRef}, nil) == nil
+	revoked := true
+	for _, ref := range []string{task.DelegationRef, task.DeadlyDelegationRef} {
+		if ref != "" {
+			revoked = client.call(ctx, "delegation.revoke", map[string]any{"account_ref": task.AccountRef, "delegation_ref": ref}, nil) == nil && revoked
+		}
+	}
 	return map[string]any{"removed": true, "delegation_revoked": revoked}, nil
 }
 func finiteRange(v, low, high float64) bool {
@@ -271,12 +280,15 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 			params["operation"] = a.Game.ID + ".sign"
 			params["write_confirmed"] = true
 		}
-		if task.Kind == "challenge" {
+		if task.Kind == "challenge" && task.Pair {
 			// ZZZ-Plugin's global switch stops the reminders of its own
 			// 开启挑战提醒, not the detailed ones.
-			if task.Pair && !settings(event).ChallengeRemind {
+			if !settings(event).ChallengeRemind {
 				return result, gameError("remind_disabled", challengeRemindOff)
 			}
+			return a.queryChallengePair(ctx, client, task)
+		}
+		if task.Kind == "challenge" {
 			kind, ok := challengeKind(task.ChallengeKind)
 			if !ok {
 				return result, gameError("input_invalid", "挑战任务玩法无效。")

@@ -17,11 +17,11 @@ import (
 )
 
 // ZZZ-Plugin's remind app: 开启挑战提醒 checks 式舆防卫战 by the floors rated
-// S and 危局强袭战 by its stars at a daily or weekly time, and messages the
-// user when either falls short. Here the pair is two challenge reminders of
-// the user's role, each with its own delegation, marked Pair. A user's own
-// thresholds and time override the global ones in the plugin settings;
-// changing either moves the pair's tasks.
+// S and 危局强袭战 by its stars at a daily or weekly time, and sends the user
+// one message when either falls short. Here that is one challenge reminder
+// of the user's role, marked Pair, holding a delegation for each of the two
+// operations under its task. A user's own thresholds and time override the
+// global ones in the plugin settings; changing either moves the task.
 
 // challengeRemindOff is upstream's reply while the global switch is off.
 const challengeRemindOff = "当前未启用防卫战/危局挑战提醒功能"
@@ -266,7 +266,7 @@ func challengeOwner(event *rayleabot.EventContext) Subject {
 	return Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
 }
 
-// challengePairTasks are the user's pair tasks.
+// challengePairTasks are the user's 开启挑战提醒 tasks.
 func (a *App) challengePairTasks(owner Subject) ([]Reminder, error) {
 	items, err := a.Reminders.List()
 	return slices.DeleteFunc(items, func(task Reminder) bool { return !task.Pair || task.Kind != "challenge" || task.Owner != owner }), err
@@ -290,12 +290,8 @@ func (a *App) syncChallengePairs(global challengeGlobals, owner *Subject) error 
 		}
 		preference := preferences[task.Owner]
 		abyss, deadly, remindTime := preference.targets(global)
-		threshold := float64(abyss)
-		if task.ChallengeKind == "deadly" {
-			threshold = float64(deadly)
-		}
 		hour, minute, weekday, _ := parseChallengeTime(remindTime)
-		if task.Threshold == threshold && task.Hour == hour && task.Minute == minute && task.Weekday == weekday {
+		if task.Threshold == float64(abyss) && task.DeadlyThreshold == float64(deadly) && task.Hour == hour && task.Minute == minute && task.Weekday == weekday {
 			continue
 		}
 		err = a.Reminders.edit(task.Ref, func(items *[]Reminder, i int) error {
@@ -303,7 +299,7 @@ func (a *App) syncChallengePairs(global challengeGlobals, owner *Subject) error 
 				return nil
 			}
 			current := &(*items)[i]
-			current.Threshold = threshold
+			current.Threshold, current.DeadlyThreshold = float64(abyss), float64(deadly)
 			if current.Hour != hour || current.Minute != minute || current.Weekday != weekday {
 				current.Hour, current.Minute, current.Weekday = hour, minute, weekday
 				current.NextCheckMS = nextChallengeCheck(now, hour, minute, weekday)
@@ -317,12 +313,104 @@ func (a *App) syncChallengePairs(global challengeGlobals, owner *Subject) error 
 	return nil
 }
 
-// challengePairModes are the pair's two reminders: kind, metric and whose
-// threshold each takes.
+// challengePairModes are the two modes a pair checks, in upstream's order:
+// the operation's kind, the mode's name and whether it takes the 危局
+// threshold.
 var challengePairModes = []struct {
-	kind, metric string
-	deadly       bool
-}{{"challenge", "s_layers", false}, {"deadly", "star", true}}
+	kind, name string
+	deadly     bool
+}{{"challenge", "式舆防卫战", false}, {"deadly", "危局强袭战", true}}
+
+// queryChallengePair reads both modes of a pair task, each under its own
+// delegation; a mode whose threshold is 0 is not read. The result holds each
+// mode's official data by kind, and under "errors" the reply for a mode that
+// failed; the error is returned only when every mode read failed.
+func (a *App) queryChallengePair(ctx context.Context, client AccountsClient, task Reminder) (QueryResult, error) {
+	result := QueryResult{Data: map[string]any{}}
+	failures := map[string]any{}
+	read := 0
+	var last error
+	for _, mode := range challengePairModes {
+		threshold, delegation := task.Threshold, task.DelegationRef
+		if mode.deadly {
+			threshold, delegation = task.DeadlyThreshold, task.DeadlyDelegationRef
+		}
+		if threshold <= 0 {
+			continue
+		}
+		read++
+		var answer QueryResult
+		err := client.call(ctx, "execute", map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "operation": a.Game.ID + "." + mode.kind, "input": map[string]any{}, "delegation_ref": delegation}, &answer)
+		if err != nil {
+			failures[mode.kind], last = friendlyError(err), err
+			continue
+		}
+		result.Role, result.Data[mode.kind] = answer.Role, answer.Data
+	}
+	if read > 0 && len(failures) == read {
+		return result, last
+	}
+	if len(failures) > 0 {
+		result.Data["errors"] = failures
+	}
+	return result, nil
+}
+
+// challengePairReport is upstream's checkUser: the lines of both modes, a
+// mode that could not be read named as failed. Unless all is set, a mode
+// whose threshold is 0 is left out.
+func challengePairReport(abyss, deadly int, data map[string]any, all bool, now time.Time) []string {
+	lines := []string{}
+	failures := asObject(data["errors"])
+	for _, mode := range challengePairModes {
+		threshold := abyss
+		if mode.deadly {
+			threshold = deadly
+		}
+		if threshold <= 0 && !all {
+			continue
+		}
+		if failure := asText(failures[mode.kind]); failure != "" {
+			lines = append(lines, mode.name+"查询失败: "+failure)
+			continue
+		}
+		lines = append(lines, challengePairLines(mode.kind, threshold, asObject(data[mode.kind]), all, now)...)
+	}
+	return lines
+}
+
+// tickChallengePair runs a 开启挑战提醒 task: both modes are checked
+// together, and one message lists what falls short, as upstream's.
+func (s *ReminderStore) tickChallengePair(task *Reminder, now int64, query func(Reminder) (QueryResult, error), send func(Reminder, string) error) error {
+	task.LastCheckedMS = now
+	task.NextCheckMS = nextChallengeCheck(now, task.Hour, task.Minute, task.Weekday)
+	if task.Threshold <= 0 && task.DeadlyThreshold <= 0 {
+		// As ZZZ-Plugin, thresholds of 0 check nothing.
+		task.LastCode = "threshold_off"
+		return s.save(*task)
+	}
+	result, err := query(*task)
+	if err != nil {
+		task.failCheck(now, err)
+		return s.save(*task)
+	}
+	lines := challengePairReport(int(task.Threshold), int(task.DeadlyThreshold), result.Data, false, time.UnixMilli(now))
+	if len(lines) == 0 {
+		task.LastCode = "target_met"
+		return s.save(*task)
+	}
+	task.LastAttemptMS = now
+	task.LastCode = "notification_attempted"
+	if err = s.save(*task); err != nil {
+		return err
+	}
+	if err = send(*task, "【式舆/危局挑战提醒】\n"+strings.Join(lines, "\n")); err != nil {
+		task.LastCode = "notification_failed"
+	} else {
+		task.LastCode = "notified"
+	}
+	return s.save(*task)
+}
 
 // challengeModeWord tells a 阈值 command's mode word: false for 式舆防卫战,
 // true for 危局强袭战.
@@ -565,24 +653,18 @@ func (a *App) challengePairEnable(ctx context.Context, event *rayleabot.EventCon
 		return event.SendText(friendlyError(err))
 	}
 	abyss, deadly, remindTime := preference.targets(global)
-	hour, minute, weekday, _ := parseChallengeTime(remindTime)
-	created := []Reminder{}
-	for _, mode := range challengePairModes {
-		kind, _ := challengeKind(mode.kind)
-		threshold := float64(abyss)
-		if mode.deadly {
-			threshold = float64(deadly)
-		}
-		task, createErr := a.createChallengeReminder(ctx, event, kind, challengeRequest{Selection: choice, Kind: kind.ID, Metric: mode.metric, Threshold: &threshold, Hour: hour, Minute: minute, Weekday: weekday, Days: 30, Confirm: true, Pair: true})
-		if createErr != nil {
-			for _, done := range created {
-				_, _ = a.removeDelegatedTask(ctx, event, done.Ref, "challenge")
-			}
-			return event.SendText(friendlyError(createErr))
-		}
-		created = append(created, task)
+	if _, err = a.createChallengePair(ctx, a.accountClient(event), eventScheduler(event), choice, abyss, deadly, remindTime); err != nil {
+		return event.SendText(friendlyError(err))
 	}
 	return event.SendText("提醒功能已开启，将在" + remindTime + "对" + challengePairDescription(abyss, deadly) + "\n有效 30 天，到期后请重新开启。")
+}
+
+// createChallengePair creates the 开启挑战提醒 task of a role for 30 days.
+func (a *App) createChallengePair(ctx context.Context, client AccountsClient, schedule taskScheduler, choice Selection, abyss, deadly int, remindTime string) (Reminder, error) {
+	kind, _ := challengeKind("challenge")
+	hour, minute, weekday, _ := parseChallengeTime(remindTime)
+	threshold := float64(abyss)
+	return a.createChallengeReminder(ctx, client, schedule, kind, challengeRequest{Selection: choice, Kind: kind.ID, Metric: "s_layers", Threshold: &threshold, DeadlyThreshold: float64(deadly), Hour: hour, Minute: minute, Weekday: weekday, Days: 30, Confirm: true, Pair: true})
 }
 
 // challengePairCheck is 查询挑战状态: both modes read now and listed
@@ -613,20 +695,17 @@ func (a *App) challengePairCheck(ctx context.Context, event *rayleabot.EventCont
 	}
 	abyss, deadly, _ := preference.targets(global)
 	notice(ctx, event, "正在查询，请稍候...")
-	lines := []string{}
+	data, failures := map[string]any{}, map[string]any{}
 	for _, mode := range challengePairModes {
-		kind, _ := challengeKind(mode.kind)
-		threshold := abyss
-		if mode.deadly {
-			threshold = deadly
-		}
-		result, queryErr := client.Execute(ctx, choice, kind.Operation, nil)
+		result, queryErr := client.Execute(ctx, choice, a.Game.ID+"."+mode.kind, nil)
 		if queryErr != nil {
-			lines = append(lines, map[bool]string{false: "式舆防卫战", true: "危局强袭战"}[mode.deadly]+"查询失败: "+friendlyError(queryErr))
+			failures[mode.kind] = friendlyError(queryErr)
 			continue
 		}
-		lines = append(lines, challengePairLines(kind.ID, threshold, result.Data, true, time.Now())...)
+		data[mode.kind] = result.Data
 	}
+	data["errors"] = failures
+	lines := challengePairReport(abyss, deadly, data, true, time.Now())
 	if len(lines) == 0 {
 		return event.SendText("查询失败，请稍后再试")
 	}

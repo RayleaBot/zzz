@@ -1,11 +1,13 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func TestChallengePairFollowsZZZPluginCounts(t *testing.T) {
@@ -68,70 +70,147 @@ func TestChallengePairTicksAndFollowsSettings(t *testing.T) {
 	china := time.FixedZone("UTC+8", 8*3600)
 	now := time.Date(2026, 9, 21, 20, 0, 0, 0, china).UnixMilli()
 	owner, other := Subject{"onebot11", "a", "bot", "1"}, Subject{"onebot11", "a", "bot", "2"}
-	expires := now + int64(24*time.Hour/time.Millisecond)
+	expires := now + int64(7*24*time.Hour/time.Millisecond)
 	tasks := []Reminder{
-		{Ref: "abyss", Kind: "challenge", ChallengeKind: "challenge", Metric: "s_layers", Threshold: 5, Pair: true, Owner: owner, Enabled: true, Hour: 20, ExpiresAtMS: expires},
-		{Ref: "deadly", Kind: "challenge", ChallengeKind: "deadly", Metric: "star", Threshold: 0, Pair: true, Owner: owner, Enabled: true, Hour: 20, ExpiresAtMS: expires},
-		{Ref: "other", Kind: "challenge", ChallengeKind: "deadly", Metric: "star", Threshold: 6, Pair: true, Owner: other, Enabled: true, Hour: 20, ExpiresAtMS: expires},
+		{Ref: "pair", Kind: "challenge", ChallengeKind: "challenge", Metric: "s_layers", Threshold: 5, DeadlyThreshold: 9, Pair: true, Owner: owner, Enabled: true, Hour: 20, ExpiresAtMS: expires},
+		{Ref: "other", Kind: "challenge", ChallengeKind: "challenge", Metric: "s_layers", Pair: true, Owner: other, Enabled: true, Hour: 20, ExpiresAtMS: expires},
 		{Ref: "detail", Kind: "challenge", ChallengeKind: "deadly", Metric: "star", Threshold: 9, Owner: owner, Enabled: true, Hour: 20, ExpiresAtMS: expires},
 	}
 	if err := seedReminders(a.Reminders, tasks); err != nil {
 		t.Fatal(err)
 	}
+	abyss := map[string]any{"hadal_info_v2": map[string]any{"brief": map[string]any{"rating": "A"}, "fourth_layer_detail": map[string]any{"rating": "S"}}}
+	data := map[string]any{"challenge": abyss, "deadly": map[string]any{"has_data": true, "total_star": json.Number("7")}}
 	queries, sent := 0, []string{}
-	query := func(Reminder) (QueryResult, error) {
-		queries++
-		return QueryResult{Data: map[string]any{"hadal_info_v2": map[string]any{"brief": map[string]any{"rating": "A"}, "fourth_layer_detail": map[string]any{"rating": "S"}}}}, nil
-	}
+	query := func(Reminder) (QueryResult, error) { queries++; return QueryResult{Data: data}, nil }
 	send := func(_ Reminder, text string) error { sent = append(sent, text); return nil }
-	for _, ref := range []string{"abyss", "deadly"} {
+	for _, ref := range []string{"pair", "other"} {
 		if err := a.Reminders.Tick(ref, now, query, send, Game{ID: "zzz"}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// A threshold of 0 checks nothing; the unmet one sends upstream's lines.
-	if queries != 1 || len(sent) != 1 || !strings.HasPrefix(sent[0], "【式舆/危局挑战提醒】\n式舆防卫战S评级: 4/5") {
+	// Both modes arrive in one message; thresholds of 0 check nothing.
+	if queries != 1 || len(sent) != 1 || sent[0] != "【式舆/危局挑战提醒】\n式舆防卫战S评级: 4/5\n第五层评价: A\n危局强袭战星数: 7/9" {
 		t.Fatalf("queries %d sent %q", queries, sent)
 	}
+	byRef := func() map[string]Reminder {
+		items, _ := a.Reminders.List()
+		out := map[string]Reminder{}
+		for _, task := range items {
+			out[task.Ref] = task
+		}
+		return out
+	}
+	// A mode that could not be read is named in the same message.
+	data = map[string]any{"deadly": map[string]any{"has_data": true, "total_star": json.Number("9")}, "errors": map[string]any{"challenge": "账号插件未运行"}}
+	if err := a.Reminders.Tick("pair", byRef()["pair"].NextCheckMS, query, send, Game{ID: "zzz"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(sent) != 2 || sent[1] != "【式舆/危局挑战提醒】\n式舆防卫战查询失败: 账号插件未运行" {
+		t.Fatalf("sent %q", sent)
+	}
 
-	// The user's own time and threshold move only that user's pair.
-	nine := 9
+	// The user's own time and threshold move only that user's task.
+	three := 3
 	if _, err := a.ChallengePrefs.Edit(owner, func(p *ChallengePreference) bool {
-		p.DeadlyStars, p.RemindTime = &nine, "每周一8时30分"
+		p.DeadlyStars, p.RemindTime = &three, "每周一8时30分"
 		return true
 	}); err != nil {
 		t.Fatal(err)
 	}
-	global := Settings{ChallengeRemind: true, ChallengeRemindTime: "每日21时", ChallengeAbyssLevel: 6, ChallengeDeadlyStars: 3}.challengeGlobals()
+	global := Settings{ChallengeRemind: true, ChallengeRemindTime: "每日21时", ChallengeAbyssLevel: 6, ChallengeDeadlyStars: 4}.challengeGlobals()
 	if err := a.syncChallengePairs(global, &owner); err != nil {
 		t.Fatal(err)
 	}
-	items, _ := a.Reminders.List()
-	byRef := map[string]Reminder{}
-	for _, task := range items {
-		byRef[task.Ref] = task
-	}
-	if task := byRef["deadly"]; task.Threshold != 9 || task.Hour != 8 || task.Minute != 30 || task.Weekday != 1 || task.NextCheckMS != nextChallengeCheck(time.Now().UnixMilli(), 8, 30, 1) {
+	if task := byRef()["pair"]; task.Threshold != 6 || task.DeadlyThreshold != 3 || task.Hour != 8 || task.Minute != 30 || task.Weekday != 1 || task.NextCheckMS != nextChallengeCheck(time.Now().UnixMilli(), 8, 30, 1) {
 		t.Fatalf("own settings not applied: %+v", task)
 	}
-	if task := byRef["abyss"]; task.Threshold != 6 {
-		t.Fatalf("global threshold not applied: %+v", task)
+	if task := byRef()["other"]; task.Threshold != 0 || task.Hour != 20 {
+		t.Fatalf("another user's task moved: %+v", task)
 	}
-	if byRef["other"].Threshold != 6 || byRef["other"].Hour != 20 || byRef["detail"].Threshold != 9 || byRef["detail"].Hour != 20 {
-		t.Fatalf("other tasks moved: %+v %+v", byRef["other"], byRef["detail"])
-	}
-	// A global change reaches users without their own values.
+	// A global change reaches users without their own values; detailed
+	// reminders keep theirs.
 	if err := a.syncChallengePairs(global, nil); err != nil {
 		t.Fatal(err)
 	}
-	items, _ = a.Reminders.List()
-	for _, task := range items {
-		if task.Ref == "other" && (task.Threshold != 3 || task.Hour != 21) {
-			t.Fatalf("global settings not applied: %+v", task)
-		}
+	if task := byRef()["other"]; task.Threshold != 6 || task.DeadlyThreshold != 4 || task.Hour != 21 {
+		t.Fatalf("global settings not applied: %+v", task)
+	}
+	if task := byRef()["detail"]; task.Threshold != 9 || task.Hour != 20 {
+		t.Fatalf("a detailed reminder moved: %+v", task)
 	}
 	// Values out of range fall back to upstream's defaults.
 	if global := (Settings{ChallengeRemindTime: "25时", ChallengeAbyssLevel: 7, ChallengeDeadlyStars: -1}).challengeGlobals(); global.Time != "每日20时" || global.Abyss != 5 || global.Deadly != 6 {
 		t.Fatalf("defaults = %+v", global)
+	}
+}
+
+// pairCaller answers the account service for a pair: roles, the account,
+// delegations (failing for failOperation) and reads.
+type pairCaller struct {
+	failOperation string
+	revoked       []string
+	reads         map[string]string
+}
+
+func (c *pairCaller) CallService(_ context.Context, req rayleabot.ServiceCallRequest, out any) error {
+	role := Role{Ref: "role", Game: "zzz", UID: "10000001"}
+	switch req.Method {
+	case "roles":
+		return decodeObject(map[string]any{"roles": []Role{role}}, out)
+	case "list":
+		return decodeObject(Accounts{Items: []Account{{Ref: "account", Owner: Subject{"onebot11", "a", "bot", "1"}, Roles: []Role{role}}}}, out)
+	case "delegation.create":
+		operation := asText(req.Params["operation"])
+		if operation == c.failOperation {
+			return gameError("operation_denied", "synthetic")
+		}
+		return decodeObject(map[string]any{"delegation": map[string]any{"ref": "d-" + operation, "expires_at_ms": 1}}, out)
+	case "delegation.revoke":
+		c.revoked = append(c.revoked, asText(req.Params["delegation_ref"]))
+		return nil
+	case "execute":
+		operation := asText(req.Params["operation"])
+		c.reads[operation] = asText(req.Params["delegation_ref"])
+		if operation == c.failOperation {
+			return gameError("upstream_unavailable", "官方暂不可用")
+		}
+		return decodeObject(QueryResult{Role: role, Data: map[string]any{"has_data": true}}, out)
+	}
+	return gameError("operation_denied", "unexpected")
+}
+
+func TestChallengePairTaskHoldsBothDelegations(t *testing.T) {
+	a := &App{Game: Game{ID: "zzz", Name: "绝区零"}, Reminders: reminderStore(t.TempDir())}
+	choice := Selection{"account", "role"}
+	scheduled := 0
+	schedule := func(context.Context, rayleabot.SchedulerCreateRequest) error { scheduled++; return nil }
+	// A second delegation that fails takes the first and the task with it.
+	caller := &pairCaller{failOperation: "zzz.deadly", reads: map[string]string{}}
+	if _, err := a.createChallengePair(t.Context(), AccountsClient{Caller: caller, Provider: "p", Game: "zzz"}, schedule, choice, 5, 6, "每日20时"); err == nil {
+		t.Fatal("a pair without its 危局 delegation was created")
+	}
+	if items, _ := a.Reminders.List(); len(items) != 0 || scheduled != 0 || !reflect.DeepEqual(caller.revoked, []string{"d-zzz.challenge"}) {
+		t.Fatalf("left behind: tasks %v scheduled %d revoked %v", items, scheduled, caller.revoked)
+	}
+	caller = &pairCaller{reads: map[string]string{}}
+	client := AccountsClient{Caller: caller, Provider: "p", Game: "zzz"}
+	task, err := a.createChallengePair(t.Context(), client, schedule, choice, 5, 6, "每日20时")
+	if err != nil || scheduled != 1 || task.DelegationRef != "d-zzz.challenge" || task.DeadlyDelegationRef != "d-zzz.deadly" || task.DeadlyThreshold != 6 || !task.Pair {
+		t.Fatalf("task %+v scheduled %d err %v", task, scheduled, err)
+	}
+	if items, _ := a.Reminders.List(); len(items) != 1 || !items[0].Enabled {
+		t.Fatalf("tasks = %+v", items)
+	}
+	// Each mode is read under its own delegation; a failed one is reported
+	// beside the other's data.
+	caller.failOperation = "zzz.deadly"
+	result, err := a.queryChallengePair(t.Context(), client, task)
+	if err != nil || caller.reads["zzz.challenge"] != "d-zzz.challenge" || caller.reads["zzz.deadly"] != "d-zzz.deadly" || result.Data["challenge"] == nil || asObject(result.Data["errors"])["deadly"] != "官方暂不可用" {
+		t.Fatalf("result %+v reads %v err %v", result, caller.reads, err)
+	}
+	task.Threshold = 0
+	if _, err = a.queryChallengePair(t.Context(), client, task); err == nil {
+		t.Fatal("a pair whose only read failed succeeded")
 	}
 }
