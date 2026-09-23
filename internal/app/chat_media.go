@@ -55,11 +55,12 @@ func messageImages(ctx context.Context, segments []rayleabot.Segment, reader mes
 			}
 		}
 	}
+	// The host names the quoted message message_id, as in outgoing replies.
 	for _, segment := range segments {
-		if segment.Type != "reply" || asText(segment.Data["id"]) == "" {
+		if segment.Type != "reply" || asText(segment.Data["message_id"]) == "" {
 			continue
 		}
-		quoted, err := reader.MessageGet(ctx, asText(segment.Data["id"]))
+		quoted, err := reader.MessageGet(ctx, asText(segment.Data["message_id"]))
 		if err != nil {
 			continue
 		}

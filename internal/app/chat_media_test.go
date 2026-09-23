@@ -37,7 +37,7 @@ func TestMessageImagesReadQuotedAndForwardedMessages(t *testing.T) {
 			map[string]any{"content": []any{image("file", "https://example.com/3.png"), image("url", "https://example.com/1.png")}},
 		}}},
 	}
-	quote := []rayleabot.Segment{{Type: "reply", Data: map[string]any{"id": "quoted"}}, rayleabot.Text("上传艾莲面板图")}
+	quote := []rayleabot.Segment{{Type: "reply", Data: map[string]any{"message_id": "quoted"}}, rayleabot.Text("上传艾莲面板图")}
 	want := []string{"https://example.com/1.png", "https://example.com/2.png", "https://example.com/3.png", "https://example.com/4.png"}
 	if got := messageImages(t.Context(), quote, reader); !reflect.DeepEqual(got, want) {
 		t.Fatalf("quoted images = %v", got)
