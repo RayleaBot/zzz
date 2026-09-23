@@ -48,6 +48,8 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"抽卡", "gacha", nil},
 			{"帮助", "help", nil},
 			{"菲林预估", "estimate", nil},
+			{"查询体力", "note", nil},
+			{"树脂", "note", nil},
 			{"资讯列表", "info", []string{"列表"}},
 			{"添加艾莲别名鲨鲨", "alias-set", []string{"艾莲", "鲨鲨"}},
 			{"删除别名鲨鲨", "alias-remove", []string{"鲨鲨"}},
