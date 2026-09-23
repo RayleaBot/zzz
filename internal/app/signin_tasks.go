@@ -224,5 +224,5 @@ func (a *App) signinTaskCommand(ctx context.Context, event *rayleabot.EventConte
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	return event.SendText("已开启" + a.Game.Name + "每日自动签到，默认北京时间 08:00 后检查，有效 30 天。可在管理页查看结果，或发送“" + a.Game.Prefix + "自动签到 关闭”停止。")
+	return event.SendText("已开启" + a.Game.Name + "每日自动签到，默认北京时间 08:00 后检查，有效 30 天。发送“" + a.Game.Prefix + "签到状态”查看今日签到，或发送“" + a.Game.Prefix + "自动签到 关闭”停止。")
 }

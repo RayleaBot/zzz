@@ -38,7 +38,7 @@ func (a *App) help(event *rayleabot.EventContext, query string) (map[string]any,
 		}
 		commands = append(commands, c)
 	}
-	view := View{Title: a.Game.Name + "帮助", Subtitle: "插件 " + m.Version + " · " + m.License, Rows: []Row{}, Note: "管理页提供完整参数与数据管理。"}
+	view := View{Title: a.Game.Name + "帮助", Subtitle: "插件 " + m.Version + " · " + m.License, Rows: []Row{}}
 	if disabled {
 		view.Note = "本群游戏功能已暂停，当前只列管理与停止操作。"
 	}

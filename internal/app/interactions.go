@@ -206,7 +206,7 @@ func (a *App) sendCharacterMedia(ctx context.Context, event *rayleabot.EventCont
 		}
 	}
 	if photoOnly {
-		return event.SendText(strings.TrimSpace("暂无图片。" + a.pictureHint(a.Game.Pictures.Photos) + "也可在管理页的图库导入图片并关联角色。"))
+		return event.SendText(strings.TrimSpace("暂无图片。" + a.pictureHint(a.Game.Pictures.Photos) + "机器人管理员也可在图库中导入图片并关联角色。"))
 	}
 	return a.sendView(ctx, event, EntryView(a.Game, entry))
 }
@@ -254,10 +254,20 @@ func (a *App) interactionCommand(ctx context.Context, event *rayleabot.EventCont
 		}
 		return a.sendCharacterMedia(ctx, event, entry, true)
 	case "image-library":
-		if len(args) < 1 {
-			return event.SendText("使用“" + a.Game.Prefix + "图鉴图 分类 [关键词]”，分类见图库管理页。")
+		category := ""
+		for key, label := range mediaLabels {
+			if len(args) > 0 && (args[0] == key || args[0] == label) {
+				category = key
+			}
 		}
-		result, err := a.mediaAction("media.list", map[string]any{"category": args[0], "query": strings.Join(args[1:], " ")})
+		if category == "" {
+			labels := []string{}
+			for _, key := range mediaKinds {
+				labels = append(labels, mediaLabels[key])
+			}
+			return event.SendText("使用“" + a.Game.Prefix + "图鉴图 分类 [关键词]”，分类：" + strings.Join(labels, "、") + "。")
+		}
+		result, err := a.mediaAction("media.list", map[string]any{"category": category, "query": strings.Join(args[1:], " ")})
 		if err != nil {
 			return event.SendText(friendlyError(err))
 		}

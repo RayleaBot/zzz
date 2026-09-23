@@ -7,7 +7,7 @@ import (
 )
 
 func calendarView(game Game, result map[string]any) View {
-	v := View{Title: game.Name + "固定资料", Rows: []Row{}, Note: "来源：" + asText(result["version"]) + "；固定快照，不代表已在线校准的当前活动。完整条目可在材料与卡池页面查询。"}
+	v := View{Title: game.Name + "固定资料", Rows: []Row{}, Note: "来源：" + asText(result["version"]) + "；固定快照，不代表已在线校准的当前活动。"}
 	for _, p := range result["pools"].([]PoolInfo) {
 		if len(v.Sections) >= 10 {
 			break

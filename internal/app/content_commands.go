@@ -18,7 +18,7 @@ func (a *App) calendarCommand(ctx context.Context, event *rayleabot.EventContext
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	view := View{Title: a.Game.Name + "公开资料", Note: "完整正文及分页见插件的公告与活动页面。"}
+	view := View{Title: a.Game.Name + "公开资料", Note: "发送“" + a.Game.Prefix + "公告”“" + a.Game.Prefix + "活动”查看正文。"}
 	items, _ := data["items"].([]PublicActivity)
 	for _, v := range items[:min(20, len(items))] {
 		text := "时间未确定"

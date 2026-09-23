@@ -27,6 +27,9 @@ const mediaMaxBytes = 4 * 1024 * 1024
 var mediaRefPattern = regexp.MustCompile(`^[A-Z2-7]{26}$`)
 var mediaKinds = []string{"character", "weapon", "food", "enemy", "domain", "artifact", "material", "guide", "birthday", "photo", "other"}
 
+// mediaLabels name the categories as the image library page does.
+var mediaLabels = map[string]string{"character": "角色图鉴", "weapon": "装备", "food": "食物", "enemy": "怪物", "domain": "秘境", "artifact": "套装", "material": "材料", "guide": "攻略", "birthday": "生日", "photo": "角色照片", "other": "其他"}
+
 type MediaEntry struct {
 	Ref       string `json:"ref"`
 	Revision  uint64 `json:"revision"`

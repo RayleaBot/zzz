@@ -310,7 +310,7 @@ func BuildView(game Game, result BuildResult) View {
 		}
 		rows = append(rows, Row{Label: item.Title, Value: value})
 	}
-	return View{Title: result.Character + " · 参考伤害", Subtitle: game.Name + " · " + result.Version, Rows: rows, Note: "按固定参考列出的战斗情境自动应用角色、武器和套装增益。条件明细与武器换装可在管理页查看。"}
+	return View{Title: result.Character + " · 参考伤害", Subtitle: game.Name + " · " + result.Version, Rows: rows, Note: "按固定参考列出的战斗情境自动应用角色、武器和套装增益。"}
 }
 
 // PanelTalent is a skill level as miao's panel shows it: Level includes

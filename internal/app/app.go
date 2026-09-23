@@ -799,9 +799,9 @@ func friendlyError(err error) string {
 	case "plugin.service_unavailable":
 		return "米游社账号插件未运行，请先启用并扫码登录。"
 	case "plugin.vault_locked":
-		return "账号库已锁定，请在米游社账号管理页解锁。"
+		return "账号库已锁定，请联系机器人管理员解锁。"
 	case "plugin.account_caller_denied":
-		return "此游戏未获准使用账号，请在账号管理页调整授权。"
+		return "此游戏未获准使用米游社账号，请联系机器人管理员授权。"
 	}
 	return failure.Message
 }
