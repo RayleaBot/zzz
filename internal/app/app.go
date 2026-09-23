@@ -270,7 +270,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return event.SendText(friendlyError(readErr))
 		}
 		applyGroupConfig(event, config)
-		if config.Enabled != nil && !*config.Enabled && !(command == "poke" && len(args) > 0 && args[0] == "关闭") && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "community-stop" && command != "cloud-game-stop" && command != "reminder-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
+		if config.Enabled != nil && !*config.Enabled && !(command == "poke" && len(args) > 0 && args[0] == "关闭") && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "challenge-status" && command != "community-stop" && command != "cloud-game-stop" && command != "reminder-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
 			return event.Result(map[string]any{"handled": false})
 		}
 	}
@@ -304,7 +304,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.assetCommand(ctx, event, command, args)
 	case "monthly-history", "monthly-save":
 		return a.monthlyCommand(ctx, event, command, args)
-	case "challenge-remind", "challenge-stop":
+	case "challenge-remind", "challenge-stop", "challenge-status":
 		return a.challengeReminderCommand(ctx, event, command, args)
 	case "gacha-background", "gacha-schedule", "gacha-progress", "gacha-stop":
 		return a.syncTaskCommand(ctx, event, command, args)

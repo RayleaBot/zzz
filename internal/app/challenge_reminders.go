@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -208,46 +209,56 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 	return s.save(*task)
 }
 func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	if command == "challenge-stop" {
+	owner := Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
+	if command == "challenge-stop" || command == "challenge-status" {
 		if len(args) > 1 {
-			return event.SendText("格式：关闭挑战提醒 [UID]。")
+			return event.SendText("格式：" + a.Game.Prefix + map[string]string{"challenge-stop": "关闭挑战提醒", "challenge-status": "挑战提醒状态"}[command] + " [UID]。")
 		}
 		items, err := a.Reminders.List()
 		if err != nil {
 			return event.SendText(friendlyError(err))
 		}
-		owner := Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
-		n := 0
+		lines := []string{}
 		for _, task := range items {
-			if task.Kind == "challenge" && task.Owner == owner && (len(args) == 0 || args[0] == task.Role.UID) {
-				if _, err = a.removeDelegatedTask(ctx, event, task.Ref, "challenge"); err != nil {
-					return event.SendText(friendlyError(err))
-				}
-				n++
+			if task.Kind != "challenge" || task.Owner != owner || len(args) == 1 && args[0] != task.Role.UID {
+				continue
 			}
+			if command == "challenge-status" {
+				lines = append(lines, challengeReminderLine(task))
+				continue
+			}
+			if _, err = a.removeDelegatedTask(ctx, event, task.Ref, "challenge"); err != nil {
+				return event.SendText(friendlyError(err))
+			}
+			lines = append(lines, task.Ref)
 		}
-		return event.SendText(fmt.Sprintf("已停止 %d 项挑战提醒。", n))
+		if command == "challenge-stop" {
+			return event.SendText(fmt.Sprintf("已停止 %d 项挑战提醒。", len(lines)))
+		}
+		if len(lines) == 0 {
+			return event.SendText("尚未开启挑战提醒。\n" + a.challengeUsage())
+		}
+		return event.SendText(a.Game.Name + "挑战提醒\n" + strings.Join(lines, "\n") + "\n发送“" + a.Game.Prefix + "关闭挑战提醒 [UID]”停止。")
 	}
 	if len(args) < 3 || len(args) > 5 {
-		return event.SendText("格式：" + a.Game.Prefix + "挑战提醒 玩法 指标 阈值 [HH:MM] [UID]。默认每日北京时间 20:00，30 天。玩法及指标可在管理页查看。")
+		return event.SendText(a.challengeUsage())
 	}
-	hour, minute, uid := 20, 0, ""
+	kind, ok := challengeKind(args[0])
+	if !ok {
+		return event.SendText("挑战玩法不存在。\n" + a.challengeUsage())
+	}
+	metric, ok := challengeMetric(kind, args[1])
+	if !ok {
+		return event.SendText(kind.Label + "没有此指标。\n" + a.challengeUsage())
+	}
 	threshold, err := strconv.ParseFloat(args[2], 64)
 	if err != nil {
 		return event.SendText("阈值必须为数值。")
 	}
+	hour, minute, weekday, uid := 20, 0, 0, ""
 	if len(args) >= 4 {
-		parts := strings.Split(args[3], ":")
-		if len(parts) != 2 {
-			return event.SendText("提醒时间请使用 HH:MM。")
-		}
-		hour, err = strconv.Atoi(parts[0])
-		if err != nil {
-			return event.SendText("提醒时间无效。")
-		}
-		minute, err = strconv.Atoi(parts[1])
-		if err != nil {
-			return event.SendText("提醒时间无效。")
+		if hour, minute, weekday, ok = parseChallengeTime(args[3]); !ok {
+			return event.SendText("提醒时间请写作 HH:MM、每日20时30分或每周一20时。")
 		}
 	}
 	if len(args) == 5 {
@@ -262,9 +273,86 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	_, err = a.challengeReminder(ctx, event, "challenge.reminder.create", map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "kind": args[0], "metric": args[1], "threshold": threshold, "hour": hour, "minute": minute, "days": 30, "confirm": true})
+	_, err = a.challengeReminder(ctx, event, "challenge.reminder.create", map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "kind": kind.ID, "metric": metric.Key, "threshold": threshold, "hour": hour, "minute": minute, "weekday": weekday, "days": 30, "confirm": true})
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	return event.SendText("挑战提醒已开启，有效 30 天；未达目标时私聊通知。可在管理页调整每日/每周时间，或发送“" + a.Game.Prefix + "关闭挑战提醒”停止。")
+	return event.SendText("挑战提醒已开启，" + challengeSchedule(hour, minute, weekday) + "检查，有效 30 天；未达目标时私聊通知。发送“" + a.Game.Prefix + "挑战提醒状态”查看，或“" + a.Game.Prefix + "关闭挑战提醒”停止。")
+}
+
+// challengeUsage lists the reminder's form with every kind and its metrics.
+func (a *App) challengeUsage() string {
+	lines := []string{"格式：" + a.Game.Prefix + "挑战提醒 玩法 指标 阈值 [时间] [UID]", "时间写作 HH:MM、每日20时30分或每周一20时，默认每日 20:00；有效 30 天。", "可选玩法与指标："}
+	for _, kind := range challengeKinds() {
+		names := []string{}
+		for _, metric := range kind.Metrics {
+			names = append(names, metric.Label)
+		}
+		lines = append(lines, kind.Label+"："+strings.Join(names, "、"))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// challengeMetric finds a kind's metric by key, label, or the label without
+// its note in brackets.
+func challengeMetric(kind ChallengeKind, name string) (ChallengeMetric, bool) {
+	for _, metric := range kind.Metrics {
+		short, _, _ := strings.Cut(metric.Label, "（")
+		if strings.EqualFold(name, metric.Key) || name == metric.Label || name == short {
+			return metric, true
+		}
+	}
+	return ChallengeMetric{}, false
+}
+
+var challengeTimes = regexp.MustCompile(`^(?:每日|每周([一二三四五六日天]))?(\d{1,2})(?::(\d{2})|时(?:(\d{1,2})分)?)$`)
+
+// parseChallengeTime reads HH:MM or ZZZ-Plugin's 每日20时30分 and 每周一20时;
+// weekday is 0 for every day, else 1 (Monday) to 7 (Sunday).
+func parseChallengeTime(text string) (hour, minute, weekday int, ok bool) {
+	match := challengeTimes.FindStringSubmatch(text)
+	if match == nil {
+		return 0, 0, 0, false
+	}
+	hour, _ = strconv.Atoi(match[2])
+	minute, _ = strconv.Atoi(match[3] + match[4])
+	switch match[1] {
+	case "":
+	case "天":
+		weekday = 7
+	default:
+		weekday = strings.Index("一二三四五六日", match[1])/len("一") + 1
+	}
+	return hour, minute, weekday, hour <= 23 && minute <= 59
+}
+
+func challengeSchedule(hour, minute, weekday int) string {
+	day := "每日"
+	if weekday > 0 {
+		day = "每周" + []string{"一", "二", "三", "四", "五", "六", "日"}[weekday-1]
+	}
+	return fmt.Sprintf("%s %02d:%02d", day, hour, minute)
+}
+
+// challengeReminderLine describes one reminder for 挑战提醒状态.
+func challengeReminderLine(task Reminder) string {
+	kind, _ := challengeKind(task.ChallengeKind)
+	label, compare := task.Metric, "≥"
+	for _, metric := range kind.Metrics {
+		if metric.Key == task.Metric {
+			label, _, _ = strings.Cut(metric.Label, "（")
+			if metric.Lower {
+				compare = "≤"
+			}
+		}
+	}
+	state := map[string]string{"": "尚未检查", "target_met": "上次已达标", "notified": "上次未达标，已私聊通知", "notification_failed": "上次通知未送达", "notification_attempted": "上次通知未确认送达", "metric_unknown": "上次未读到该指标", "expired": "已到期"}[task.LastCode]
+	if state == "" {
+		state = "上次检查失败"
+	}
+	if !task.Enabled && task.LastCode != "expired" {
+		state = "已暂停（" + state + "）"
+	}
+	expires := time.UnixMilli(task.ExpiresAtMS).In(time.FixedZone("UTC+8", 28800)).Format("01-02")
+	return fmt.Sprintf("%s · UID %s · %s %s %s · %s · %s 到期 · %s", kind.Label, task.Role.UID, label, compare, strconv.FormatFloat(task.Threshold, 'f', -1, 64), challengeSchedule(task.Hour, task.Minute, task.Weekday), expires, state)
 }
