@@ -293,6 +293,10 @@ func (a *App) fullPanelView(ctx context.Context, event *rayleabot.EventContext, 
 		}
 		if drawn, ok := a.panel(a.imageContext(ctx), image); ok {
 			view.Image = &drawn
+			// As upstream, 原图 then sends the portrait the panel shows.
+			if portrait := panelPortrait(drawn); portrait != "" {
+				_ = a.rememberImage(event, portrait)
+			}
 		}
 	}
 	return view

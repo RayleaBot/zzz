@@ -129,6 +129,23 @@ func (s *PanelImages) Remove(id string, ids []string) (removed, failed []string,
 	return removed, failed, nil
 }
 
+// panelPortrait is the 原图 reference of the portrait a panel image shows:
+// a custom picture or a downloaded one; "" when it shows none.
+func panelPortrait(image Image) string {
+	for _, resource := range image.Resources {
+		if resource.ID != "role-icon" {
+			continue
+		}
+		if name, ok := strings.CutPrefix(resource.Path, panelImagesDir+"/"); ok {
+			return "panel:" + name
+		}
+		if name, ok := strings.CutPrefix(resource.Path, "assets/"); ok {
+			return "artwork:" + name
+		}
+	}
+	return ""
+}
+
 // Read returns a picture's content.
 func (s *PanelImages) Read(id, name string) ([]byte, error) {
 	folder, err := s.folder(id)

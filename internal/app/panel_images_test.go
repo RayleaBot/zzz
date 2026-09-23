@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func TestPanelImagesKeepIDsInUploadOrder(t *testing.T) {
@@ -37,5 +39,17 @@ func TestPanelImagesKeepIDsInUploadOrder(t *testing.T) {
 	left, _ := store.List("1191")
 	if !reflect.DeepEqual(left, []string{names[0], names[2]}) {
 		t.Fatalf("left %v of %v", left, names)
+	}
+}
+
+func TestPanelPortraitIsTheOriginalImage(t *testing.T) {
+	for path, want := range map[string]string{"panel-images/1191/1700000000000.png": "panel:1191/1700000000000.png", "assets/zzzerouid/role/IconRole01.png": "artwork:zzzerouid/role/IconRole01.png"} {
+		image := Image{Resources: []rayleabot.RenderImageResource{{ID: "weapon-icon", Path: "assets/zzzerouid/weapon/w.png"}, {ID: "role-icon", Path: path}}}
+		if got := panelPortrait(image); got != want {
+			t.Errorf("%s = %s", path, got)
+		}
+	}
+	if panelPortrait(Image{}) != "" {
+		t.Error("a panel without a portrait has one")
 	}
 }

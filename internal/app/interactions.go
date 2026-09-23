@@ -240,6 +240,14 @@ func (a *App) interactionCommand(ctx context.Context, event *rayleabot.EventCont
 			source, file, _ := strings.Cut(ref, "/")
 			return a.sendArtwork(event, artworkFile{source, file})
 		}
+		if ref, ok := strings.CutPrefix(p.LastImage, "panel:"); ok {
+			id, name, _ := strings.Cut(ref, "/")
+			raw, err := a.PanelImages.Read(id, name)
+			if err != nil {
+				return event.SendText("未找到原图")
+			}
+			return event.Send(event.Event.Target.Type, event.Event.Target.ID, rayleabot.Image("base64://"+base64.StdEncoding.EncodeToString(raw)))
+		}
 		a.Media.mu.Lock()
 		v, err := a.Media.read(p.LastImage)
 		a.Media.mu.Unlock()
