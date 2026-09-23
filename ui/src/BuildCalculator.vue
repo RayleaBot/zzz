@@ -3,17 +3,15 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { alignBuildRows, damageGain, weaponPromotions, type BuildPrepared, type BuildSkill, type CharacterBuild, type BuildConditions } from './build'
 import BuildConditionsEditor from './BuildConditionsEditor.vue'
 import type { BuildInvoke } from './build'
-const props = defineProps<{ game: string; characterId: string; characterName: string; accountRef: string; roleRef: string; invoke: BuildInvoke }>()
+const props = defineProps<{ characterId: string; characterName: string; accountRef: string; roleRef: string; invoke: BuildInvoke }>()
 const prepared = ref<BuildPrepared>(), result = ref<CharacterBuild>(), busy = ref(false), error = ref('')
 const enemyLevel = ref(103), changeWeapon = ref(false), weaponID = ref(''), weaponLevel = ref(90), promote = ref(6), refinement = ref(1), critical = ref(false)
 const equipmentSource = ref(''), changeEquipment = ref(false)
 const conditions=ref<BuildConditions|null>(null)
-const maxWeaponLevel = computed(() => props.game === 'genshin' ? 90 : props.game === 'zzz' ? 60 : 80)
-const weaponLabel = computed(() => props.game === 'genshin' ? '武器' : props.game === 'zzz' ? '音擎' : '光锥')
 let disposed = false, revision = 0
 onUnmounted(() => { disposed = true })
 const choice = () => ({ account_ref: props.accountRef, role_ref: props.roleRef, character_id: props.characterId })
-const promotions = computed(() => weaponPromotions(props.game, weaponLevel.value))
+const promotions = computed(() => weaponPromotions(weaponLevel.value))
 watch(promotions, values => { if (!values.includes(promote.value)) promote.value = values.at(-1) ?? 0 }, { flush: 'sync' })
 watch([enemyLevel, changeWeapon, weaponID, weaponLevel, promote, refinement, changeEquipment, equipmentSource], () => { result.value = undefined; revision++ }, { flush: 'sync' })
 watch(conditions,()=>{result.value=undefined;revision++},{deep:true,flush:'sync'})
@@ -24,9 +22,8 @@ async function load() {
     const value = await props.invoke<BuildPrepared>('build.prepare', choice())
     if (disposed) return
     conditions.value = null; prepared.value = value; enemyLevel.value = value.enemy_level; weaponID.value = value.weapon.id
-    weaponLevel.value = value.weapon.level || maxWeaponLevel.value
-    const last = props.game === 'zzz' ? 5 : 6
-    promote.value = value.weapon.id ? value.weapon.promote ?? last : last; refinement.value = value.weapon.refinement; changeWeapon.value = false; changeEquipment.value = false; equipmentSource.value = ''
+    weaponLevel.value = value.weapon.level || 60
+    promote.value = value.weapon.id ? value.weapon.promote ?? 5 : 5; refinement.value = value.weapon.refinement; changeWeapon.value = false; changeEquipment.value = false; equipmentSource.value = ''
     result.value = value.build
   } catch (cause) { if (!disposed) error.value = cause instanceof Error ? cause.message : '自动计算未完成，请刷新面板后重试。' }
   finally { if (!disposed) busy.value = false }
@@ -63,19 +60,19 @@ function gain(row: ReturnType<typeof alignBuildRows>[number]) { const key = crit
 
 <template>
   <section class="build-calculator separated" aria-labelledby="build-heading">
-    <div class="section-heading"><div><h2 id="build-heading">{{ characterName }} · 角色自动计算</h2><p class="hint">按参考情境计算技能，可试换{{ weaponLabel }}或另一角色的整套装备。</p></div><button type="button" :disabled="busy" @click="load">{{ prepared ? '重新读取并计算' : '读取并自动计算' }}</button></div>
+    <div class="section-heading"><div><h2 id="build-heading">{{ characterName }} · 角色自动计算</h2><p class="hint">按参考情境计算技能，可试换音擎或另一角色的整套装备。</p></div><button type="button" :disabled="busy" @click="load">{{ prepared ? '重新读取并计算' : '读取并自动计算' }}</button></div>
     <p v-if="error" role="alert" class="danger-text">{{ error }}</p><p v-if="busy" role="status" class="hint">正在读取面板并计算…</p>
     <form v-if="prepared" @submit.prevent="calculate"><fieldset :disabled="busy"><legend class="sr-only">参考伤害与换装条件</legend>
-      <div class="query-form"><label>敌人等级<input v-model.number="enemyLevel" type="number" min="1" max="200" step="1" required></label><label class="check"><input v-model="changeWeapon" type="checkbox">试换{{ weaponLabel }}</label><label class="check"><input v-model="changeEquipment" type="checkbox">调入整套装备</label></div>
-      <div v-if="changeWeapon" class="query-form"><label class="wide">候选装备<select v-model="weaponID"><option value="">未装备</option><option v-for="weapon in prepared.weapons" :key="weapon.id" :value="weapon.id">{{ weapon.name }}</option></select></label><template v-if="weaponID"><label>装备等级<input v-model.number="weaponLevel" type="number" min="1" :max="maxWeaponLevel" step="1" required></label><label>突破阶段<select v-model.number="promote"><option v-for="value in promotions" :key="value" :value="value">阶段 {{ value }}</option></select></label><label>{{ game === 'genshin' ? '精炼' : game === 'zzz' ? '星级' : '叠影' }}<select v-model.number="refinement"><option v-for="value in 5" :key="value" :value="value">{{ value }}</option></select></label></template></div>
-      <div v-if="changeEquipment" class="query-form"><label class="wide">装备来源角色<input v-model="equipmentSource" placeholder="同一游戏账号下的角色名称或 ID" required></label><p class="hint wide">仅调入已查询到的整套装备，用于模拟；角色、技能和{{ weaponLabel }}仍按当前选择计算。</p></div>
-      <BuildConditionsEditor v-model="conditions" :game="game" :character-id="characterId" :disabled="busy" :invoke="invoke" />
+      <div class="query-form"><label>敌人等级<input v-model.number="enemyLevel" type="number" min="1" max="200" step="1" required></label><label class="check"><input v-model="changeWeapon" type="checkbox">试换音擎</label><label class="check"><input v-model="changeEquipment" type="checkbox">调入整套装备</label></div>
+      <div v-if="changeWeapon" class="query-form"><label class="wide">候选装备<select v-model="weaponID"><option value="">未装备</option><option v-for="weapon in prepared.weapons" :key="weapon.id" :value="weapon.id">{{ weapon.name }}</option></select></label><template v-if="weaponID"><label>装备等级<input v-model.number="weaponLevel" type="number" min="1" max="60" step="1" required></label><label>突破阶段<select v-model.number="promote"><option v-for="value in promotions" :key="value" :value="value">阶段 {{ value }}</option></select></label><label>星级<select v-model.number="refinement"><option v-for="value in 5" :key="value" :value="value">{{ value }}</option></select></label></template></div>
+      <div v-if="changeEquipment" class="query-form"><label class="wide">装备来源角色<input v-model="equipmentSource" placeholder="同一游戏账号下的角色名称或 ID" required></label><p class="hint wide">仅调入已查询到的整套装备，用于模拟；角色、技能和音擎仍按当前选择计算。</p></div>
+      <BuildConditionsEditor v-model="conditions" :character-id="characterId" :disabled="busy" :invoke="invoke" />
       <div class="actions"><button type="submit">{{ conditions ? '计算自定义候选' : changeWeapon || changeEquipment ? '计算换装收益' : '按当前条件重算' }}</button><span class="hint">每次重新读取当前角色，试算不改变游戏装备。</span></div>
     </fieldset></form>
     <section v-if="result" class="build-results" aria-live="polite">
       <div class="section-heading"><div><h3>参考情境与计算结果</h3><p class="hint">当前：{{ result.baseline.weapon.name || '未装备' }}<template v-if="result.candidate"> → 候选：{{ result.candidate.weapon.name || '未装备' }}</template></p></div><label class="check"><input v-model="critical" type="checkbox">查看暴击值</label></div>
       <p v-if="result.equipment_from" class="hint">候选整套装备来自：{{ result.equipment_from.name }}。</p>
-      <p class="hint">半血、满层、击杀、队伍等条件沿用各条参考规则。展开情境查看增益及适用技能；它们不代表角色实际处于该状态。{{ game === 'genshin' ? '敌人默认抗性 10%。' : game === 'zzz' ? '按弱点抗性 −20%、基础防御系数 50 和未失衡状态计算。' : '按弱点敌人、韧性减伤系数 0.9 计算。' }}</p>
+      <p class="hint">半血、满层、击杀、队伍等条件沿用各条参考规则。展开情境查看增益及适用技能；它们不代表角色实际处于该状态。按弱点抗性 −20%、基础防御系数 50 和未失衡状态计算。</p>
       <div class="table-scroll"><table><thead><tr><th scope="col">参考情境</th><th scope="col">{{ critical ? '当前暴击值' : '当前期望 / 效果' }}</th><template v-if="result.candidate"><th scope="col">换装后</th><th scope="col">变化</th></template></tr></thead><tbody><tr v-for="row in rows" :key="row.id"><th scope="row"><details><summary>{{ row.title }}</summary><div class="build-buffs"><p v-if="row.before">当前参考增益</p><ul v-if="row.before"><li v-for="(buff, index) in row.before.buffs" :key="index">{{ buff }}</li></ul><p v-if="row.after">候选参考增益</p><ul v-if="row.after"><li v-for="(buff, index) in row.after.buffs" :key="index">{{ buff }}</li></ul></div></details></th><td>{{ display(row.before) }}</td><template v-if="result.candidate"><td>{{ display(row.after) }}</td><td>{{ gain(row) }}</td></template></tr></tbody></table></div>
       <p class="hint">“—”表示该情境未适用、不支持暴击或无法计算变化比例。公式版本：{{ result.version }}。</p>
     </section>

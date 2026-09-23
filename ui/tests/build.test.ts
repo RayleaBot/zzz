@@ -12,7 +12,6 @@ describe('character build comparison', () => {
     expect(damageGain(100, 120)).toBe(20); expect(damageGain(100, 0)).toBe(-100)
   })
   it('allows both legitimate breakthrough stages at a level boundary', () => {
-    expect(weaponPromotions('genshin', 80)).toEqual([5, 6]); expect(weaponPromotions('genshin', 90)).toEqual([6])
-    expect(weaponPromotions('starrail', 80)).toEqual([6]); expect(weaponPromotions('starrail', 81)).toEqual([])
+    expect(weaponPromotions(50)).toEqual([4, 5]); expect(weaponPromotions(60)).toEqual([5]); expect(weaponPromotions(61)).toEqual([])
   })
 })

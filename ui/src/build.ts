@@ -13,7 +13,7 @@ export function damageGain(before: number | null | undefined, after: number | nu
   if (before == null || after == null || !Number.isFinite(before) || !Number.isFinite(after) || before === 0) return null
   return (after - before) / before * 100
 }
-export function weaponPromotions(game: string, level: number) {
-  const steps = game === 'genshin' ? [1, 20, 40, 50, 60, 70, 80, 90] : game === 'zzz' ? [1, 10, 20, 30, 40, 50, 60] : [1, 20, 30, 40, 50, 60, 70, 80]
+export function weaponPromotions(level: number) {
+  const steps = [1, 10, 20, 30, 40, 50, 60]
   return steps.slice(0, -1).flatMap((start, index) => level >= start && level <= steps[index + 1]! ? [index] : [])
 }

@@ -6,10 +6,6 @@ export interface CloudJob {
   result?:Record<string,unknown>
   view?: View
   message?: string
-  ranking?: { sort: string; rows: { index: number; uid: string; level: string; cons: string; weapon: string; damage: string; score: string; view: View; can_read_panel: boolean }[] }
-  exchange?: {uid:string;characters:number;direction:string}
-  ocr?: {slot:number;needs_identity:boolean}
-  panels?: { id: string; name: string; view: View }[]
 }
 type Invoke = <T>(action: string, payload?: Record<string, unknown>) => Promise<T>
 

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { GameID } from './uigf'
 import { intervalText, rarityName, poolNames, type History } from './history'
-const props = defineProps<{ game: GameID; uid: string; region: string; disabled: boolean; invoke: <T>(action: string, payload?: Record<string, unknown>) => Promise<T> }>()
+const props = defineProps<{ uid: string; region: string; disabled: boolean; invoke: <T>(action: string, payload?: Record<string, unknown>) => Promise<T> }>()
 const pool = ref(''), rank = ref(''), query = ref(''), from = ref(''), to = ref('')
 const data = ref<History | null>(null), busy = ref(false), error = ref(''), offset = ref(0)
 const versions=ref<{items:{version:string;half:string;total:number;top:number;unknown:number;estimated:number}[];total:number;unclassified:number;version:string;timezone:string}|null>(null)
@@ -27,8 +26,8 @@ void load()
     <p class="hint">仅统计本地保存的记录。间隔按完整档案计算，筛选不会重新起算；历史仍可能存在缺口。</p>
     <details><summary>按版本与半期汇总整个档案</summary><p class="hint">独立于下方筛选。按资料中的国服卡池区间换算档案时区；估算起点、版本冲突和未覆盖记录明确列出。</p><button :disabled="busy||disabled" type="button" @click="loadVersions">读取版本统计</button><template v-if="versions"><p class="hint">共 {{versions.total}} 抽，未分类 {{versions.unclassified}} 抽 · {{versions.timezone}} → UTC+8 · {{versions.version}}</p><div class="history-table"><table><thead><tr><th>版本</th><th>半期</th><th>抽数</th><th>已知最高稀有度</th><th>稀有度未知</th><th>涉及估算起点</th></tr></thead><tbody><tr v-for="v in versions.items" :key="v.version+v.half"><td>{{v.version}}</td><td>{{v.half}}</td><td>{{v.total}}</td><td>{{v.top}}</td><td>{{v.unknown}}</td><td>{{v.estimated}}</td></tr></tbody></table></div></template></details>
     <form @submit.prevent="load(0)"><fieldset :disabled="busy || disabled"><legend class="sr-only">筛选记录</legend>
-      <label>明细卡池<select v-model="pool"><option value="">全部卡池</option><option v-for="(name, id) in poolNames[game]" :key="id" :value="id">{{ name }}</option></select></label>
-      <label>稀有度<select v-model="rank"><option value="">全部稀有度</option><option v-for="value in (game === 'zzz' ? ['4','3','2'] : ['5','4','3'])" :key="value" :value="value">{{ rarityName(game, value) }}</option><option value="unknown">未知稀有度</option></select></label>
+      <label>明细卡池<select v-model="pool"><option value="">全部卡池</option><option v-for="(name, id) in poolNames" :key="id" :value="id">{{ name }}</option></select></label>
+      <label>稀有度<select v-model="rank"><option value="">全部稀有度</option><option v-for="value in ['4','3','2']" :key="value" :value="value">{{ rarityName(value) }}</option><option value="unknown">未知稀有度</option></select></label>
       <label>物品名或 ID<input v-model="query" type="search" maxlength="128"></label><label>开始日期<input v-model="from" type="date"></label><label>结束日期<input v-model="to" type="date"></label>
       <button class="primary" type="submit">查询明细</button>
     </fieldset></form>
@@ -38,8 +37,8 @@ void load()
       <dl class="history-metrics"><div><dt>符合筛选</dt><dd>{{ data.total }} 抽</dd></div><div><dt>最高稀有度占比</dt><dd>{{ data.analytics.top_rate === null ? '无法确定' : data.analytics.top_rate.toFixed(2) + '%' }}</dd></div><div><dt>完整间隔均值</dt><dd>{{ data.analytics.average_interval === null ? '无完整间隔' : data.analytics.average_interval.toFixed(2) + ' 抽' }}</dd></div><div><dt>完整间隔样本</dt><dd>{{ data.analytics.complete_intervals }}</dd></div></dl>
       <p class="hint">占比是筛选结果的记录占比，不代表游戏抽卡概率；首段或稀有度不完整的间隔不计入均值。</p>
       <details><summary>按月份统计</summary><p class="hint">沿用档案区服本地时间。</p><div class="history-table"><table><thead><tr><th>月份</th><th>抽数</th><th>最高稀有度</th><th>未知</th></tr></thead><tbody><tr v-for="item in data.analytics.months" :key="item.month"><td>{{ item.month }}</td><td>{{ item.total }}</td><td>{{ item.top }}</td><td>{{ item.unknown }}</td></tr></tbody></table></div></details>
-      <details><summary>物品分布 · {{ data.analytics.item_kinds }} 种</summary><p v-if="data.analytics.item_kinds > 100" class="hint">显示数量最多的 100 种，可按物品名查询其余记录。</p><ul class="history-items"><li v-for="item in data.analytics.items" :key="`${item.id}:${item.rank}`"><span>{{ item.name || item.id }} · {{ rarityName(game, item.rank) }}</span><strong>{{ item.count }}</strong></li></ul></details>
-      <div v-if="data.records.length" class="history-table"><table><thead><tr><th>时间</th><th>物品</th><th>稀有度</th><th>卡池</th><th>最高稀有度间隔</th></tr></thead><tbody><tr v-for="item in data.records" :key="`${item.gacha_type}:${item.id}`"><td>{{ item.time }}</td><td>{{ item.name || item.item_id }}</td><td>{{ rarityName(game, item.rank_type ?? '') }}</td><td>{{ poolNames[game][item.gacha_type === '400' ? '301' : item.gacha_type] || item.gacha_type }}</td><td>{{ intervalText(item.interval) }}</td></tr></tbody></table></div>
+      <details><summary>物品分布 · {{ data.analytics.item_kinds }} 种</summary><p v-if="data.analytics.item_kinds > 100" class="hint">显示数量最多的 100 种，可按物品名查询其余记录。</p><ul class="history-items"><li v-for="item in data.analytics.items" :key="`${item.id}:${item.rank}`"><span>{{ item.name || item.id }} · {{ rarityName(item.rank) }}</span><strong>{{ item.count }}</strong></li></ul></details>
+      <div v-if="data.records.length" class="history-table"><table><thead><tr><th>时间</th><th>物品</th><th>稀有度</th><th>卡池</th><th>最高稀有度间隔</th></tr></thead><tbody><tr v-for="item in data.records" :key="`${item.gacha_type}:${item.id}`"><td>{{ item.time }}</td><td>{{ item.name || item.item_id }}</td><td>{{ rarityName(item.rank_type ?? '') }}</td><td>{{ poolNames[item.gacha_type] || item.gacha_type }}</td><td>{{ intervalText(item.interval) }}</td></tr></tbody></table></div>
       <p v-else class="empty">没有符合筛选的记录。</p>
       <div class="actions"><button :disabled="busy || disabled || offset === 0" @click="load(Math.max(0, offset - 50))">上一页明细</button><span>第 {{ Math.floor(offset / 50) + 1 }} 页</span><button :disabled="busy || disabled || data.next_offset === null" @click="load(data.next_offset!)">下一页明细</button><button :disabled="busy || disabled" @click="load(0)">重新读取第一页</button></div>
     </template>

@@ -8,7 +8,7 @@ describe('local gacha interval boundaries', () => {
     expect(intervalText()).toBe('—')
   })
   it('uses game-specific rank meaning', () => {
-    expect(rarityName('zzz','4')).toBe('S 级')
-    expect(rarityName('starrail','4')).toBe('4 星')
+    expect(rarityName('4')).toBe('S 级')
+    expect(rarityName('2')).toBe('B 级')
   })
 })
