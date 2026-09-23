@@ -229,6 +229,7 @@
       ],
       "include": [
         "resources/ZZZero/img/other/",
+        "resources/ZZZero/img/buddy/",
         "resources/img/icon/",
         "resources/html/mysNews/",
         "resources/html/mysNews-list/",

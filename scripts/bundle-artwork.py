@@ -37,10 +37,14 @@ BUNDLES = {
         "resources/common/bg/bg-hydro.webp",
         "resources/common/item/face.webp",
     ]),
-    # The UID list page and the news pages.
+    # The UID list page, the news pages and the Bangboo list.
     "yunzai-genshin": ("Yunzai-genshin", [
         "resources/img/icon/check.webp",
         "resources/ZZZero/img/other/banner.png",
+        "resources/ZZZero/img/other/S.png",
+        "resources/ZZZero/img/other/A.png",
+        "resources/ZZZero/img/other/fill.png",
+        "resources/ZZZero/img/buddy/*",
         "resources/html/mysNews/iconfont.fb3712d.woff2",
         "resources/html/mysNews/mys.png",
         "resources/html/mysNews-list/蒙德.png",

@@ -1,0 +1,11 @@
+{
+  "id": "buddy",
+  "name": "绝区零邦布列表",
+  "description": "邦布命令的图片，布局参照 Yunzai 原神插件 ZZZero/html/buddy",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 870,
+  "height": 600
+}

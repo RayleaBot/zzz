@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container" id="container">
+  <div class="main_box">
+    <div class="base_info">
+      <div class="uid">ID: {{ .uid }}</div>
+    </div>
+    <div class="item_box">
+      {{ range .buddies }}
+      <div class="item">
+        <div class="role_box">
+          {{ if .star }}<span class="life life{{ .star }}">{{ .star }}</span>{{ end }}
+          <div class="bg{{ .rarity }}"></div>
+          {{ with .image }}<img class="role_img" data-render-resource="{{ . }}" alt="">{{ end }}
+          <div class="desc">Lv.{{ .level }}</div>
+          <img class="fill_img" data-render-resource="other-fill" alt="">
+        </div>
+        <div class="role_name">{{ .name }}</div>
+      </div>
+      {{ end }}
+    </div>
+    <div class="tips">*仅显示已拥有的邦布</div>
+  </div>
+  {{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

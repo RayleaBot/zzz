@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["uid", "buddies"],
+  "properties": {
+    "uid": { "type": "string" },
+    "buddies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "rarity", "level", "star", "image"],
+        "properties": {
+          "name": { "type": "string" },
+          "rarity": { "type": "string" },
+          "level": { "type": "string" },
+          "star": { "type": "integer" },
+          "image": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

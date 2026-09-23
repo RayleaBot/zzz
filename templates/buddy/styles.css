@@ -1,0 +1,154 @@
+@property --render-resource { syntax: "*"; inherits: false; }
+/* Converted from the Yunzai 原神插件's ZZZero/html/buddy/buddy.css; the page
+   scales the body by 1.5. The host draws the page at a fixed width, so the
+   card spans the page instead of shrinking to its items, and the narrower
+   page upstream uses for eight Bangboo or fewer is left out. The number font
+   and the rarity strips are render resources. */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+html {
+  background-color: #ececec;
+}
+body {
+  font-size: 12px;
+  color: #1e1f20;
+  width: 580px;
+  font-family: PingFangSC-Medium, "PingFang SC", sans-serif;
+  zoom: 1.5;
+}
+.container {
+  padding: 10px;
+  background-color: #ececec;
+}
+.main_box {
+  border-radius: 15px;
+  padding: 10px 10px 6px 0;
+  background: #fff;
+  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.15);
+}
+.base_info {
+  margin: 0 0 15px 10px;
+  font-size: 16px;
+  position: relative;
+}
+.uid {
+  font-family: "tttgbnumber", sans-serif;
+  margin-left: 17px;
+}
+.uid:before {
+  content: " ";
+  position: absolute;
+  width: 5px;
+  height: 24px;
+  border-radius: 1px;
+  left: 0;
+  top: -1px;
+  background: #d3bc8d;
+}
+.item_box {
+  display: flex;
+  flex-wrap: wrap;
+}
+.item {
+  width: 66px;
+  margin: 0px 0 10px 12px;
+  position: relative;
+}
+.role_box {
+  overflow: hidden;
+  height: 80px;
+  border-radius: 5px;
+  position: relative;
+  background: #e9e5dc;
+  box-shadow: 0 2px 6px 0 rgba(132, 93, 90, 0.3);
+}
+.role_box .role_img {
+  width: 100%;
+  overflow: hidden;
+  background-size: 100%;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 0;
+}
+.bgS {
+  background-image: var(--render-resource-other-S, none);
+  width: 20px;
+  height: 70px;
+  background-size: 100%;
+  background-repeat: no-repeat;
+}
+.bgA {
+  width: 20px;
+  height: 70px;
+  background-image: var(--render-resource-other-A, none);
+  background-size: 100%;
+  background-repeat: no-repeat;
+}
+.role_box .fill_img {
+  position: absolute;
+  width: 15px;
+  right: 0;
+  bottom: 17px;
+}
+.role_box .desc {
+  font-weight: 500;
+  text-align: center;
+  line-height: 18px;
+  position: absolute;
+  bottom: 0;
+  background: #e9e5dc;
+  width: 100%;
+  height: 18px;
+  font-size: 14px;
+  font-family: "tttgbnumber", sans-serif;
+}
+.role_name {
+  overflow: hidden;
+  white-space: nowrap;
+  margin-top: 5px;
+  font-weight: 500;
+  text-align: center;
+  font-size: 14px;
+}
+.role_box .life {
+  position: absolute;
+  top: 0px;
+  left: 51px;
+  z-index: 9;
+  font-size: 12px;
+  text-align: center;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: "tttgbnumber", sans-serif;
+}
+.life1 {
+  background-color: #62a8ea;
+}
+.life2 {
+  background-color: #62a8ea;
+}
+.life3 {
+  background-color: #62a8ea;
+}
+.life4 {
+  background-color: #ff5722;
+}
+.life5 {
+  background-color: #ff5722;
+}
+.tips {
+  margin: 0px 0px 6px 12px;
+  font-size: 12px;
+  color: #7f858a;
+}
+.copyright {
+  margin-top: 8px;
+  font-size: 12px;
+  text-align: center;
+  color: #7f858a;
+}

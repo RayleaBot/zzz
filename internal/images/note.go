@@ -15,7 +15,7 @@ import (
 func Builders() map[string]app.ImageBuilder {
 	return map[string]app.ImageBuilder{"zzz.note": Note, "zzz.challenge": Abyss, "zzz.deadly": Deadly, "zzz.holo_boss": HoloBoss, "zzz.void_front": VoidFront, "zzz.tower": Tower, "zzz.profile": Card, "zzz.characters": Card, "zzz.training": Training, "zzz.monthly": Monthly,
 		"zzz.hollow_zero": HollowZero, "zzz.lost_void": LostVoid, "zzz.zenkov": Zenkov, "zzz.zenkov_detail": ZenkovDetail,
-		"zzz.exploration": Exploration}
+		"zzz.exploration": Exploration, "zzz.buddies": Buddies}
 }
 
 // Queries lists the commands that run another operation's query: 练度统计
