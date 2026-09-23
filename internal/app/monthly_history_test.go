@@ -149,7 +149,7 @@ func TestRefreshMonthlyKeepsOfferedMonthsNotYetFinal(t *testing.T) {
 func TestMonthlyWordsFollowZZZPlugin(t *testing.T) {
 	china := time.FixedZone("UTC+8", 8*3600)
 	january := time.Date(2026, 1, 15, 12, 0, 0, 0, china)
-	for word, want := range map[string]int{"上月": 202512, "3月": 0, "2025年3月": 202503, "2022年3月": 0, "2025年": 0, "2025年上月": 202412, "1月": 202601} {
+	for word, want := range map[string]int{"上月": 202512, "3月": 0, "2025年3月": 202503, "2022年3月": 0, "2025年": 0, "2025年上月": 202412, "1月": 202601, "0月": 0, "2025年0月": 0} {
 		if month, valid := monthlyWord(word, january); !valid || month != want {
 			t.Errorf("%s = %d %v, want %d", word, month, valid, want)
 		}

@@ -373,9 +373,10 @@ func (s *ReminderStore) tickMonthly(task *Reminder, now int64, query func(Remind
 var monthlyWords = regexp.MustCompile(`^(?:([0-9]{4})年)?(?:([0-9]{1,2}|上)月)?$`)
 
 // monthlyWord reads ZZZ-Plugin's month words as its getDateString does: a
-// year before 2023 or none is this year, 上月 is the month before this one,
-// and no month or one still to come reads the default month, 0. valid is
-// false for a month outside 1–12.
+// year before 2023 or none is this year, and no month, 0月 or a month still
+// to come reads the default month, 0. valid is false for a month above 12.
+// 上月 is the month before this one; upstream means the same but reads 上 as
+// a number, which is never one, and so always falls back to the default.
 func monthlyWord(word string, now time.Time) (month int, valid bool) {
 	match := monthlyWords.FindStringSubmatch(word)
 	if match == nil || match[2] == "" {
@@ -393,7 +394,10 @@ func monthlyWord(word string, now time.Time) (month int, valid bool) {
 			number, year = 12, year-1
 		}
 	}
-	if number < 1 || number > 12 {
+	if number == 0 {
+		return 0, true
+	}
+	if number > 12 {
 		return 0, false
 	}
 	if time.Date(year, time.Month(number), 1, 0, 0, 0, 0, now.Location()).After(now) {
