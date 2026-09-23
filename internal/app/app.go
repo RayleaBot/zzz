@@ -458,6 +458,21 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 				view.Note = "未找到匹配资料，请尝试角色、装备全名或 ID。"
 			}
 		}
+	case "materials":
+		// Atlas's material for role: the character's ascension materials.
+		name := strings.Join(args, "")
+		entry, known := a.Catalog.Resolve(name, "character", a.aliasMap(event))
+		names := []string{name}
+		if known {
+			names = []string{entry.Name, name}
+		}
+		if file, ok := a.atlasModulePicture("material for role", names); ok {
+			return a.sendArtwork(event, file)
+		}
+		if hint := a.pictureHint(a.Game.Pictures.Atlas); known && hint != "" {
+			return event.SendText(hint)
+		}
+		return event.Result(map[string]any{"handled": false})
 	case "character":
 		if len(args) < 1 || len(args) > 2 {
 			return event.Result(map[string]any{"handled": false})

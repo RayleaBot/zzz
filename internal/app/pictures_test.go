@@ -63,3 +63,21 @@ func TestAtlasFindsPicturesByTheLibraryAliases(t *testing.T) {
 		}
 	}
 }
+
+func TestAtlasMaterialsReadOnlyTheirModule(t *testing.T) {
+	root := t.TempDir()
+	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "zzz-atlas", Index: "path.json", Skip: []string{"material for role"}}}}}}
+	writeArtwork(t, root, "zzz-atlas/path.json", `{"role":{"艾莲":"/role/艾莲.png"},"material for role":{"艾莲":"/material for role/艾莲.png"}}`)
+	writeArtwork(t, root, "zzz-atlas/role/艾莲.png", "a")
+	writeArtwork(t, root, "zzz-atlas/material for role/艾莲.png", "b")
+	if file, ok := a.atlasModulePicture("material for role", []string{"艾莲"}); !ok || file.Path != "material for role/艾莲.png" {
+		t.Fatalf("materials = %+v %v", file, ok)
+	}
+	// 图鉴 leaves the materials out.
+	if file, ok := a.atlasPicture([]string{"艾莲"}); !ok || file.Path != "role/艾莲.png" {
+		t.Fatalf("catalog = %+v %v", file, ok)
+	}
+	if _, ok := a.atlasModulePicture("material for role", []string{"不存在"}); ok {
+		t.Fatal("found a missing name")
+	}
+}

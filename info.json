@@ -1495,6 +1495,17 @@
       }
     },
     {
+      "id": "materials",
+      "name": "培养材料",
+      "description": "发送已下载 Atlas 绝区零图鉴中该角色的突破与培养材料图",
+      "usage": "#<角色>材料",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?P<name>.+?)(?:突破|材料|素材|培养)$"
+      }
+    },
+    {
       "id": "character",
       "name": "面板",
       "description": "查看代理人面板",
@@ -1632,7 +1643,8 @@
         "guide-default",
         "guide-forward-count",
         "talent-wiki",
-        "catalog"
+        "catalog",
+        "materials"
       ]
     },
     {

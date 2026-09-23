@@ -154,13 +154,20 @@ func atlasAliases(raw []byte) map[string]string {
 
 // atlasPicture finds the first downloaded 图鉴 image of any of the names.
 func (a *App) atlasPicture(names []string) (artworkFile, bool) {
+	return a.atlasModulePicture("", names)
+}
+
+// atlasModulePicture is atlasPicture within one path.json module, as Atlas
+// answers a module's own words such as 材料; "" searches every module the
+// game does not skip, then the file paths.
+func (a *App) atlasModulePicture(only string, names []string) (artworkFile, bool) {
 	for _, source := range a.Game.Pictures.Atlas {
 		if !a.Artwork.Ready(source.Source) {
 			continue
 		}
 		if source.Index != "" {
 			for _, module := range a.atlases.read(a.Artwork.Root, source) {
-				if slices.Contains(source.Skip, module.name) {
+				if only == "" && slices.Contains(source.Skip, module.name) || only != "" && module.name != only {
 					continue
 				}
 				for _, name := range names {
@@ -179,6 +186,9 @@ func (a *App) atlasPicture(names []string) (artworkFile, bool) {
 			}
 		}
 		for _, pattern := range source.Paths {
+			if only != "" {
+				break
+			}
 			for _, name := range names {
 				file := strings.ReplaceAll(pattern, "{name}", name)
 				if _, found := a.Artwork.File(source.Source, file); found {
