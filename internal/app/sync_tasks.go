@@ -253,6 +253,3 @@ func (a *App) syncTaskCommand(ctx context.Context, event *rayleabot.EventContext
 	}
 	return event.SendText("抽卡记录获取中请稍等...可能需要一段时间，请耐心等待")
 }
-func syncTaskState(state string) string {
-	return map[string]string{"creating": "创建中", "waiting": "等待调度", "running": "同步中", "completed": "已完成", "paused": "已暂停", "expired": "已到期"}[state]
-}
