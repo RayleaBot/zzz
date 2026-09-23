@@ -59,6 +59,11 @@ func artworkStatusText(statuses []artwork.Status) string {
 			line += fmt.Sprintf("下载中，已接收 %.1f MB", float64(status.Received)/1e6)
 		case "on_demand":
 			line += fmt.Sprintf("出图时按需下载，已缓存 %d 个文件（%.1f MB）", status.Files, float64(status.Bytes)/1e6)
+		case "bundled":
+			line += fmt.Sprintf("随插件安装包附带 %d 个文件（%.1f MB）", status.Files, float64(status.Bytes)/1e6)
+			if status.Commit != "" {
+				line += "，版本 " + status.Commit[:min(7, len(status.Commit))]
+			}
 		case "ready":
 			line += fmt.Sprintf("已下载 %d 个文件（%.1f MB）", status.Files, float64(status.Bytes)/1e6)
 			if status.Commit != "" {

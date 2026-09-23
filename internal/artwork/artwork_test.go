@@ -191,3 +191,47 @@ func TestFetchDownloadsOnDemandFilesOnce(t *testing.T) {
 		t.Fatal("on-demand source started a download")
 	}
 }
+
+func TestDownloadedFilesTakePrecedenceOverTheShippedOnes(t *testing.T) {
+	shipped := t.TempDir()
+	for name, content := range map[string]string{"miao/images/a.png": "shipped a", "miao/images/b.png": "shipped b", "miao.json": `{"commit":"pinned","files":2,"bytes":18}`} {
+		file := filepath.Join(shipped, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	body := archive(t, "newer", map[string]string{"images/a.png": "new a", "images/c.png": "new c"})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(body) }))
+	defer server.Close()
+	store := &Store{Root: t.TempDir(), Package: shipped, Sources: []Source{{ID: "miao", Archives: []string{server.URL}}}}
+	defer store.Close()
+	read := func(name string) string {
+		data, err := store.Open("miao", name)
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	}
+	if status := store.Statuses()[0]; status.State != "bundled" || status.Commit != "pinned" || status.Files != 2 || !store.Ready("miao") || read("images/a.png") != "shipped a" {
+		t.Fatalf("shipped source: %+v", status)
+	}
+	if _, err := store.Start("miao"); err != nil {
+		t.Fatal(err)
+	}
+	if status := wait(t, store, "miao"); status.State != "ready" || status.Commit != "newer" {
+		t.Fatalf("after download: %+v", status)
+	}
+	// A download replaces shipped files it carries and leaves the rest.
+	if read("images/a.png") != "new a" || read("images/b.png") != "shipped b" || len(store.List("miao", "images")) != 3 {
+		t.Fatalf("files %q %q, list %v", read("images/a.png"), read("images/b.png"), store.List("miao", "images"))
+	}
+	if err := store.Delete("miao"); err != nil {
+		t.Fatal(err)
+	}
+	if status := store.Statuses()[0]; status.State != "bundled" || read("images/a.png") != "shipped a" {
+		t.Fatalf("after delete: %+v", status)
+	}
+}

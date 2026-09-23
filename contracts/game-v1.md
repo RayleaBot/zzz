@@ -162,9 +162,9 @@ calendar 合并官方公告列表与正文，区别公告展示时间与实际�
 
 ### 上游图片素材
 
-`artwork.status` 按 `game.json` 声明顺序返回 `sources`，每项含 `id`、`name`、`state`（`missing`、`downloading`、`ready`，或按需下载来源的 `on_demand`）、已下载的 `files` 与 `bytes`，以及可选的 `commit`、`downloaded_ms`、下载中已接收的 `received` 和上次失败的 `error`。`artwork.download` 以 `id` 在后台开始下载或更新，已在下载时不重复开始；`artwork.delete` 删除已下载的来源，下载中拒绝。三者都返回最新的 `sources`。聊天中超级管理员使用“素材更新 [素材名]”开始下载，“素材状态”查看进度。
+`artwork.status` 按 `game.json` 声明顺序返回 `sources`，每项含 `id`、`name`、`state`（`missing`、`downloading`、`ready`（已下载）、`bundled`（使用插件包随附的文件），或按需下载来源的 `on_demand`）、已下载或随附的 `files` 与 `bytes`，以及可选的 `commit`、`downloaded_ms`、下载中已接收的 `received` 和上次失败的 `error`。`artwork.download` 以 `id` 在后台开始下载或更新，已在下载时不重复开始；`artwork.delete` 删除已下载的来源，下载中拒绝。三者都返回最新的 `sources`。聊天中超级管理员使用“素材更新 [素材名]”开始下载，“素材状态”查看进度。
 
-每个来源是一个上游公开仓库，按声明顺序尝试其 tar.gz 地址（Atlas 先 Gitee 后 GitHub，其余为 GitHub），只保留声明路径下的图片（图鉴库另含索引文件），按仓库内相对路径存到插件数据目录的 `assets/<id>/`。下载完成后整体替换上一份，失败时保留上一份并记录原因；插件包不含第三方图片。模板以 render.image 的 `path` 资源引用这些文件，素材缺失时使用不依赖图片的样式。`game.json` 的 `pictures` 声明聊天图片取自哪些来源：`atlas` 为图鉴库，依次查 Atlas 的 `path.json`（按文件中的模块顺序）或 `{name}` 文件路径，“图鉴”在没有插件自绘的资料页时发送找到的图鉴图；本游戏不声明角色照片目录，“照片”、互动与戳一戳只取本地图库中该角色的图片。来源尚未下载且没有可用图片时，回复中给出对应的素材更新命令。声明 `mirrors` 的来源与 ZZZ-Plugin 一样在出图时逐个下载所需文件并缓存，不能整体下载，可删除缓存；某个文件在所有镜像都取不到时，一小时内不再请求。
+每个来源是一个上游公开仓库，按声明顺序尝试其 tar.gz 地址（Atlas 先 Gitee 后 GitHub，其余为 GitHub），只保留声明路径下的图片（图鉴库另含索引文件），按仓库内相对路径存到插件数据目录的 `assets/<id>/`。下载完成后整体替换上一份，失败时保留上一份并记录原因。插件包在 `assets/<id>/` 随附模板用到的文件，取自与内置资料相同的上游固定提交，由 `scripts/bundle-artwork.py` 生成；来源未下载时状态为 `bundled`，下载的同名文件优先于随附文件，删除下载后恢复使用随附文件。图鉴库与按需下载的来源不随附。模板以 render.image 的 `path` 资源引用这些文件，素材缺失时使用不依赖图片的样式。`game.json` 的 `pictures` 声明聊天图片取自哪些来源：`atlas` 为图鉴库，依次查 Atlas 的 `path.json`（按文件中的模块顺序）或 `{name}` 文件路径，“图鉴”在没有插件自绘的资料页时发送找到的图鉴图；本游戏不声明角色照片目录，“照片”、互动与戳一戳只取本地图库中该角色的图片。来源尚未下载且没有可用图片时，回复中给出对应的素材更新命令。声明 `mirrors` 的来源与 ZZZ-Plugin 一样在出图时逐个下载所需文件并缓存，不能整体下载，可删除缓存；某个文件在所有镜像都取不到时，一小时内不再请求。
 
 ### 本地图库与角色互动
 

@@ -1,8 +1,11 @@
-// Package artwork downloads upstream image repositories into a plugin's data
-// directory when an administrator asks, the way upstream plugins clone their
-// resource repositories. Plugin packages carry no third-party images; templates
-// read the downloaded files through render.image path resources and fall back
-// to plain styling while a source is missing.
+// Package artwork serves the upstream images the templates use. The plugin
+// package ships those files, taken from the pinned upstream commits, under
+// assets/<source>/; an administrator may download a source's repository into
+// the data directory, whose files then take precedence, the way upstream
+// plugins update their cloned resources. Templates read the files through
+// render.image path resources, which the host looks up in the data directory
+// first and the package second, and fall back to plain styling when a file is
+// missing.
 package artwork
 
 import (
@@ -17,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -48,9 +52,9 @@ type Source struct {
 }
 
 // Status describes one source for the chat and management views. State is
-// missing, downloading or ready, or on_demand for a source fetched file by
-// file; Error keeps the last failed attempt, which
-// leaves an earlier download in place.
+// missing, downloading, ready (downloaded) or bundled (served from the files
+// the package ships), or on_demand for a source fetched file by file; Error
+// keeps the last failed attempt, which leaves earlier files in place.
 type Status struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
@@ -75,10 +79,13 @@ type job struct {
 	received atomic.Int64
 }
 
-// Store keeps each source under Root/<id>. Start runs downloads in the
-// background for the life of the store; Close stops them.
+// Store keeps each downloaded source under Root/<id>, beside the files the
+// package ships under Package/<id>. Start runs downloads in the background for
+// the life of the store; Close stops them.
 type Store struct {
-	Root    string
+	Root string
+	// Package is <package directory>/assets, empty when unknown.
+	Package string
 	Sources []Source
 	Client  *http.Client
 
@@ -184,6 +191,15 @@ func (s *Store) status(source Source) Status {
 	}
 	if info, err := os.Stat(filepath.Join(s.Root, source.ID)); err == nil && info.IsDir() {
 		status.State = "ready"
+	} else if s.bundled(source.ID) {
+		// The shipped files serve until a download replaces them.
+		status.State = "bundled"
+		if raw, err := os.ReadFile(filepath.Join(s.Package, source.ID+".json")); err == nil {
+			var shipped record
+			if json.Unmarshal(raw, &shipped) == nil {
+				status.Commit, status.Files, status.Bytes = shipped.Commit, shipped.Files, shipped.Bytes
+			}
+		}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -228,51 +244,88 @@ func (s *Store) Delete(id string) error {
 	return os.RemoveAll(discarded)
 }
 
-// File returns a downloaded file's path relative to the plugin data
-// directory, the form render.image path resources take, when it exists. Root
-// must be <data directory>/assets.
-func (s *Store) File(sourceID, name string) (string, bool) {
-	if !validName(name) {
+// roots are the directories a source's files are looked up in: the
+// download first, then the package.
+func (s *Store) roots(sourceID string) []string {
+	roots := []string{filepath.Join(s.Root, sourceID)}
+	if s.Package != "" {
+		roots = append(roots, filepath.Join(s.Package, sourceID))
+	}
+	return roots
+}
+
+// locate finds a file of a source, downloaded or shipped.
+func (s *Store) locate(sourceID, name string) (string, bool) {
+	if !validName(sourceID) || !validName(name) {
 		return "", false
 	}
-	info, err := os.Stat(filepath.Join(s.Root, sourceID, filepath.FromSlash(name)))
-	if err != nil || !info.Mode().IsRegular() {
+	for _, root := range s.roots(sourceID) {
+		file := filepath.Join(root, filepath.FromSlash(name))
+		if info, err := os.Stat(file); err == nil && info.Mode().IsRegular() {
+			return file, true
+		}
+	}
+	return "", false
+}
+
+func (s *Store) bundled(id string) bool {
+	if s.Package == "" || !validName(id) {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(s.Package, id))
+	return err == nil && info.IsDir()
+}
+
+// File returns a file's path relative to the plugin data directory, the form
+// render.image path resources take, when the source has it downloaded or
+// shipped; the host reads the same path from the package when the data
+// directory lacks it. Root must be <data directory>/assets.
+func (s *Store) File(sourceID, name string) (string, bool) {
+	if _, ok := s.locate(sourceID, name); !ok {
 		return "", false
 	}
 	return "assets/" + sourceID + "/" + name, true
 }
 
-// List names the downloaded files directly inside a directory of a source,
-// as paths relative to the source, in name order.
+// List names the files directly inside a directory of a source, downloaded or
+// shipped, as paths relative to the source, in name order.
 func (s *Store) List(sourceID, dir string) []string {
-	if !validName(dir) {
+	if !validName(sourceID) || !validName(dir) {
 		return nil
 	}
-	entries, err := os.ReadDir(filepath.Join(s.Root, sourceID, filepath.FromSlash(dir)))
-	if err != nil {
-		return nil
-	}
-	names := []string{}
-	for _, entry := range entries {
-		if entry.Type().IsRegular() {
-			names = append(names, dir+"/"+entry.Name())
+	seen := map[string]bool{}
+	for _, root := range s.roots(sourceID) {
+		entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(dir)))
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.Type().IsRegular() {
+				seen[dir+"/"+entry.Name()] = true
+			}
 		}
 	}
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 	return names
 }
 
-// Ready tells whether a source has been downloaded.
+// Ready tells whether a source has files, downloaded or shipped.
 func (s *Store) Ready(id string) bool {
 	info, err := os.Stat(filepath.Join(s.Root, id))
-	return validName(id) && err == nil && info.IsDir()
+	return validName(id) && (err == nil && info.IsDir() || s.bundled(id))
 }
 
-// Open reads a downloaded file, for sources that ship indexes next to images.
+// Open reads a file of a source, for sources that ship indexes next to images.
 func (s *Store) Open(sourceID, name string) ([]byte, error) {
-	if !validName(name) {
+	file, ok := s.locate(sourceID, name)
+	if !ok {
 		return nil, os.ErrNotExist
 	}
-	return os.ReadFile(filepath.Join(s.Root, sourceID, filepath.FromSlash(name)))
+	return os.ReadFile(file)
 }
 
 func (s *Store) recordPath(id string) string { return filepath.Join(s.Root, id+".json") }

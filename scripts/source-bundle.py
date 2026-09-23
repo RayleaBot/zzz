@@ -11,9 +11,9 @@ import zipfile
 plugin = pathlib.Path(__file__).resolve().parents[1]
 core = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else plugin.parent.parent / "RayleaBot"
 ignored_dirs = {".git", ".rayleabot", "node_modules", "dist", "__pycache__", ".tmp", "logs", ".cache"}
-# Runtime data sits at the top of the tree; internal/assets/data is embedded
-# source and stays.
-ignored_top = {"data"}
+# Runtime data and the bundled upstream artwork sit at the top of the tree;
+# internal/assets/data is embedded source and stays.
+ignored_top = {"data", "assets"}
 allowed_suffixes = {".go", ".mod", ".sum", ".work", ".json", ".md", ".txt", ".ts", ".js", ".mjs", ".vue", ".css", ".html", ".yaml", ".yml", ".py"}
 allowed_names = {"LICENSE", ".gitignore", ".npmrc"}
 blocked_names = {"master-key.json", "go.work.sum", ".env", "credentials.json", "cookies.json"}
