@@ -7,8 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"path"
 	"regexp"
@@ -139,7 +137,7 @@ func (a *App) gachaFileMessage(ctx context.Context, event *rayleabot.EventContex
 	if file == "" {
 		return true, event.SendText("文件链接获取失败")
 	}
-	raw, err := downloadGachaFile(ctx, file)
+	raw, err := downloadFile(ctx, file, gachaImportLimit)
 	if err != nil {
 		return true, event.SendText("下载json文件错误")
 	}
@@ -236,28 +234,6 @@ func importName(name, link string) string {
 		name += ".json"
 	}
 	return name
-}
-
-func downloadGachaFile(ctx context.Context, file string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, file, nil)
-	if err != nil {
-		return nil, err
-	}
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("download status %d", response.StatusCode)
-	}
-	raw, err := io.ReadAll(io.LimitReader(response.Body, gachaImportLimit+1))
-	if err == nil && len(raw) > gachaImportLimit {
-		err = fmt.Errorf("file exceeds %d bytes", gachaImportLimit)
-	}
-	return raw, err
 }
 
 // noTimezone marks a legacy file that names no time zone; the region's then

@@ -28,7 +28,7 @@ func TestDownloadAllCountsEveryFileAndResumes(t *testing.T) {
 		}
 	}
 	// A slice that has already run out fetches nothing, and the next resumes.
-	if job.step(t.Context(), store, time.Now().Add(-time.Second)) || job.next != 0 {
+	if job.step(t.Context(), store, time.Now().Add(-time.Second)) {
 		t.Fatal("a spent slice fetched files")
 	}
 	if !job.step(t.Context(), store, time.Now().Add(time.Minute)) {

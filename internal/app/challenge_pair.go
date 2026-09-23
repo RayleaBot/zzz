@@ -261,11 +261,6 @@ func challengePairDescription(abyss, deadly int) string {
 	return abyssText + "，" + deadlyText
 }
 
-// challengeOwner is the chat user a command speaks for.
-func challengeOwner(event *rayleabot.EventContext) Subject {
-	return Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
-}
-
 // challengePairTasks are the user's 开启挑战提醒 tasks.
 func (a *App) challengePairTasks(owner Subject) ([]Reminder, error) {
 	items, err := a.Reminders.List()
@@ -424,7 +419,7 @@ func challengeModeWord(word string) bool {
 func (a *App) challengePairCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
 	config := settings(event)
 	global := config.challengeGlobals()
-	owner := challengeOwner(event)
+	owner := chatOwner(event)
 	switch command {
 	case "challenge-global-switch":
 		enable := len(args) > 0 && (args[0] == "开启" || args[0] == "启用")
