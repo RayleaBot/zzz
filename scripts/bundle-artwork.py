@@ -38,7 +38,7 @@ BUNDLES = {
         "resources/common/item/face.webp",
     ]),
     # The UID list page, the news pages, the Bangboo list and the fonts
-    # ZZZ-Plugin's 伤害 page reads from the 原神插件 beside it.
+    # ZZZ-Plugin's common style reads from the 原神插件 beside it.
     "yunzai-genshin": ("Yunzai-genshin", [
         "resources/img/icon/check.webp",
         "resources/ZZZero/img/other/banner.png",

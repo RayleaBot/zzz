@@ -89,6 +89,7 @@ func newAgentCard(context app.ImageContext) *agentCard {
 			card.resources = append(card.resources, resource)
 		}
 	}
+	card.resources = append(card.resources, fontResources(context)...)
 	return card
 }
 

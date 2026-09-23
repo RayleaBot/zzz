@@ -1,5 +1,10 @@
 package images
 
+import (
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
+	"github.com/RayleaBot/plugin-zzz/internal/app"
+)
+
 // The tables below map the images named in each stylesheet, converted from
 // ZZZ-Plugin's stylesheets, to their repository paths; stylesheets read them
 // as --render-resource-<id>.
@@ -84,6 +89,26 @@ var commonArtwork = [][2]string{
 	{"common-images-team-02", "resources/common/images/team/02.png"},
 	{"common-images-team-03", "resources/common/images/team/03.png"},
 	{"zzz", "resources/common/fonts/inpinhongmengti.ttf"},
+}
+
+// commonFonts are the fonts ZZZ-Plugin's common style loads besides its own:
+// the number and Chinese fonts of the Yunzai 原神插件 beside it, which every
+// page's text falls back to after zzz.
+var commonFonts = [][2]string{
+	{"tttgbnumber", "resources/font/tttgbnumber.ttf"},
+	{"HYWenHei-55W", "resources/font/HYWenHei-55W.ttf"},
+}
+
+// fontResources are the common fonts for the pages that list their resources
+// themselves.
+func fontResources(context app.ImageContext) []rayleabot.RenderImageResource {
+	resources := []rayleabot.RenderImageResource{}
+	for _, font := range commonFonts {
+		if resource, ok := context.ArtworkResource(font[0], "yunzai-genshin", font[1]); ok {
+			resources = append(resources, resource)
+		}
+	}
+	return resources
 }
 
 // panelArtwork is what panel/card adds.

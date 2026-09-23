@@ -73,6 +73,7 @@ func Gacha(context app.ImageContext, image app.GachaImage) (app.Image, bool) {
 			resources = append(resources, resource)
 		}
 	}
+	resources = append(resources, fontResources(context)...)
 	maps := readMaps(context)
 	icons := map[string]string{}
 	icon := func(record gacha.Record) string {

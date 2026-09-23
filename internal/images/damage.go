@@ -8,14 +8,6 @@ import (
 	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
-// damageFonts are the fonts ZZZ-Plugin's common style loads besides its own:
-// the number and Chinese fonts of the Yunzai 原神插件 beside it, which the
-// damage tables use for most of their text.
-var damageFonts = [][2]string{
-	{"tttgbnumber", "resources/font/tttgbnumber.ttf"},
-	{"HYWenHei-55W", "resources/font/HYWenHei-55W.ttf"},
-}
-
 // damageArea is one column of the damage area table: upstream's label, the
 // area's key in the calculation and the digits it shows.
 type damageArea struct {
@@ -43,11 +35,6 @@ func Damage(context app.ImageContext, image app.DamageImage) (app.Image, bool) {
 		return app.Image{}, false
 	}
 	card := newAgentCard(context)
-	for _, font := range damageFonts {
-		if resource, ok := context.ArtworkResource(font[0], "yunzai-genshin", font[1]); ok {
-			card.resources = append(card.resources, resource)
-		}
-	}
 	data := card.basic(official, image.UID, image.Portrait, result.Weights)
 	name := app.Text(official["name_mi18n"])
 	damages := []any{}

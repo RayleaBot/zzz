@@ -70,6 +70,7 @@ func Note(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 			resources = append(resources, resource)
 		}
 	}
+	resources = append(resources, fontResources(context)...)
 	region := regionNames[result.Role.Region]
 	if region == "" {
 		region = result.Role.Region

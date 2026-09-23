@@ -11,12 +11,17 @@ import (
 // official images the response links to, cached on demand.
 type recordResources struct{ app.ImageResources }
 
+// newRecordResources starts with the ZZZ-Plugin art of the tables and the
+// common fonts every page loads.
 func newRecordResources(context app.ImageContext, tables ...[][2]string) *recordResources {
 	resources := &recordResources{app.ImageResources{Context: context}}
 	for _, table := range tables {
 		for _, item := range table {
 			resources.Artwork(item[0], "zzz-plugin", item[1])
 		}
+	}
+	for _, font := range commonFonts {
+		resources.Artwork(font[0], "yunzai-genshin", font[1])
 	}
 	return resources
 }
