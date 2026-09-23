@@ -20,6 +20,8 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"艾莲面板", "character", []string{"艾莲"}},
 			{"面板", "panel-list", nil},
 			{"面板列表", "panel-list", nil},
+			{"开启资讯推送", "subscribe", []string{"资讯"}},
+			{"推送公告", "content-push", nil},
 			{"更新面板", "panel-refresh", nil},
 			{"更新展柜面板", "panel-refresh", nil},
 			{"面板刷新", "panel-refresh", nil},

@@ -2,16 +2,12 @@ package app
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 )
 
 func TestPublicActivityUsesActualWindowNotAnnouncementDisplayTime(t *testing.T) {
@@ -46,54 +42,27 @@ func TestPublicPostsUseOfficialCursorAndSanitizeContent(t *testing.T) {
 		t.Fatal("query accepted")
 	}
 }
-func TestPublicSubscriptionBaselineFailureDedupRestartAndExpiry(t *testing.T) {
-	now := time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC).UnixMilli()
-	s := ContentSubscriptions{Path: filepath.Join(t.TempDir(), "subscriptions.json")}
-	task := ContentSubscription{Ref: "task", Kind: "news", Enabled: true, ExpiresMS: now + int64(time.Hour/time.Millisecond)}
-	if err := localdata.Write(s.Path, []ContentSubscription{task}); err != nil {
-		t.Fatal(err)
+func TestPushPicksOneRecentPostAsYunzai(t *testing.T) {
+	now := time.Date(2026, 9, 20, 12, 0, 0, 0, time.FixedZone("UTC+8", 8*3600))
+	at := func(ago time.Duration) int64 { return now.Add(-ago).Unix() }
+	posts := []pushPost{
+		{"105", "新版本前瞻", "announce", at(time.Hour)},
+		{"101", "旧公告", "announce", at(3 * time.Hour)},
+		{"102", "作品展示合集", "announce", at(time.Hour)},
+		{"103", "已推送的公告", "announce", at(time.Hour)},
+		{"104", "资讯", "info", at(time.Hour)},
 	}
-	rows := []PublicPost{{ID: "1", Title: "old"}}
-	fetch := func(ContentSubscription) (map[string]any, error) { return map[string]any{"items": rows}, nil }
-	sent := 0
-	send := func(ContentSubscription, string) error { sent++; return errors.New("delivery failed") }
-	if err := s.Tick("task", now, fetch, send, Game{Name: "原神"}); err != nil || sent != 0 {
-		t.Fatal("historical notification", err)
+	sub := ContentSubscription{Kinds: []string{"announce"}, Sent: map[string]int64{"103": now.Add(-time.Hour).UnixMilli()}}
+	if post, ok := postToPush(posts, sub, now); !ok || post.id != "105" {
+		t.Fatal(post, ok)
 	}
-	rows = append(rows, PublicPost{ID: "2", Title: "new"})
-	now += int64(16 * time.Minute / time.Millisecond)
-	_ = s.Tick("task", now, fetch, send, Game{Name: "原神"})
-	if sent != 1 {
-		t.Fatal(sent)
-	}
-	s = ContentSubscriptions{Path: s.Path}
-	now += int64(16 * time.Minute / time.Millisecond)
-	_ = s.Tick("task", now, fetch, send, Game{Name: "原神"})
-	if sent != 1 {
-		t.Fatal("failed send replayed")
-	}
-	now += int64(time.Hour / time.Millisecond)
-	_ = s.Tick("task", now, fetch, send, Game{Name: "原神"})
-	_ = s.Tick("task", now+int64(time.Hour/time.Millisecond), fetch, send, Game{Name: "原神"})
-	if sent != 2 {
-		t.Fatal("expiry replayed")
+	// Ten hours after a push the post may be pushed again.
+	sub.Sent["103"] = now.Add(-10 * time.Hour).UnixMilli()
+	if post, _ := postToPush(posts, sub, now); post.id != "103" {
+		t.Fatal(post)
 	}
 }
-func TestPublicExpirySkipsUnknownAndPastWindows(t *testing.T) {
-	now := time.Now().UnixMilli()
-	s := ContentSubscriptions{Path: filepath.Join(t.TempDir(), "s.json")}
-	_ = localdata.Write(s.Path, []ContentSubscription{{Ref: "e", Kind: "expiry", Enabled: true, ExpiresMS: now + int64(2*time.Hour/time.Millisecond)}})
-	sent := ""
-	err := s.Tick("e", now, func(ContentSubscription) (map[string]any, error) {
-		return map[string]any{"items": []PublicActivity{{ID: "1", Title: "unknown", EndMS: now + 1000, TimeStatus: "unknown"}, {ID: "2", Title: "past", EndMS: now - 1000, TimeStatus: "explicit"}, {ID: "3", Title: "known", EndMS: now + 1000, TimeStatus: "explicit_end"}}}, nil
-	}, func(_ ContentSubscription, text string) error {
-		sent = text
-		return nil
-	}, Game{})
-	if err != nil || !strings.Contains(sent, "known") || strings.Contains(sent, "unknown") || strings.Contains(sent, "past") {
-		t.Fatal(sent, err)
-	}
-}
+
 func TestPublicLiveAnonymousSources(t *testing.T) {
 	if os.Getenv("RAYLEA_PUBLIC_SMOKE") != "1" {
 		t.Skip("explicit anonymous network smoke")

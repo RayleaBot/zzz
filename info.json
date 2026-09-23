@@ -1294,23 +1294,34 @@
     {
       "id": "subscribe",
       "name": "开启公告推送",
-      "description": "在当前聊天开启官方公告推送",
-      "usage": "#开启公告推送",
+      "description": "群管理员为本群开启米游社公告或资讯推送",
+      "usage": "%开启公告推送 / %开启资讯推送",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?:订阅|开启(?P<kind>公告|资讯)推送|开启(?P<expiry>到期)活动(?:预警)?(?:推送)?)$"
+        "pattern": "^(?:绝区零)?开启(?P<kind>公告|资讯)推送$"
       }
     },
     {
       "id": "unsubscribe",
       "name": "关闭公告推送",
-      "description": "在当前聊天关闭官方公告推送",
-      "usage": "#关闭公告推送",
+      "description": "群管理员关闭本群的米游社公告或资讯推送",
+      "usage": "%关闭公告推送 / %关闭资讯推送",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?:退订|关闭(?P<kind>公告|资讯)推送|关闭(?P<expiry>到期)活动(?:预警)?(?:推送)?)$"
+        "pattern": "^(?:绝区零)?关闭(?P<kind>公告|资讯)推送$"
+      }
+    },
+    {
+      "id": "content-push",
+      "name": "推送公告",
+      "description": "立即为已开启推送的群检查并推送新公告与资讯",
+      "usage": "%推送公告 / %推送资讯",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:绝区零)?推送(?:公告|资讯)$"
       }
     },
     {
@@ -1645,7 +1656,8 @@
         "post",
         "estimate",
         "subscribe",
-        "unsubscribe"
+        "unsubscribe",
+        "content-push"
       ]
     },
     {
