@@ -180,7 +180,9 @@ func (a *App) queryRankCommand(ctx context.Context, event *rayleabot.EventContex
 		return event.Result(map[string]any{"handled": false})
 	}
 	if command == "query-rank-reset" {
-		// Upstream means to clear the group's ranking of that mode.
+		// ZZZ-Plugin's 重置排名 means to clear the group's ranking of the
+		// mode, but deletes a key its members are not kept under, so nothing
+		// goes; this clears it. 绝境 shares 危局's ranking, as upstream's.
 		if err := a.Groups.Update(scope, func(data *GroupData) error {
 			delete(data.QueryRanks, rank.ID)
 			return nil
