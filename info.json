@@ -1236,7 +1236,7 @@
     {
       "id": "artwork-delete",
       "name": "删除全部资源",
-      "description": "删除已下载的全部素材与图片缓存，随插件附带的文件保留",
+      "description": "删除按需下载的图片缓存，素材仓库与随插件附带的文件保留",
       "usage": "#删除全部资源",
       "permission": "super_admin",
       "trigger": {

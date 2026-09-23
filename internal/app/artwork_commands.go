@@ -269,12 +269,16 @@ func (a *App) runArtworkJob(ctx context.Context, event *rayleabot.EventContext) 
 	return event.Result(map[string]any{"handled": true})
 }
 
-// artworkDeleteAll is 删除全部资源: every downloaded repository and on-demand
-// cache is removed; the files the package ships remain.
+// artworkDeleteAll is 删除全部资源: the caches of the sources fetched on
+// demand are removed, as ZZZ-Plugin removes only its own download folders;
+// downloaded repositories and the files the package ships remain.
 func (a *App) artworkDeleteAll(ctx context.Context, event *rayleabot.EventContext) error {
 	notice(ctx, event, "【注意】正在删除所有资源图片，后续使用需要重新下载！")
 	busy := []string{}
 	for _, source := range a.Artwork.Sources {
+		if len(source.Mirrors) == 0 {
+			continue
+		}
 		if err := a.Artwork.Delete(source.ID); err != nil {
 			busy = append(busy, source.Name)
 		}
