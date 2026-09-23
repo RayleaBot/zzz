@@ -328,7 +328,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.guideCommand(ctx, event, command, args)
 	case "subscribe", "unsubscribe", "content-push":
 		return a.subscriptionCommand(ctx, event, command, args)
-	case "news", "info", "events", "search", "post", "estimate":
+	case "news", "info", "events", "search", "estimate":
 		return a.newsCommand(ctx, event, command, args)
 	case "live-calendar":
 		return a.calendarCommand(ctx, event)

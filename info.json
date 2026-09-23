@@ -1072,19 +1072,6 @@
       }
     },
     {
-      "id": "post",
-      "name": "帖子",
-      "description": "查看米游社帖子内容",
-      "usage": "#帖子 编号或官方链接",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "帖子"
-        ]
-      }
-    },
-    {
       "id": "estimate",
       "name": "预估",
       "description": "米游社作者整理的本版本可获取抽数统计",
@@ -1653,7 +1640,6 @@
         "events",
         "live-calendar",
         "search",
-        "post",
         "estimate",
         "subscribe",
         "unsubscribe",

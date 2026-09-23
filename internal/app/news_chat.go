@@ -13,7 +13,7 @@ import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// 公告, 资讯, 活动, 米游社搜索, 帖子 and 预估 answer the way the Yunzai 原神插件's
+// 公告, 资讯, 活动, 米游社搜索 and 预估 answer the way the Yunzai 原神插件's
 // mysNews does: a post drawn as html/mysNews after a line naming it, or the
 // newest five as html/mysNews-list for 公告列表. The templates are the
 // plugin's news and news-list; their images come from the Yunzai 原神插件
@@ -94,12 +94,6 @@ func (a *App) newsCommand(ctx context.Context, event *rayleabot.EventContext, co
 			return event.SendText("搜索不到您要的结果，换个关键词试试呗~")
 		}
 		return a.sendNewsPost(ctx, event, asText(asObject(asObject(posts[index])["post"])["post_id"]), "")
-	case "post":
-		id, err := publicPostID(word)
-		if err != nil {
-			return event.SendText(friendlyError(err))
-		}
-		return a.sendNewsPost(ctx, event, id, "")
 	}
 	return a.newsEstimate(ctx, event)
 }
