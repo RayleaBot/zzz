@@ -332,9 +332,32 @@
       {
         "source": "zzz-atlas",
         "index": "path.json",
-        "skip": [
-          "material for role"
-        ]
+        "rules": {
+          "config": {
+            "condition": 3,
+            "pick": [
+              "图鉴"
+            ]
+          },
+          "material for role": {
+            "condition": 4,
+            "pick": [
+              "突破",
+              "材料",
+              "素材",
+              "培养"
+            ]
+          },
+          "角色攻略": {
+            "condition": 3,
+            "pick": [
+              "图鉴",
+              "攻略0",
+              "攻略",
+              "指南"
+            ]
+          }
+        }
       }
     ]
   }

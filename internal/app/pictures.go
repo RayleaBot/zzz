@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -25,7 +26,7 @@ type Pictures struct {
 	// character.
 	Photos []PictureSource `json:"photos"`
 	// Atlas are the 图鉴 libraries, tried in order: an Atlas repository's
-	// path.json index, or file paths with {name}.
+	// path.json index.
 	Atlas []PictureSource `json:"atlas"`
 }
 
@@ -33,9 +34,52 @@ type PictureSource struct {
 	Source string   `json:"source"`
 	Index  string   `json:"index,omitempty"`
 	Paths  []string `json:"paths,omitempty"`
-	// Skip are index modules 图鉴 leaves out: Atlas answers them only for
-	// their own words, such as 攻略 or 材料.
-	Skip []string `json:"skip,omitempty"`
+	// Rules are Atlas's rules for the library's modules (its
+	// rule_default/<module>.yaml), config for the others.
+	Rules map[string]AtlasRule `json:"rules,omitempty"`
+}
+
+// AtlasRule is which words an Atlas module answers: Condition 0 any word, 1
+// a word after the prefix, 2 one with a Pick word, 3 either, 4 both, 5 one
+// with a Pick word, the prefix optional; the Pick words are removed before
+// the name is looked up. Commands always come after the prefix.
+type AtlasRule struct {
+	Condition int      `json:"condition"`
+	Pick      []string `json:"pick"`
+}
+
+// config is the rule of the modules without their own: the library's
+// config, else Atlas's default of 图鉴 or the prefix.
+func (s PictureSource) config() AtlasRule {
+	if rule, ok := s.Rules["config"]; ok {
+		return rule
+	}
+	return AtlasRule{Condition: 3, Pick: []string{"图鉴"}}
+}
+
+// pick is Atlas's PickRule for a word that came after the prefix: the name
+// it leaves, false when the rule does not answer the word.
+func (r AtlasRule) pick(word string) (string, bool) {
+	words := r.Pick
+	if len(words) == 0 {
+		words = []string{"图鉴"}
+	}
+	// Atlas joins the pick words into one expression.
+	pick, err := regexp.Compile("(" + strings.Join(words, "|") + ")")
+	if err != nil {
+		return "", false
+	}
+	switch r.Condition {
+	case 0, 1:
+		return strings.TrimSpace(word), true
+	case 3:
+		return strings.TrimSpace(pick.ReplaceAllString(word, "")), true
+	case 2, 4, 5:
+		if pick.MatchString(word) {
+			return strings.TrimSpace(pick.ReplaceAllString(word, "")), true
+		}
+	}
+	return "", false
 }
 
 // artworkFile is a downloaded file of an artwork source.
@@ -152,47 +196,39 @@ func atlasAliases(raw []byte) map[string]string {
 	return aliases
 }
 
-// atlasPicture finds the first downloaded 图鉴 image of any of the names.
-func (a *App) atlasPicture(names []string) (artworkFile, bool) {
-	return a.atlasModulePicture("", names)
-}
-
-// atlasModulePicture is atlasPicture within one path.json module, as Atlas
-// answers a module's own words such as 材料; "" searches every module the
-// game does not skip, then the file paths.
-func (a *App) atlasModulePicture(only string, names []string) (artworkFile, bool) {
+// atlasPicture is Atlas's search for a command word: each downloaded
+// library's modules in path.json order, the module's rule deciding whether
+// it answers the word and what name is left; the name is looked up among the
+// module's aliases, then as the character or item the plugin's aliases name,
+// as Atlas borrows ZZZ-Plugin's alias file.
+func (a *App) atlasPicture(word string, aliases map[string]string) (artworkFile, bool) {
 	for _, source := range a.Game.Pictures.Atlas {
-		if !a.Artwork.Ready(source.Source) {
+		if source.Index == "" || !a.Artwork.Ready(source.Source) {
 			continue
 		}
-		if source.Index != "" {
-			for _, module := range a.atlases.read(a.Artwork.Root, source) {
-				if only == "" && slices.Contains(source.Skip, module.name) || only != "" && module.name != only {
-					continue
-				}
-				for _, name := range names {
-					// Atlas looks the name up among the aliases first.
-					key, aliased := module.aliases[name]
-					if !aliased {
-						key = name
-					}
-					// Some modules also index the library's alias files.
-					if file, ok := module.paths[key]; ok && slices.Contains(pictureExtensions, strings.ToLower(path.Ext(file))) {
-						if _, found := a.Artwork.File(source.Source, strings.TrimPrefix(file, "/")); found {
-							return artworkFile{source.Source, strings.TrimPrefix(file, "/")}, true
-						}
-					}
-				}
+		for _, module := range a.atlases.read(a.Artwork.Root, source) {
+			rule, ok := source.Rules[module.name]
+			if !ok {
+				rule = source.config()
 			}
-		}
-		for _, pattern := range source.Paths {
-			if only != "" {
-				break
+			name, ok := rule.pick(word)
+			if !ok || name == "" {
+				continue
+			}
+			names := []string{name}
+			if entry, _, found := a.aliasOwner(name, aliases); found && entry.Name != name {
+				names = append(names, entry.Name)
 			}
 			for _, name := range names {
-				file := strings.ReplaceAll(pattern, "{name}", name)
-				if _, found := a.Artwork.File(source.Source, file); found {
-					return artworkFile{source.Source, file}, true
+				key, aliased := module.aliases[name]
+				if !aliased {
+					key = name
+				}
+				// Some modules also index the library's alias files.
+				if file, ok := module.paths[key]; ok && slices.Contains(pictureExtensions, strings.ToLower(path.Ext(file))) {
+					if _, found := a.Artwork.File(source.Source, strings.TrimPrefix(file, "/")); found {
+						return artworkFile{source.Source, strings.TrimPrefix(file, "/")}, true
+					}
 				}
 			}
 		}

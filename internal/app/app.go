@@ -429,16 +429,14 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	case "catalog":
 		query := strings.Join(args, " ")
 		entries := a.Catalog.Search(query, "", 20, a.aliasMap(event))
-		names := []string{query}
 		if len(entries) == 1 {
 			view = EntryView(a.Game, entries[0])
 			view.Image = a.entryImage(ctx, event, command, entries[0])
-			names = []string{entries[0].Name, query}
 		}
 		// Without a drawn page, the downloaded 图鉴 libraries answer as Atlas
-		// and xiaoyao do.
+		// does.
 		if view.Image == nil {
-			if file, ok := a.atlasPicture(names); ok {
+			if file, ok := a.atlasPicture(event.Event.Command(), a.aliasMap(event)); ok {
 				return a.sendArtwork(event, file)
 			}
 		}
@@ -455,15 +453,17 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 				view.Note = "未找到匹配资料，请尝试角色、装备全名或 ID。"
 			}
 		}
+	case "atlas":
+		// Atlas answers the words no other command takes, as it does any word
+		// after the prefix.
+		if file, ok := a.atlasPicture(strings.Join(append([]string{event.Event.Command()}, args...), " "), a.aliasMap(event)); ok {
+			return a.sendArtwork(event, file)
+		}
+		return event.Result(map[string]any{"handled": false})
 	case "materials":
 		// Atlas's material for role: the character's ascension materials.
-		name := strings.Join(args, "")
-		entry, known := a.Catalog.Resolve(name, "character", a.aliasMap(event))
-		names := []string{name}
-		if known {
-			names = []string{entry.Name, name}
-		}
-		if file, ok := a.atlasModulePicture("material for role", names); ok {
+		_, known := a.Catalog.Resolve(strings.Join(args, ""), "character", a.aliasMap(event))
+		if file, ok := a.atlasPicture(event.Event.Command(), a.aliasMap(event)); ok {
 			return a.sendArtwork(event, file)
 		}
 		if hint := a.pictureHint(a.Game.Pictures.Atlas); known && hint != "" {

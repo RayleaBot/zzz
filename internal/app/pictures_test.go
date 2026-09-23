@@ -32,10 +32,10 @@ func TestPicturesReadDownloadedLibraries(t *testing.T) {
 	writeArtwork(t, root, "zzz-atlas/path.json", `{"weapon":{"深海访客":"/weapon/深海访客.png"},"guide":{"深海访客":"/guide/深海访客.png"}}`)
 	writeArtwork(t, root, "zzz-atlas/weapon/深海访客.png", "a")
 	writeArtwork(t, root, "zzz-atlas/guide/深海访客.png", "b")
-	if file, ok := a.atlasPicture([]string{"深海访客"}); !ok || file != (artworkFile{"zzz-atlas", "weapon/深海访客.png"}) {
+	if file, ok := a.atlasPicture("深海访客图鉴", nil); !ok || file != (artworkFile{"zzz-atlas", "weapon/深海访客.png"}) {
 		t.Fatal(file, ok)
 	}
-	if _, ok := a.atlasPicture([]string{"不存在"}); ok {
+	if _, ok := a.atlasPicture("不存在图鉴", nil); ok {
 		t.Fatal("found a missing name")
 	}
 	if hint := a.pictureHint(a.Game.Pictures.Atlas); hint != "" {
@@ -45,39 +45,44 @@ func TestPicturesReadDownloadedLibraries(t *testing.T) {
 
 func TestAtlasFindsPicturesByTheLibraryAliases(t *testing.T) {
 	root := t.TempDir()
-	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "atlas", Index: "path.json", Skip: []string{"guide for role"}}}}}}
+	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "atlas", Index: "path.json",
+		Rules: map[string]AtlasRule{"guide for role": {Condition: 5, Pick: []string{"攻略"}}}}}}}}
 	writeArtwork(t, root, "atlas/guide/1001.png", "guide")
-	if _, ok := a.atlasPicture([]string{"role"}); ok {
+	if _, ok := a.atlasPicture("role图鉴", nil); ok {
 		t.Error("sent an alias file")
 	}
 	// Star Rail's library keys pictures by ID; othername lists each key's
 	// names.
-	writeArtwork(t, root, "atlas/path.json", `{"guide for role":{"1001":"/guide/1001.png"},"othername":{"role":"/othername/role.yaml"},"role":{"1001":"/role/1001.png","1002":"/role/1002.png"}}`)
+	writeArtwork(t, root, "atlas/path.json", `{"guide for role":{"三月七":"/guide/1001.png"},"othername":{"role":"/othername/role.yaml"},"role":{"1001":"/role/1001.png","1002":"/role/1002.png"}}`)
 	writeArtwork(t, root, "atlas/othername/role.yaml", "# roles\n'1001':\n  - 三月七\n  - mar7th\n\"1002\":\n- 丹恒\n- 三月七\n")
 	writeArtwork(t, root, "atlas/role/1001.png", "a")
 	writeArtwork(t, root, "atlas/role/1002.png", "b")
 	// The guide module answers 攻略, not 图鉴.
 	for name, want := range map[string]string{"三月七": "role/1001.png", "mar7th": "role/1001.png", "丹恒": "role/1002.png", "1002": "role/1002.png"} {
-		if file, ok := a.atlasPicture([]string{name}); !ok || file.Path != want {
+		if file, ok := a.atlasPicture(name+"图鉴", nil); !ok || file.Path != want {
 			t.Errorf("%s: %+v %v", name, file, ok)
 		}
 	}
+	if file, ok := a.atlasPicture("三月七攻略", nil); !ok || file.Path != "guide/1001.png" {
+		t.Errorf("guide: %+v %v", file, ok)
+	}
 }
 
-func TestAtlasMaterialsReadOnlyTheirModule(t *testing.T) {
+func TestAtlasRulesPickTheModule(t *testing.T) {
 	root := t.TempDir()
-	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "zzz-atlas", Index: "path.json", Skip: []string{"material for role"}}}}}}
+	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "zzz-atlas", Index: "path.json",
+		Rules: map[string]AtlasRule{"config": {Condition: 3, Pick: []string{"图鉴"}}, "material for role": {Condition: 4, Pick: []string{"突破", "材料", "素材", "培养"}}}}}}}}
 	writeArtwork(t, root, "zzz-atlas/path.json", `{"role":{"艾莲":"/role/艾莲.png"},"material for role":{"艾莲":"/material for role/艾莲.png"}}`)
 	writeArtwork(t, root, "zzz-atlas/role/艾莲.png", "a")
 	writeArtwork(t, root, "zzz-atlas/material for role/艾莲.png", "b")
-	if file, ok := a.atlasModulePicture("material for role", []string{"艾莲"}); !ok || file.Path != "material for role/艾莲.png" {
-		t.Fatalf("materials = %+v %v", file, ok)
+	// Any word after the prefix reaches the modules with condition 3; the
+	// materials module needs its own words.
+	for word, want := range map[string]string{"艾莲突破": "material for role/艾莲.png", "艾莲图鉴": "role/艾莲.png", "艾莲": "role/艾莲.png"} {
+		if file, ok := a.atlasPicture(word, nil); !ok || file.Path != want {
+			t.Errorf("%s: %+v %v", word, file, ok)
+		}
 	}
-	// 图鉴 leaves the materials out.
-	if file, ok := a.atlasPicture([]string{"艾莲"}); !ok || file.Path != "role/艾莲.png" {
-		t.Fatalf("catalog = %+v %v", file, ok)
-	}
-	if _, ok := a.atlasModulePicture("material for role", []string{"不存在"}); ok {
+	if _, ok := a.atlasPicture("不存在突破", nil); ok {
 		t.Fatal("found a missing name")
 	}
 }

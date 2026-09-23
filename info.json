@@ -1489,6 +1489,18 @@
         "type": "pattern",
         "pattern": "^(?P<character>.+?)面板$"
       }
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas 图鉴",
+      "description": "其他命令都不匹配时，按 Atlas 的规则在已下载的图鉴库中查找并发送图片",
+      "usage": "%艾莲 / %深海访客",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^.+$",
+        "fallback": true
+      }
     }
   ],
   "command_groups": [
@@ -1618,6 +1630,7 @@
         "guide-forward-count",
         "talent-wiki",
         "catalog",
+        "atlas",
         "materials"
       ]
     },
