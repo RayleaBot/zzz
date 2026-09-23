@@ -250,7 +250,8 @@
       "page": "abyss",
       "operation": "zzz.challenge",
       "words": "(式舆防卫战|式舆|深渊|防卫战|防卫)(群内?)?排名$",
-      "empty": "没有式舆防卫战排名，请先 {prefix}显示深渊排名，并且用 {prefix}深渊 查询战绩"
+      "empty": "没有式舆防卫战排名，请先 {prefix}显示深渊排名，并且用 {prefix}深渊 查询战绩",
+      "closed": "当前群深渊排名功能已关闭！"
     },
     {
       "id": "DEADLY",
@@ -258,7 +259,8 @@
       "page": "deadly-hard",
       "operation": "zzz.deadly",
       "words": "(绝境|(危局|强袭|强袭战|危局强袭战)绝境|绝境(危局|强袭|强袭战|危局强袭战))(群内?)?排名$",
-      "empty": "没有危局强袭战绝境排名，请先 {prefix}显示危局绝境排名，并且用 {prefix}危局 查询战绩"
+      "empty": "没有危局强袭战绝境排名，请先 {prefix}显示危局绝境排名，并且用 {prefix}危局 查询战绩",
+      "closed": "当前群危局强袭战排名功能已关闭！"
     },
     {
       "id": "DEADLY",
@@ -266,7 +268,8 @@
       "page": "deadly",
       "operation": "zzz.deadly",
       "words": "(危局强袭战|危局|强袭|强袭战)(群内?)?排名$",
-      "empty": "没有危局强袭战排名，请先 {prefix}显示危局排名，并且用 {prefix}危局 查询战绩"
+      "empty": "没有危局强袭战排名，请先 {prefix}显示危局排名，并且用 {prefix}危局 查询战绩",
+      "closed": "当前群危局强袭战排名功能已关闭！"
     },
     {
       "id": "HOLO_BOSS",
@@ -274,7 +277,8 @@
       "page": "holo-boss",
       "operation": "zzz.holo_boss",
       "words": "(拟境湮灭战|拟境|湮灭|湮灭战)(群内?)?排名$",
-      "empty": "没有拟境湮灭战排名，请先 {prefix}显示拟境排名，并且用 {prefix}拟境 查询战绩"
+      "empty": "没有拟境湮灭战排名，请先 {prefix}显示拟境排名，并且用 {prefix}拟境 查询战绩",
+      "closed": "当前群拟境湮灭战排名功能已关闭！"
     },
     {
       "id": "VOID_FRONT_BATTLE",
@@ -282,7 +286,8 @@
       "page": "void-front",
       "operation": "zzz.void_front",
       "words": "(临界推演|临界|推演)(群内?)?排名$",
-      "empty": "没有临界推演排名，请先 {prefix}显示推演排名，并且用 {prefix}推演 查询战绩"
+      "empty": "没有临界推演排名，请先 {prefix}显示推演排名，并且用 {prefix}推演 查询战绩",
+      "closed": "当前群临界推演排名功能已关闭！"
     },
     {
       "id": "CLIMBING_TOWER_S1",
@@ -290,7 +295,8 @@
       "page": "tower-s1",
       "operation": "zzz.tower",
       "words": "(爬塔 ?[Ss]1|拟真鏖战试炼)(群内?)?排名$",
-      "empty": "没有爬塔S1排名，请先 {prefix}显示爬塔S1排名，并且用 {prefix}爬塔 查询战绩"
+      "empty": "没有爬塔S1排名，请先 {prefix}显示爬塔S1排名，并且用 {prefix}爬塔 查询战绩",
+      "closed": "当前群爬塔S1排名功能已关闭！"
     },
     {
       "id": "CLIMBING_TOWER_S2",
@@ -298,7 +304,8 @@
       "page": "tower-s2",
       "operation": "zzz.tower",
       "words": "(爬塔 ?[Ss]2|鏖战试炼[：:]?末路)(群内?)?排名$",
-      "empty": "没有爬塔S2排名，请先 {prefix}显示爬塔S2排名，并且用 {prefix}爬塔 查询战绩"
+      "empty": "没有爬塔S2排名，请先 {prefix}显示爬塔S2排名，并且用 {prefix}爬塔 查询战绩",
+      "closed": "当前群爬塔S2排名功能已关闭！"
     },
     {
       "id": "CLIMBING_TOWER_S3",
@@ -306,7 +313,8 @@
       "page": "tower-s3",
       "operation": "zzz.tower",
       "words": "(爬塔 ?[Ss]3|鏖战试炼[：:]?荣耀)(群内?)?排名$",
-      "empty": "没有爬塔S3排名，请先 {prefix}显示爬塔S3排名，并且用 {prefix}爬塔 查询战绩"
+      "empty": "没有爬塔S3排名，请先 {prefix}显示爬塔S3排名，并且用 {prefix}爬塔 查询战绩",
+      "closed": "当前群爬塔S3排名功能已关闭！"
     },
     {
       "id": "CLIMBING_TOWER_S4",
@@ -314,7 +322,8 @@
       "page": "tower-s4",
       "operation": "zzz.tower",
       "words": "(爬塔 ?[Ss]4|鏖战试炼[：:]?狂澜)(群内?)?排名$",
-      "empty": "没有爬塔S4排名，请先 {prefix}显示爬塔S4排名，并且用 {prefix}爬塔 查询战绩"
+      "empty": "没有爬塔S4排名，请先 {prefix}显示爬塔S4排名，并且用 {prefix}爬塔 查询战绩",
+      "closed": "当前群爬塔S4排名功能已关闭！"
     }
   ],
   "pictures": {

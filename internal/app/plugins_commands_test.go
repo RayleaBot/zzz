@@ -62,6 +62,11 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"上传艾莲面板图", "panel-image-upload", []string{"艾莲"}},
 			{"查看艾莲角色图2", "panel-image-list", []string{"艾莲", "2"}},
 			{"删除艾莲面板图1,2", "panel-image-remove", []string{"艾莲", "1,2"}},
+			{"开启群内式舆排名", "group-rank-switch", nil},
+			{"关闭群危局排名", "group-rank-switch", nil},
+			{"开启深渊群排名", "query-rank-switch", nil},
+			{"重置深渊排名", "query-rank-reset", nil},
+			{"清空爬塔S2排名", "query-rank-reset", nil},
 		},
 	}
 	for game, list := range cases {

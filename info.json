@@ -44,7 +44,8 @@
     "challenge_remind_enabled": true,
     "challenge_remind_time": "每日20时",
     "challenge_abyss_level": 5,
-    "challenge_deadly_stars": 6
+    "challenge_deadly_stars": 6,
+    "group_rank_enabled": true
   },
   "commands": [
     {
@@ -509,6 +510,28 @@
       "trigger": {
         "type": "pattern",
         "pattern": "^(?:显示|展示|开启|打开|on|启用|启动|隐藏|取消显示|关闭|关掉|off|禁用|停止)(?:式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭|强袭战|拟境湮灭战|拟境|湮灭|湮灭战|临界推演|临界|推演|爬塔S1|爬塔S2|爬塔S3|爬塔 s1|爬塔 s2|爬塔 s3|爬塔s1|爬塔s2|爬塔s3)?(?:群内?)?排名$"
+      }
+    },
+    {
+      "id": "group-rank-switch",
+      "name": "开关群内排名",
+      "description": "开启或关闭所有群的挑战排名，关闭时不再保存查询的战绩",
+      "usage": "#开启群内深渊排名 / #关闭群内深渊排名",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:开启|打开|on|启用|启动|关闭|关掉|off|禁用|停止)群内?(?:式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭|强袭战|临界推演|临界|推演)排名$"
+      }
+    },
+    {
+      "id": "query-rank-reset",
+      "name": "清空排名",
+      "description": "清空本群该玩法的排名",
+      "usage": "#重置深渊排名 / #清空危局排名",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:重置|清空)(?:式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭|强袭战|拟境湮灭战|拟境|湮灭|湮灭战|临界推演|临界|推演|绝境|(?:危局|强袭|强袭战|危局强袭战)绝境|绝境(?:危局|强袭|强袭战|危局强袭战)|爬塔 ?[Ss][1-4]|拟真鏖战试炼|鏖战试炼[：:]?(?:末路|荣耀|狂澜))排名$"
       }
     },
     {
@@ -1483,6 +1506,8 @@
         "query-rank",
         "query-rank-help",
         "query-rank-switch",
+        "group-rank-switch",
+        "query-rank-reset",
         "rank"
       ]
     },

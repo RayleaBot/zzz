@@ -96,6 +96,9 @@ type Settings struct {
 	ChallengeRemindTime  string `json:"challenge_remind_time"`
 	ChallengeAbyssLevel  int    `json:"challenge_abyss_level"`
 	ChallengeDeadlyStars int    `json:"challenge_deadly_stars"`
+	// GroupRank is ZZZ-Plugin's rank.allow_group: whether the group
+	// challenge rankings answer and keep queried records.
+	GroupRank bool `json:"group_rank_enabled"`
 }
 type App struct {
 	Manifest      pluginmeta.Manifest
@@ -186,7 +189,7 @@ func New(assets Assets, directory string) (*App, error) {
 	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, rankImage: assets.Rank, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Media: &MediaStore{Directory: filepath.Join(directory, "media")}, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
-	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6}
+	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true}
 	_ = decodeObject(event.Config, &value)
 	return value
 }
@@ -336,7 +339,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.signinCommand(ctx, event, command, args)
 	case "rank":
 		return a.rankCommand(ctx, event, args)
-	case "query-rank", "query-rank-switch":
+	case "query-rank", "query-rank-switch", "query-rank-reset", "group-rank-switch":
 		return a.queryRankCommand(ctx, event, command)
 	case "panel-refresh", "panel-list":
 		return a.panelCommand(ctx, event, command, args)

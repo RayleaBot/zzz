@@ -38,7 +38,17 @@ func TestQueryRankKeepsRecordsAndMembersChoices(t *testing.T) {
 	if _, ok := a.QueryRanks.Read("zzz.note", "10000001"); ok {
 		t.Error("unranked operation recorded")
 	}
-	for word, page := range map[string]string{"危局绝境排名": "deadly-hard", "危局排名": "deadly", "深渊排名": "abyss"} {
+	// While group rankings are off, as upstream, the member still joins but
+	// no record is kept.
+	event.Config = map[string]any{"group_rank_enabled": false}
+	a.recordQueryRank(event, "zzz.challenge", result)
+	if _, ok := a.QueryRanks.Read("zzz.challenge", "10000001"); ok {
+		t.Error("record kept while group rankings are off")
+	}
+	if data, _ := a.Groups.Read(scope); data.QueryRanks["ABYSS"]["10000001"].ActorID != "10001" {
+		t.Error("member did not join while group rankings are off")
+	}
+	for word, page := range map[string]string{"危局绝境排名": "deadly-hard", "危局排名": "deadly", "深渊排名": "abyss", "重置深渊排名": "abyss"} {
 		if rank, ok := a.queryRankType(word); !ok || rank.Page != page {
 			t.Errorf("queryRankType(%s) = %+v", word, rank)
 		}

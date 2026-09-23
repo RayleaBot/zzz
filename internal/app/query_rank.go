@@ -24,8 +24,9 @@ import (
 // QueryRankType is one ranking in game.json: the ID members show or hide
 // themselves under, its name, the builder's page, the operation whose queries
 // feed it, the pattern that names it in commands, and the reply when nothing
-// ranks ({prefix} is the reply prefix). Rankings sharing an ID share the
-// choice, as upstream's 危局 and 绝境 do; the first that matches a word wins.
+// ranks ({prefix} is the reply prefix), and the reply while group rankings
+// are off. Rankings sharing an ID share the choice, as upstream's 危局 and
+// 绝境 do; the first that matches a word wins.
 type QueryRankType struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -33,6 +34,7 @@ type QueryRankType struct {
 	Operation string `json:"operation"`
 	Words     string `json:"words"`
 	Empty     string `json:"empty"`
+	Closed    string `json:"closed"`
 }
 
 // QueryRankRecord is a UID's latest record for a ranking's operation: the
@@ -109,7 +111,11 @@ func (a *App) recordQueryRank(event *rayleabot.EventContext, operation string, r
 	if len(types) == 0 || uid == "" || event.Event.Actor.ID == "" {
 		return nil
 	}
-	_ = a.QueryRanks.Save(operation, QueryRankRecord{UID: uid, ActorID: event.Event.Actor.ID, Role: result.Role, Data: result.Data, SavedAtMS: time.Now().UnixMilli()})
+	// As upstream, records are kept only while group rankings are on; the
+	// member still joins the group's rankings.
+	if settings(event).GroupRank {
+		_ = a.QueryRanks.Save(operation, QueryRankRecord{UID: uid, ActorID: event.Event.Actor.ID, Role: result.Role, Data: result.Data, SavedAtMS: time.Now().UnixMilli()})
+	}
 	scope := groupScope(event)
 	if event.Event.EventType != "message.group" || !scope.valid() {
 		return nil
@@ -149,6 +155,18 @@ func (a *App) queryRankType(word string) (QueryRankType, bool) {
 // queryRankCommand answers a query ranking in a group, or with 显示/隐藏
 // shows or hides the requester's UID in one ranking or all of them.
 func (a *App) queryRankCommand(ctx context.Context, event *rayleabot.EventContext, command string) error {
+	if command == "group-rank-switch" {
+		// ZZZ-Plugin's switch is global, whatever mode the command names.
+		enable := !queryRankHide.MatchString(event.Event.Command())
+		if _, err := event.Actions().ConfigWrite(ctx, map[string]any{"group_rank_enabled": enable}); err != nil {
+			return event.SendText(friendlyError(err))
+		}
+		state := "开启"
+		if !enable {
+			state = "关闭"
+		}
+		return event.SendText(a.Game.Name + "群内深渊排名功能已设置为: " + state)
+	}
 	scope := groupScope(event)
 	if event.Event.EventType != "message.group" || !scope.valid() {
 		return event.SendText("请在群聊中使用该命令！")
@@ -160,6 +178,19 @@ func (a *App) queryRankCommand(ctx context.Context, event *rayleabot.EventContex
 	rank, ok := a.queryRankType(word)
 	if !ok || a.queryRankImage == nil {
 		return event.Result(map[string]any{"handled": false})
+	}
+	if command == "query-rank-reset" {
+		// Upstream means to clear the group's ranking of that mode.
+		if err := a.Groups.Update(scope, func(data *GroupData) error {
+			delete(data.QueryRanks, rank.ID)
+			return nil
+		}); err != nil {
+			return event.SendText(friendlyError(err))
+		}
+		return event.SendText("清除" + rank.Name + "排名成功！")
+	}
+	if !settings(event).GroupRank {
+		return event.SendText(rank.Closed)
 	}
 	data, err := a.Groups.Read(scope)
 	if err != nil {
