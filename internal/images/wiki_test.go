@@ -3,15 +3,17 @@ package images
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/RayleaBot/plugin-zzz/internal/app"
 )
 
 func TestWikiFollowsZZZPlugin(t *testing.T) {
 	for word, want := range map[string][6]int{"艾莲技能": {12, 12, 12, 12, 12, 6}, "艾莲技能10.11 9": {10, 11, 9, 12, 12, 6}, "艾莲技能A.B.C.D.E.F": {1, 2, 3, 4, 5, 6}} {
-		if got, ok := wikiLevels(word); !ok || got != want {
-			t.Errorf("wikiLevels(%s) = %v %v", word, got, ok)
+		if got, ok := app.SkillLevels(word); !ok || got != want {
+			t.Errorf("SkillLevels(%s) = %v %v", word, got, ok)
 		}
 	}
-	if _, ok := wikiLevels("艾莲技能13"); ok {
+	if _, ok := app.SkillLevels("艾莲技能13"); ok {
 		t.Error("levels past 12 are refused, as upstream")
 	}
 	got := nanokaRichText("点按 <IconMap:Icon_Normal> 发动：\n造成<color=#98EFF0>冰属性伤害</color><b>")

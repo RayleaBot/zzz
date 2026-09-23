@@ -390,10 +390,24 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			view = PanelView(a.Game, []CharacterPanel{panel}, uid)
 		}
 	case "talent-wiki":
+		cinema := !talentLevels.MatchString(event.Event.Command())
+		if cinema && len(args) > 1 {
+			// ZZZ-Plugin's cinema rule ends with the word, so text after it is
+			// left to other plugins.
+			return event.Result(map[string]any{"handled": false})
+		}
 		name, word := talentWords(event.Event.Command(), args)
+		if _, legal := SkillLevels(word); !cinema && !legal {
+			// ZZZ-Plugin checks the levels first and leaves a message whose
+			// levels no skill has.
+			return event.Result(map[string]any{"handled": false})
+		}
 		entry, ok := a.Catalog.Resolve(name, "character", a.aliasMap(event))
+		if !ok && cinema {
+			return event.SendText("未找到" + name + "的数据")
+		}
 		if !ok {
-			return event.SendText("未找到该角色，请使用角色全名或别名。")
+			return event.SendText("暂无" + name + "角色数据")
 		}
 		view = EntryView(a.Game, entry)
 		view.Image = a.entryImage(ctx, command, word, entry)

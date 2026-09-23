@@ -161,39 +161,8 @@ func jsNumber(value float64) string { return strconv.FormatFloat(value, 'f', -1,
 var wikiSkills = [][3]string{{"basic", "普通攻击", "basic"}, {"dodge", "闪避", "dodge"}, {"assist", "支援技", "assist"}, {"special", "特殊技", "special"}, {"chain", "连携技", "chain"}}
 
 var (
-	wikiSkillWord  = regexp.MustCompile(`(?:天赋|技能)(.*)$`)
 	wikiCinemaWord = regexp.MustCompile(`意象影画|意象|影画|命座`)
-	wikiLevelSplit = regexp.MustCompile(`\.|\s+`)
 )
-
-// wikiLevels reads the levels a 技能 word may end with, split by dots or
-// spaces, a letter standing for its place in the alphabet: basic, dodge,
-// assist, special and chain attack from 1 to 12 (12 by default) and the core
-// skill from 0 to 6 (6 by default).
-func wikiLevels(word string) ([6]int, bool) {
-	levels := [6]int{12, 12, 12, 12, 12, 6}
-	match := wikiSkillWord.FindStringSubmatch(word)
-	if match == nil || strings.TrimSpace(match[1]) == "" {
-		return levels, true
-	}
-	parts := wikiLevelSplit.Split(strings.TrimSpace(match[1]), -1)
-	for index, part := range parts {
-		if index >= len(levels) {
-			break
-		}
-		level, err := strconv.Atoi(part)
-		if err != nil && part != "" {
-			level = int(strings.ToUpper(part)[0]) - 64
-		}
-		levels[index] = level
-	}
-	for index, level := range levels {
-		if index == 5 && (level < 0 || level > 6) || index < 5 && (level < 1 || level > 12) {
-			return levels, false
-		}
-	}
-	return levels, true
-}
 
 // Entry draws ZZZ-Plugin's agent pages from nanoka's data: 技能 and 天赋 as
 // skills, with every skill's descriptions and its values at the levels asked
@@ -204,7 +173,7 @@ func Entry(context app.ImageContext, page app.EntryImage) (app.Image, bool) {
 		return app.Image{}, false
 	}
 	cinema := wikiCinemaWord.MatchString(page.Word)
-	levels, ok := wikiLevels(page.Word)
+	levels, ok := app.SkillLevels(page.Word)
 	if !cinema && !ok {
 		return app.Image{}, false
 	}

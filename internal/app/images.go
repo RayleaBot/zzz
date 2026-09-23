@@ -102,7 +102,11 @@ func (a *App) entryImage(ctx context.Context, command, word string, entry Entry)
 	return &image
 }
 
-var talentLevels = regexp.MustCompile(`(?:天赋|技能)[0-9A-Za-z.]*$`)
+var (
+	talentLevels    = regexp.MustCompile(`(?:天赋|技能)[0-9A-Za-z.]*$`)
+	skillWord       = regexp.MustCompile(`(?:天赋|技能)(.*)$`)
+	skillLevelSplit = regexp.MustCompile(`\.|\s+`)
+)
 
 // talentWords splits a talent-wiki command into the agent's name and the text
 // its page reads. ZZZ-Plugin reads a 技能 or 天赋 page's levels to the end of
@@ -113,6 +117,36 @@ func talentWords(word string, args []string) (name, text string) {
 		return args[0], strings.Join(append([]string{word}, args[1:]...), " ")
 	}
 	return strings.Join(args, " "), word
+}
+
+// SkillLevels reads the levels a 技能 word may end with, as ZZZ-Plugin's
+// skills does: split by dots or spaces, a letter standing for its place in
+// the alphabet; basic, dodge, assist, special and chain attack from 1 to 12
+// (12 by default) and the core skill from 0 to 6 (6 by default). ok is false
+// when a level is out of range.
+func SkillLevels(word string) ([6]int, bool) {
+	levels := [6]int{12, 12, 12, 12, 12, 6}
+	match := skillWord.FindStringSubmatch(word)
+	if match == nil || strings.TrimSpace(match[1]) == "" {
+		return levels, true
+	}
+	parts := skillLevelSplit.Split(strings.TrimSpace(match[1]), -1)
+	for index, part := range parts {
+		if index >= len(levels) {
+			break
+		}
+		level, err := strconv.Atoi(part)
+		if err != nil && part != "" {
+			level = int(strings.ToUpper(part)[0]) - 64
+		}
+		levels[index] = level
+	}
+	for index, level := range levels {
+		if index == 5 && (level < 0 || level > 6) || index < 5 && (level < 1 || level > 12) {
+			return levels, false
+		}
+	}
+	return levels, true
 }
 
 // CalendarImage is what a 日历 image draws on: the command word as sent,
