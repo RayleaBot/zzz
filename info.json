@@ -761,6 +761,20 @@
       }
     },
     {
+      "id": "community-progress",
+      "name": "社区任务进度",
+      "description": "查看本人社区与云游戏任务的进度",
+      "usage": "#社区任务进度",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "社区任务进度",
+          "米游币任务进度"
+        ]
+      }
+    },
+    {
       "id": "cloud-game-task",
       "name": "云游戏任务",
       "description": "开启云游戏签到任务（一次或每天）",
@@ -1388,7 +1402,8 @@
         "community-status",
         "community-sign",
         "community-task",
-        "community-stop"
+        "community-stop",
+        "community-progress"
       ]
     },
     {

@@ -60,5 +60,5 @@ func (a *App) accountTaskCommand(ctx context.Context, event *rayleabot.EventCont
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	return event.SendText("任务已创建，每分钟最多执行一步；默认不重放结果不确定的写请求。可在游戏管理页查看进度，或发送“" + a.Game.Prefix + map[string]string{"community": "关闭社区任务", "cloudgame": "关闭云游戏任务"}[kind] + "”停止。")
+	return event.SendText("任务已创建，每分钟最多执行一步；默认不重放结果不确定的写请求。发送“" + a.Game.Prefix + "社区任务进度”查看进度，或发送“" + a.Game.Prefix + map[string]string{"community": "关闭社区任务", "cloudgame": "关闭云游戏任务"}[kind] + "”停止。")
 }
