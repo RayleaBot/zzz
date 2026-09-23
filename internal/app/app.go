@@ -284,6 +284,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.helpCommand(ctx, event, command, args)
 	case "gacha-export", "gacha-import":
 		return a.gachaFileCommand(ctx, event, command, args)
+	case "device-bind", "device-unbind", "device-help":
+		return a.deviceCommand(ctx, event, command)
 	case "artwork", "artwork-status":
 		return a.artworkCommand(event, command, args)
 	case "photo", "image-library", "original-image", "interaction", "poke":

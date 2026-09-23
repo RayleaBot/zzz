@@ -128,7 +128,7 @@
     {
       "id": "device-bind",
       "name": "绑定设备",
-      "description": "出现 10041 时绑定设备（由米游社账号插件在管理页加密导入）",
+      "description": "出现 10041 时绑定设备（之后私聊发送设备信息）",
       "usage": "#绑定设备",
       "permission": "everyone",
       "trigger": {
@@ -154,7 +154,7 @@
     {
       "id": "device-unbind",
       "name": "解绑设备",
-      "description": "恢复本人账号的默认设备",
+      "description": "恢复所绑定账号的默认设备",
       "usage": "#解绑设备",
       "permission": "everyone",
       "trigger": {
