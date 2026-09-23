@@ -40,7 +40,11 @@
       "绝区",
       "zzz",
       "ZZZ"
-    ]
+    ],
+    "challenge_remind_enabled": true,
+    "challenge_remind_time": "每日20时",
+    "challenge_abyss_level": 5,
+    "challenge_deadly_stars": 6
   },
   "commands": [
     {
@@ -624,7 +628,7 @@
     {
       "id": "challenge-stop",
       "name": "关闭挑战提醒",
-      "description": "停止本人的挑战完成提醒",
+      "description": "关闭本人的全部挑战提醒，写 UID 时只关闭该角色的",
       "usage": "#关闭挑战提醒 [UID]",
       "permission": "everyone",
       "trigger": {
@@ -645,6 +649,129 @@
         "names": [
           "挑战提醒状态"
         ]
+      }
+    },
+    {
+      "id": "challenge-enable",
+      "name": "开启挑战提醒",
+      "description": "按个人或全局阈值开启式舆防卫战与危局强袭战未完成提醒（30 天）",
+      "usage": "#开启挑战提醒 [UID]",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "开启挑战提醒"
+        ]
+      }
+    },
+    {
+      "id": "challenge-check",
+      "name": "查询挑战状态",
+      "description": "立即查看式舆防卫战 S 评级层数与危局强袭战星数",
+      "usage": "#查询挑战状态 [UID]",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "查询挑战状态"
+        ]
+      }
+    },
+    {
+      "id": "challenge-threshold",
+      "name": "设置提醒阈值",
+      "description": "设置本人的式舆防卫战 S 评级层数阈值（0–6，6 为第五层还需 S+）或危局强袭战星数阈值（0–9），0 为不提醒",
+      "usage": "#设置式舆阈值5 / #设置危局阈值6",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置(?P<mode>式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭战|强袭)阈值(?P<value>[0-9]*)$"
+      }
+    },
+    {
+      "id": "challenge-time",
+      "name": "设置个人提醒时间",
+      "description": "设置本人挑战提醒的每日或每周时间",
+      "usage": "#设置个人提醒时间每日20时 / #设置个人提醒时间每周六20时10分",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置个人提醒时间(?P<time>(?:每日|每周.)?[0-9]{1,2}(?::[0-9]{2}|时(?:[0-9]{1,2}分)?))?$"
+      }
+    },
+    {
+      "id": "challenge-time-status",
+      "name": "个人提醒状态",
+      "description": "查看个人提醒时间、开关与阈值",
+      "usage": "#个人提醒状态",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "个人提醒状态",
+          "个人提醒时间"
+        ]
+      }
+    },
+    {
+      "id": "challenge-time-reset",
+      "name": "重置个人提醒时间",
+      "description": "个人提醒时间恢复为全局时间",
+      "usage": "#重置个人提醒时间",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "重置个人提醒时间",
+          "删除个人提醒时间",
+          "取消个人提醒时间"
+        ]
+      }
+    },
+    {
+      "id": "challenge-global-time-status",
+      "name": "全局提醒时间",
+      "description": "查看未设置个人时间时使用的提醒时间",
+      "usage": "#全局提醒时间",
+      "permission": "everyone",
+      "trigger": {
+        "type": "exact",
+        "names": [
+          "全局提醒时间"
+        ]
+      }
+    },
+    {
+      "id": "challenge-global-switch",
+      "name": "开关全局挑战提醒",
+      "description": "开启或关闭所有人的挑战提醒",
+      "usage": "#开启全局挑战提醒 / #关闭全局挑战提醒",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?P<action>开启|启用|关闭|禁用)全局挑战提醒$"
+      }
+    },
+    {
+      "id": "challenge-global-threshold",
+      "name": "设置全局提醒阈值",
+      "description": "设置默认的式舆防卫战 S 评级层数阈值（0–6）或危局强袭战星数阈值（0–9）",
+      "usage": "#设置全局式舆阈值5 / #设置全局危局阈值6",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置全局(?P<mode>式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭战|强袭)阈值(?P<value>[0-9]*)$"
+      }
+    },
+    {
+      "id": "challenge-global-time",
+      "name": "设置全局提醒时间",
+      "description": "设置未设置个人时间的用户使用的提醒时间",
+      "usage": "#设置全局提醒时间每日20时",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置全局提醒时间(?P<time>(?:每日|每周.)?[0-9]{1,2}(?::[0-9]{2}|时(?:[0-9]{1,2}分)?))?$"
       }
     },
     {
@@ -1339,7 +1466,17 @@
         "reminder-stop",
         "challenge-remind",
         "challenge-stop",
-        "challenge-status"
+        "challenge-status",
+        "challenge-enable",
+        "challenge-check",
+        "challenge-threshold",
+        "challenge-time",
+        "challenge-time-status",
+        "challenge-time-reset",
+        "challenge-global-time-status",
+        "challenge-global-switch",
+        "challenge-global-threshold",
+        "challenge-global-time"
       ]
     },
     {

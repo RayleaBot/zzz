@@ -89,6 +89,13 @@ type Settings struct {
 	AccountProvider string            `json:"account_provider"`
 	ImageReplies    bool              `json:"image_replies"`
 	CustomAliases   map[string]string `json:"custom_aliases"`
+	// ChallengeRemind and the three after it are ZZZ-Plugin's remind.yaml:
+	// the switch of every challenge reminder, and the time and thresholds
+	// 开启挑战提醒 uses for users who set none.
+	ChallengeRemind      bool   `json:"challenge_remind_enabled"`
+	ChallengeRemindTime  string `json:"challenge_remind_time"`
+	ChallengeAbyssLevel  int    `json:"challenge_abyss_level"`
+	ChallengeDeadlyStars int    `json:"challenge_deadly_stars"`
 }
 type App struct {
 	Manifest      pluginmeta.Manifest
@@ -119,6 +126,9 @@ type App struct {
 	Groups       *GroupStore
 	QueryRanks   *QueryRankStore
 	BuildPresets *BuildPresetStore
+
+	// ChallengePrefs are users' own 挑战提醒 thresholds and times.
+	ChallengePrefs *ChallengePreferences
 
 	commands       commandSet
 	images         map[string]ImageBuilder
@@ -171,10 +181,10 @@ func New(assets Assets, directory string) (*App, error) {
 	if directory == "" {
 		return nil, fmt.Errorf("plugin data directory is required")
 	}
-	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, rankImage: assets.Rank, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Media: &MediaStore{Directory: filepath.Join(directory, "media")}, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
+	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, rankImage: assets.Rank, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Media: &MediaStore{Directory: filepath.Join(directory, "media")}, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
-	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}}
+	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6}
 	_ = decodeObject(event.Config, &value)
 	return value
 }
@@ -246,6 +256,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	}
 	if event.Event.EventType == "config.changed" {
 		a.aliases.observe(settings(event).CustomAliases)
+		// The global 挑战提醒 time and thresholds may have changed.
+		_ = a.syncChallengePairs(settings(event).challengeGlobals(), nil)
 	}
 	if event.Event.EventType != "message.private" && event.Event.EventType != "message.group" {
 		return event.Result(map[string]any{"handled": false})
@@ -306,6 +318,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.monthlyCommand(ctx, event, command, args)
 	case "challenge-remind", "challenge-stop", "challenge-status":
 		return a.challengeReminderCommand(ctx, event, command, args)
+	case "challenge-enable", "challenge-check", "challenge-threshold", "challenge-time", "challenge-time-reset", "challenge-time-status", "challenge-global-switch", "challenge-global-threshold", "challenge-global-time", "challenge-global-time-status":
+		return a.challengePairCommand(ctx, event, command, args)
 	case "gacha-background", "gacha-schedule", "gacha-progress", "gacha-stop":
 		return a.syncTaskCommand(ctx, event, command, args)
 	case "community-progress":

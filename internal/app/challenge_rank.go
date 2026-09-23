@@ -30,8 +30,8 @@ type ChallengeEntry struct {
 }
 
 func challengeKinds() []ChallengeKind {
-	defs := [][4]string{{"challenge", "防卫战", "challenge", "score rating"}, {"deadly", "危局", "deadly", "star score"}, {"deadly_hard", "危局绝境", "deadly", "score star"}, {"holo_boss", "拟境", "holo_boss", "star time flawless"}, {"void_front", "临界", "void_front", "score"}, {"tower_s1", "爬塔S1", "tower", "floor"}, {"tower_s2", "爬塔S2", "tower", "floor flawless"}, {"tower_s3", "爬塔S3", "tower", "score floor flawless"}, {"tower_s4", "爬塔S4", "tower", "score floor flawless"}}
-	labels := map[string]string{"floor": "最深层", "star": "星数", "time": "用时（秒）", "score": "得分", "rating": "评级（C=1 至 S+=5）", "flawless": "无伤/最佳次数"}
+	defs := [][4]string{{"challenge", "防卫战", "challenge", "score rating s_layers"}, {"deadly", "危局", "deadly", "star score"}, {"deadly_hard", "危局绝境", "deadly", "score star"}, {"holo_boss", "拟境", "holo_boss", "star time flawless"}, {"void_front", "临界", "void_front", "score"}, {"tower_s1", "爬塔S1", "tower", "floor"}, {"tower_s2", "爬塔S2", "tower", "floor flawless"}, {"tower_s3", "爬塔S3", "tower", "score floor flawless"}, {"tower_s4", "爬塔S4", "tower", "score floor flawless"}}
+	labels := map[string]string{"floor": "最深层", "star": "星数", "time": "用时（秒）", "score": "得分", "rating": "评级（C=1 至 S+=5）", "flawless": "无伤/最佳次数", "s_layers": "S评级层数（阈值 6 为第五层还需 S+）"}
 	out := []ChallengeKind{}
 	for _, d := range defs {
 		v := ChallengeKind{ID: d[0], Label: d[1], Operation: "zzz." + d[2]}
@@ -123,6 +123,10 @@ func challengeExtract(kind ChallengeKind, data map[string]any) (ChallengeEntry, 
 		put("score", "brief.score")
 		if v, ok := map[string]float64{"C": 1, "B": 2, "A": 3, "S": 4, "S+": 5}[asText(fieldAt(data, "brief.rating"))]; ok {
 			out.Metrics["rating"] = v
+		}
+		if data != nil {
+			layers, _ := abyssSLayers(data)
+			out.Metrics["s_layers"] = float64(layers)
 		}
 	case "deadly":
 		put("star", "total_star")

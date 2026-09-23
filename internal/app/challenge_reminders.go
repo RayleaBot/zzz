@@ -49,6 +49,11 @@ func challengeTarget(kind ChallengeKind, metric string, threshold float64, data 
 	if kind.Metrics[index].Lower {
 		met = v <= threshold
 	}
+	// As ZZZ-Plugin's 式舆阈值, 6 asks for all five floors with S and S+ on
+	// the fifth.
+	if metric == "s_layers" {
+		met = v >= min(threshold, 5) && (threshold < 6 || entry.Metrics["rating"] == 5)
+	}
 	return v, met, true, nil
 }
 func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
@@ -60,17 +65,7 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 	if action == "challenge.reminder.remove" {
 		return a.removeDelegatedTask(ctx, event, asText(input["ref"]), "challenge")
 	}
-	var q struct {
-		Selection
-		Kind      string   `json:"kind"`
-		Metric    string   `json:"metric"`
-		Threshold *float64 `json:"threshold"`
-		Hour      int      `json:"hour"`
-		Minute    int      `json:"minute"`
-		Weekday   int      `json:"weekday"`
-		Days      int      `json:"days"`
-		Confirm   bool     `json:"confirm"`
-	}
+	var q challengeRequest
 	if decodeObject(input, &q) != nil || q.Threshold == nil || !finiteRange(*q.Threshold, 0, 1e14) {
 		return nil, gameError("input_invalid", "请提供明确的挑战指标和阈值。")
 	}
@@ -93,12 +88,43 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 	if action != "challenge.reminder.create" || !q.Confirm || q.Days < 1 || q.Days > 90 || q.Hour < 0 || q.Hour > 23 || q.Minute < 0 || q.Minute > 59 || q.Weekday < 0 || q.Weekday > 7 {
 		return nil, gameError("input_invalid", "请确认挑战提醒，并设置有效时间和 1–90 天期限。")
 	}
-	account, role, err := client.Authorize(ctx, q.Selection)
+	task, err := a.createChallengeReminder(ctx, event, kind, q)
 	if err != nil {
 		return nil, err
 	}
-	hash := sha256.Sum256([]byte(client.Provider + "\x00" + q.AccountRef + "\x00" + q.RoleRef + "\x00" + kind.ID))
-	task := Reminder{Ref: "game.challenge." + a.Game.ID + "." + hex.EncodeToString(hash[:]), Selection: q.Selection, Owner: account.Owner, Role: role, Provider: client.Provider, Kind: "challenge", ChallengeKind: kind.ID, Metric: q.Metric, Threshold: *q.Threshold, Hour: q.Hour, Minute: q.Minute, Weekday: q.Weekday, NextCheckMS: nextChallengeCheck(time.Now().UnixMilli(), q.Hour, q.Minute, q.Weekday)}
+	return map[string]any{"task": task}, nil
+}
+
+// challengeRequest is a challenge reminder to create or check: the account
+// role, the kind and metric, the target, the Beijing time and the days it
+// runs. Pair marks one of the two reminders 开启挑战提醒 creates.
+type challengeRequest struct {
+	Selection
+	Kind      string   `json:"kind"`
+	Metric    string   `json:"metric"`
+	Threshold *float64 `json:"threshold"`
+	Hour      int      `json:"hour"`
+	Minute    int      `json:"minute"`
+	Weekday   int      `json:"weekday"`
+	Days      int      `json:"days"`
+	Confirm   bool     `json:"confirm"`
+	Pair      bool     `json:"-"`
+}
+
+// createChallengeReminder keeps a checked request as a task with its own
+// delegation and schedule; a failed step removes what was set up.
+func (a *App) createChallengeReminder(ctx context.Context, event *rayleabot.EventContext, kind ChallengeKind, q challengeRequest) (Reminder, error) {
+	client := a.accountClient(event)
+	account, role, err := client.Authorize(ctx, q.Selection)
+	if err != nil {
+		return Reminder{}, err
+	}
+	key := client.Provider + "\x00" + q.AccountRef + "\x00" + q.RoleRef + "\x00" + kind.ID
+	if q.Pair {
+		key += "\x00pair"
+	}
+	hash := sha256.Sum256([]byte(key))
+	task := Reminder{Ref: "game.challenge." + a.Game.ID + "." + hex.EncodeToString(hash[:]), Selection: q.Selection, Owner: account.Owner, Role: role, Provider: client.Provider, Kind: "challenge", ChallengeKind: kind.ID, Metric: q.Metric, Threshold: *q.Threshold, Pair: q.Pair, Hour: q.Hour, Minute: q.Minute, Weekday: q.Weekday, NextCheckMS: nextChallengeCheck(time.Now().UnixMilli(), q.Hour, q.Minute, q.Weekday)}
 	err = a.Reminders.edit(task.Ref, func(items *[]Reminder, i int) error {
 		if i >= 0 {
 			return gameError("reminder_exists", "此角色已有该玩法提醒，请先停止旧任务。")
@@ -110,7 +136,7 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return Reminder{}, err
 	}
 	var grant struct {
 		Delegation struct {
@@ -144,9 +170,9 @@ func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventConte
 		if task.DelegationRef != "" {
 			_ = client.call(ctx, "delegation.revoke", map[string]any{"account_ref": task.AccountRef, "delegation_ref": task.DelegationRef}, nil)
 		}
-		return nil, err
+		return Reminder{}, err
 	}
-	return map[string]any{"task": task}, nil
+	return task, nil
 }
 func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Reminder) (QueryResult, error), send func(Reminder, string) error, game Game) error {
 	kind, ok := challengeKind(task.ChallengeKind)
@@ -157,6 +183,11 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 	}
 	task.LastCheckedMS = now
 	task.NextCheckMS = nextChallengeCheck(now, task.Hour, task.Minute, task.Weekday)
+	if task.Pair && task.Threshold <= 0 {
+		// As ZZZ-Plugin, a threshold of 0 leaves that mode unchecked.
+		task.LastCode = "threshold_off"
+		return s.save(*task)
+	}
 	result, err := query(*task)
 	if err != nil {
 		task.LastCode = PublicError(err).Code
@@ -165,6 +196,24 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 			task.Enabled = false
 		case "plugin.upstream_device_required", "plugin.upstream_challenge_required":
 			task.NextCheckMS = max(task.NextCheckMS, now+int64(24*time.Hour/time.Millisecond))
+		}
+		return s.save(*task)
+	}
+	if task.Pair {
+		lines := challengePairLines(kind.ID, int(task.Threshold), result.Data, false, time.UnixMilli(now))
+		if len(lines) == 0 {
+			task.LastCode = "target_met"
+			return s.save(*task)
+		}
+		task.LastAttemptMS = now
+		task.LastCode = "notification_attempted"
+		if err = s.save(*task); err != nil {
+			return err
+		}
+		if err = send(*task, "【式舆/危局挑战提醒】\n"+strings.Join(lines, "\n")); err != nil {
+			task.LastCode = "notification_failed"
+		} else {
+			task.LastCode = "notified"
 		}
 		return s.save(*task)
 	}
@@ -233,12 +282,22 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 			lines = append(lines, task.Ref)
 		}
 		if command == "challenge-stop" {
-			return event.SendText(fmt.Sprintf("已停止 %d 项挑战提醒。", len(lines)))
+			// Without a UID it is ZZZ-Plugin's 关闭挑战提醒.
+			switch {
+			case len(args) == 1:
+				return event.SendText(fmt.Sprintf("已停止 %d 项挑战提醒。", len(lines)))
+			case len(lines) == 0:
+				return event.SendText("提醒功能尚未开启")
+			}
+			return event.SendText("提醒功能已关闭")
 		}
 		if len(lines) == 0 {
 			return event.SendText("尚未开启挑战提醒。\n" + a.challengeUsage())
 		}
 		return event.SendText(a.Game.Name + "挑战提醒\n" + strings.Join(lines, "\n") + "\n发送“" + a.Game.Prefix + "关闭挑战提醒 [UID]”停止。")
+	}
+	if !settings(event).ChallengeRemind {
+		return event.SendText(challengeRemindOff)
 	}
 	if len(args) < 3 || len(args) > 5 {
 		return event.SendText(a.challengeUsage())
@@ -282,7 +341,7 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 
 // challengeUsage lists the reminder's form with every kind and its metrics.
 func (a *App) challengeUsage() string {
-	lines := []string{"格式：" + a.Game.Prefix + "挑战提醒 玩法 指标 阈值 [时间] [UID]", "时间写作 HH:MM、每日20时30分或每周一20时，默认每日 20:00；有效 30 天。", "可选玩法与指标："}
+	lines := []string{"格式：" + a.Game.Prefix + "挑战提醒 玩法 指标 阈值 [时间] [UID]", "时间写作 HH:MM、每日20时30分或每周一20时，默认每日 20:00；有效 30 天。", "发送“" + a.Game.Prefix + "开启挑战提醒”则按个人或全局阈值同时检查式舆防卫战与危局强袭战。", "可选玩法与指标："}
 	for _, kind := range challengeKinds() {
 		names := []string{}
 		for _, metric := range kind.Metrics {
@@ -346,7 +405,7 @@ func challengeReminderLine(task Reminder) string {
 			}
 		}
 	}
-	state := map[string]string{"": "尚未检查", "target_met": "上次已达标", "notified": "上次未达标，已私聊通知", "notification_failed": "上次通知未送达", "notification_attempted": "上次通知未确认送达", "metric_unknown": "上次未读到该指标", "expired": "已到期"}[task.LastCode]
+	state := map[string]string{"": "尚未检查", "target_met": "上次已达标", "notified": "上次未达标，已私聊通知", "notification_failed": "上次通知未送达", "notification_attempted": "上次通知未确认送达", "metric_unknown": "上次未读到该指标", "expired": "已到期", "threshold_off": "阈值为 0，不提醒", "plugin.game_remind_disabled": "全局挑战提醒已关闭"}[task.LastCode]
 	if state == "" {
 		state = "上次检查失败"
 	}

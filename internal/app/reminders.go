@@ -20,6 +20,7 @@ type Reminder struct {
 	Community     CommunityPlan `json:"community,omitempty"`
 	ChallengeKind string        `json:"challenge_kind,omitempty"`
 	Metric        string        `json:"metric,omitempty"`
+	Pair          bool          `json:"pair,omitempty"` // one of the two reminders 开启挑战提醒 creates
 	Minute        int           `json:"minute,omitempty"`
 	Weekday       int           `json:"weekday,omitempty"`
 	Kind          string        `json:"kind,omitempty"`
@@ -271,6 +272,10 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 			params["write_confirmed"] = true
 		}
 		if task.Kind == "challenge" {
+			// ZZZ-Plugin's global switch stops every challenge reminder.
+			if !settings(event).ChallengeRemind {
+				return result, gameError("remind_disabled", challengeRemindOff)
+			}
 			kind, ok := challengeKind(task.ChallengeKind)
 			if !ok {
 				return result, gameError("input_invalid", "挑战任务玩法无效。")

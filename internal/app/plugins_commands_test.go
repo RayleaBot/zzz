@@ -50,6 +50,15 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"添加艾莲别名鲨鲨", "alias-set", []string{"艾莲", "鲨鲨"}},
 			{"删除别名鲨鲨", "alias-remove", []string{"鲨鲨"}},
 			{"艾莲别名", "aliases", []string{"艾莲"}},
+			{"开启挑战提醒", "challenge-enable", nil},
+			{"关闭挑战提醒", "challenge-stop", nil},
+			{"设置式舆阈值6", "challenge-threshold", []string{"式舆", "6"}},
+			{"设置防卫战阈值", "challenge-threshold", []string{"防卫战"}},
+			{"设置全局危局阈值9", "challenge-global-threshold", []string{"危局", "9"}},
+			{"设置个人提醒时间每周六20时10分", "challenge-time", []string{"每周六20时10分"}},
+			{"设置全局提醒时间每日20时", "challenge-global-time", []string{"每日20时"}},
+			{"关闭全局挑战提醒", "challenge-global-switch", []string{"关闭"}},
+			{"个人提醒时间", "challenge-time-status", nil},
 		},
 	}
 	for game, list := range cases {
