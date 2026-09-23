@@ -8,9 +8,10 @@ import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// 绑定设备, 解绑设备 and 绑定设备帮助 follow ZZZ-Plugin. The account plugin
-// keeps the device information: after 绑定设备 it takes the sender's next
-// private message that holds it, so it never passes through this plugin.
+// 绑定设备, 解绑设备, 绑定设备帮助 and 设置默认设备 follow ZZZ-Plugin. The
+// account plugin keeps the device information: after 绑定设备 or 设置默认设备
+// it takes the sender's next private message that holds it, so it never
+// passes through this plugin.
 func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, command string) error {
 	prefix := a.Game.Prefix
 	if command == "device-help" {
@@ -18,6 +19,18 @@ func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, 
 	}
 	if command == "device-bind" && event.Event.Target.Type != "private" {
 		return event.SendText("请私聊发送“" + prefix + "绑定设备”，再私聊发送设备信息。")
+	}
+	if command == "device-default" {
+		if event.Event.Target.Type != "private" {
+			return event.SendText("请私聊发送“" + prefix + "设置默认设备”，再私聊发送默认设备信息。")
+		}
+		if err := a.accountClient(event).call(ctx, "device.default", map[string]any{}, nil); err != nil {
+			if PublicError(err).Code == "plugin.account_subject_denied" {
+				return event.SendText("仅限主人设置")
+			}
+			return event.SendText(friendlyError(err))
+		}
+		return event.SendText("请发送默认设备信息，或者发送“取消”取消设置默认设备信息")
 	}
 	var answer struct {
 		UID          string `json:"uid"`

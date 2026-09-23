@@ -67,6 +67,7 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"开启深渊群排名", "query-rank-switch", nil},
 			{"重置深渊排名", "query-rank-reset", nil},
 			{"清空爬塔S2排名", "query-rank-reset", nil},
+			{"设置默认设备", "device-default", nil},
 		},
 	}
 	for game, list := range cases {
