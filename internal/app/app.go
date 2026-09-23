@@ -105,6 +105,8 @@ type App struct {
 	Gacha         *gacha.Store
 	Transfers     gacha.Transfers
 	Syncs         gacha.Syncs
+	// fileImports are the senders 导入记录 is waiting on for a file.
+	fileImports fileImports
 	// LinkJobs are gacha links whose records are still being fetched;
 	// LinkHTTP reads the official signal search (nil uses a default client).
 	LinkJobs     gachaLinkJobs
@@ -251,6 +253,9 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	if handled, err := a.gachaLinkMessage(ctx, event); handled {
 		return err
 	}
+	if handled, err := a.gachaFileMessage(ctx, event); handled {
+		return err
+	}
 	command, args, known := a.commands.resolve(event.Event.Command(), event.Event.Args())
 	if !known {
 		return event.Result(map[string]any{"handled": false})
@@ -277,6 +282,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	switch command {
 	case "help", "version":
 		return a.helpCommand(ctx, event, command, args)
+	case "gacha-export", "gacha-import":
+		return a.gachaFileCommand(ctx, event, command, args)
 	case "artwork", "artwork-status":
 		return a.artworkCommand(event, command, args)
 	case "photo", "image-library", "original-image", "interaction", "poke":

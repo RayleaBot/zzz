@@ -10,10 +10,6 @@ var panelListArtwork = [][2]string{
 	{"panel-images-refresh_title", "resources/panel/images/refresh_title.png"},
 }
 
-// uidRegions are the servers ZZZ-Plugin's getGameRoles reads from a UID's
-// leading digits; other UIDs are on 新艾利都.
-var uidRegions = map[string]string{"10": "prod_gf_us", "15": "prod_gf_eu", "13": "prod_gf_jp", "17": "prod_gf_sg"}
-
 // PanelList draws 面板列表 the way ZZZ-Plugin's panel/list does, and the
 // reply to 更新面板 as its panel/refresh: the player card with the number of
 // agents kept or updated, then every agent's square avatar, Mindscape, name
@@ -41,12 +37,7 @@ func PanelList(context app.ImageContext, list app.PanelListImage) (app.Image, bo
 		}
 		agents = append(agents, agent)
 	}
-	region := "prod_gf_cn"
-	if len(list.UID) > 8 {
-		if code := uidRegions[list.UID[:len(list.UID)-8]]; code != "" {
-			region = code
-		}
-	}
+	region := app.UIDRegion(list.UID)
 	nickname, level := list.Profiles.Nickname, list.Profiles.Level
 	if nickname == "" {
 		// Upstream's placeholder for a player it has no card for.
