@@ -145,3 +145,23 @@ func TestRefreshMonthlyKeepsOfferedMonthsNotYetFinal(t *testing.T) {
 		t.Fatalf("archive = %+v", archive.Items)
 	}
 }
+
+func TestMonthlyWordsFollowZZZPlugin(t *testing.T) {
+	china := time.FixedZone("UTC+8", 8*3600)
+	january := time.Date(2026, 1, 15, 12, 0, 0, 0, china)
+	for word, want := range map[string]int{"上月": 202512, "3月": 0, "2025年3月": 202503, "2022年3月": 0, "2025年": 0, "2025年上月": 202412, "1月": 202601} {
+		if month, valid := monthlyWord(word, january); !valid || month != want {
+			t.Errorf("%s = %d %v, want %d", word, month, valid, want)
+		}
+	}
+	// A month still to come, or with no year in the past, reads the default.
+	if month, _ := monthlyWord("2022年12月", time.Date(2026, 9, 1, 0, 0, 0, 0, china)); month != 0 {
+		t.Errorf("an old year is this year: %d", month)
+	}
+	if month, _ := monthlyWord("8月", time.Date(2026, 9, 1, 0, 0, 0, 0, china)); month != 202608 {
+		t.Errorf("8月 = %d", month)
+	}
+	if _, valid := monthlyWord("13月", january); valid {
+		t.Error("13月 accepted")
+	}
+}

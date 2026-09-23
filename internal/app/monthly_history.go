@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -367,4 +368,36 @@ func (s *ReminderStore) tickMonthly(task *Reminder, now int64, query func(Remind
 		}
 	}
 	return nil
+}
+
+var monthlyWords = regexp.MustCompile(`^(?:([0-9]{4})年)?(?:([0-9]{1,2}|上)月)?$`)
+
+// monthlyWord reads ZZZ-Plugin's month words as its getDateString does: a
+// year before 2023 or none is this year, 上月 is the month before this one,
+// and no month or one still to come reads the default month, 0. valid is
+// false for a month outside 1–12.
+func monthlyWord(word string, now time.Time) (month int, valid bool) {
+	match := monthlyWords.FindStringSubmatch(word)
+	if match == nil || match[2] == "" {
+		return 0, match != nil
+	}
+	now = now.In(time.FixedZone("UTC+8", 8*3600))
+	year, _ := strconv.Atoi(match[1])
+	if year < 2023 {
+		year = now.Year()
+	}
+	number, _ := strconv.Atoi(match[2])
+	if match[2] == "上" {
+		number = int(now.Month()) - 1
+		if number == 0 {
+			number, year = 12, year-1
+		}
+	}
+	if number < 1 || number > 12 {
+		return 0, false
+	}
+	if time.Date(year, time.Month(number), 1, 0, 0, 0, 0, now.Location()).After(now) {
+		return 0, true
+	}
+	return year*100 + number, true
 }

@@ -76,6 +76,11 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"刷新面板间隔60", "setting-panel-interval", []string{"60"}},
 			{"设置刷新抽卡间隔0", "setting-gacha-interval", []string{"0"}},
 			{"设置刷新角色间隔", "setting-role-interval", nil},
+			{"月报", "monthly", nil},
+			{"菲林上月", "monthly", []string{"上月"}},
+			{"月报2025年3月", "monthly", []string{"2025年3月"}},
+			{"菲林统计", "monthly-history", nil},
+			{"菲林预估", "estimate", nil},
 		},
 	}
 	for game, list := range cases {
