@@ -1,4 +1,4 @@
-const characterRule=(()=>{const exports={};
+var characterRule=(()=>{const exports={};
 "use strict";
 // 函数导出：
 Object.defineProperty(exports, "__esModule", { value: true });

@@ -126,14 +126,16 @@ for (const name of (await fs.readdir(path.join(root, 'src/model/damage/character
   const key = 'zzz_' + id
   const displayName = agentName(partner)
   const record = { key, game: 'zzz', id, name: displayName, element: elements[partner.ElementType] || String(partner.ElementType), weapon_type: String(partner.WeaponType), script: '', data: { partner } }
+  // Each rule is declared with var: one that fails to load stays undefined, and
+  // the runner goes on without it as upstream's loader does.
   if (code && data) {
     record.script = calcScriptName(key, displayName)
     record.data.calculation = JSON.parse(data)
-    await fs.writeFile(path.join(calc, record.script), `const characterRule=${compile(code, directory + '/calc.js')};\n`)
+    await fs.writeFile(path.join(calc, record.script), `var characterRule=${compile(code, directory + '/calc.js')};\n`)
   }
   if (score) {
     record.score_script = calcScriptName(key, displayName).replace(/^characters\//, 'scores/')
-    await fs.writeFile(path.join(calc, record.score_script), `const scoreRule=${compile(score, directory + '/score.js')};\n`)
+    await fs.writeFile(path.join(calc, record.score_script), `var scoreRule=${compile(score, directory + '/score.js')};\n`)
   }
   catalog.characters.push(record)
 }

@@ -45,6 +45,26 @@ func TestZZZOfficialShapeBuild(t *testing.T) {
 		})
 	}
 }
+
+// The management page's simulation has no upstream counterpart and fails on
+// the rule errors ZZZ-Plugin's calculation logs and skips.
+func TestBuildFailsOnRuleErrors(t *testing.T) {
+	panel := NormalizePanels(QueryResult{Data: map[string]any{"avatar_list": []any{damagePanel(t, "1011").Official}}}, Catalog{})[0]
+	for name, rule := range map[string]string{"clean": cleanRule, "faulty": faultyRule} {
+		engine := ruleGame(t, rule).Calc
+		record, err := findBuildCharacter(engine, panel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		profile, err := buildProfile(engine, panel, record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = referenceBuild(context.Background(), engine, record, profile); (err != nil) != (name == "faulty") {
+			t.Errorf("%s rule built with %v", name, err)
+		}
+	}
+}
 func TestGearTransferRejectsUnknownState(t *testing.T) {
 	if _, err := buildGearSet(CharacterPanel{}); err == nil {
 		t.Fatal("unknown gear treated as empty")

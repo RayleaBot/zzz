@@ -30,8 +30,10 @@ type Script struct {
 func Lodash() Script { return Script{Files: vendor, Path: "vendor/lodash.js"} }
 
 // Profile describes how to run one game's scripts. Files holds catalog.json and
-// the character scripts it names; Prelude runs in order before the character
-// script, then Runner defines runBuild and runScore.
+// the character scripts it names; Prelude runs in order before the character's
+// rules, then Runner defines runBuild, runScore and the other entries. A rule
+// script declares its rule with var, so one that fails to load leaves it
+// undefined.
 type Profile struct {
 	Files   fs.FS
 	Prelude []Script
@@ -169,10 +171,7 @@ func (e *Engine) Run(ctx context.Context, character Character, input map[string]
 // Score rates the equipment with the character's scoring rule, or with the
 // game's default weights when the character has none.
 func (e *Engine) Score(ctx context.Context, character Character, input map[string]any) (json.RawMessage, error) {
-	if character.ScoreScript != "" && !validScript(character.ScoreScript, "scores") {
-		return nil, errors.New("invalid scoring rule")
-	}
-	return e.call(ctx, "runScore", []string{character.ScoreScript}, character, input)
+	return e.withRules(ctx, "runScore", character, input)
 }
 
 // Damage runs the runner's runDamage with both of the character's rules, for
@@ -180,10 +179,18 @@ func (e *Engine) Score(ctx context.Context, character Character, input map[strin
 // A character without a damage rule still runs, and the runner reports that
 // it has no damage.
 func (e *Engine) Damage(ctx context.Context, character Character, input map[string]any) (json.RawMessage, error) {
+	return e.withRules(ctx, "runDamage", character, input)
+}
+
+// withRules runs entry with the character's damage rule and then its scoring
+// rule, the order in which ZZZ-Plugin imports an agent's files. Scoring loads
+// the damage rule as well, because upstream never imports the scoring rule of
+// an agent whose damage rule fails.
+func (e *Engine) withRules(ctx context.Context, entry string, character Character, input map[string]any) (json.RawMessage, error) {
 	if character.Script != "" && !validScript(character.Script, "characters") || character.ScoreScript != "" && !validScript(character.ScoreScript, "scores") {
 		return nil, errors.New("invalid calculation rule")
 	}
-	return e.call(ctx, "runDamage", []string{character.Script, character.ScoreScript}, character, input)
+	return e.call(ctx, entry, []string{character.Script, character.ScoreScript}, character, input)
 }
 
 // Showcase turns a showcase service's answer into the official format with
@@ -204,28 +211,38 @@ func (e *Engine) call(ctx context.Context, entry string, scripts []string, chara
 	if err != nil {
 		return nil, err
 	}
-	list := append(make([]*goja.Program, 0, len(e.prelude)+len(scripts)+1), e.prelude...)
-	for _, script := range scripts {
-		if script == "" {
-			continue
-		}
-		rule, err := e.character(script)
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, rule)
-	}
-	list = append(list, e.runner)
 	ctx, cancel := context.WithTimeout(ctx, 1500*time.Millisecond)
 	defer cancel()
 	vm := goja.New()
 	vm.SetMaxCallStackSize(512)
 	stop := context.AfterFunc(ctx, func() { vm.Interrupt("calculation canceled") })
 	defer stop()
-	for _, p := range list {
+	for _, p := range e.prelude {
 		if _, err = vm.RunProgram(p); err != nil {
 			return nil, errors.New("calculation initialization failed")
 		}
+	}
+	// ZZZ-Plugin logs an agent's file that fails to import and skips the rest
+	// of that agent's files, so a rule that fails to compile or run is left
+	// out with the rules after it, and the runner goes on without them.
+	for _, script := range scripts {
+		if script == "" {
+			continue
+		}
+		rule, err := e.character(script)
+		if err == nil {
+			_, err = vm.RunProgram(rule)
+		}
+		if err != nil {
+			// A load cut short by the time limit is not a broken rule.
+			if ctx.Err() != nil {
+				return nil, errors.New("calculation initialization failed")
+			}
+			break
+		}
+	}
+	if _, err = vm.RunProgram(e.runner); err != nil {
+		return nil, errors.New("calculation initialization failed")
 	}
 	_ = vm.Set("inputJSON", string(encoded))
 	_ = vm.Set("characterJSON", string(data))

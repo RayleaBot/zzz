@@ -77,7 +77,10 @@ function zzzScenario(info,input,gear,selected,promote,core,original,conditions){
  }
  return {weapon:{...selected,name:weapon?.name||''},attributes:avatar.initial_properties,results};
 }
+// The management page's simulation has no upstream counterpart: a rule error
+// the calculator would log and skip fails it rather than leave a partial result.
 function runBuild(record,_weapons,input){
+ logger.warn=logger.error=()=>{throw Error('reference.failure')};
  charData[record.id]=record.data.calculation;
  freshZZZRules(record);
  const partner=record.data.partner,info={id:Number(record.id),name_mi18n:record.name,level:input.level,rank:input.rank,element_type:Number(partner.ElementType),sub_element_type:input.sub_element??EnkaFormat.parseInfo({Id:Number(record.id)}).sub_element_type,avatar_profession:Number(partner.WeaponType)};
@@ -123,7 +126,6 @@ function runDamage(record,_weapons,input){
 // Showcase agents become official avatar entries through ZZZ-Plugin's
 // Enka2Mys, which skips an agent its data does not know with a warning.
 function runShowcase(_record,_weapons,input){
- logger.warn=()=>{};
  return {avatar_list:EnkaFormat.Enka2Mys(input.avatars)};
 }
 // Drive disc scoring follows ZZZ-Plugin: Score.getFinalWeight picks the rule,

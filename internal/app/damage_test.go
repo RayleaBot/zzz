@@ -3,10 +3,14 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"reflect"
 	"strconv"
 	"testing"
+	"testing/fstest"
+
+	"github.com/RayleaBot/plugin-zzz/internal/reference"
 )
 
 // damagePanel is a fixture agent's official entry as a kept panel.
@@ -112,5 +116,65 @@ func TestDamageKeepsToUpstreamRules(t *testing.T) {
 	official["id"] = 1341
 	if result, err = a.panelDamages(ctx, CharacterPanel{ID: "1341", Official: official}, new("")); err != nil || len(result.Damages) != 0 {
 		t.Errorf("score-only agent = %+v, %v", result, err)
+	}
+}
+
+// ruleGame is the game with 安比's damage rule replaced by a script written as
+// the bundler writes one.
+func ruleGame(t *testing.T, rule string) Game {
+	t.Helper()
+	game := testGame(t)
+	profile := calcProfile()
+	catalog, err := fs.ReadFile(profile.Files, "catalog.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := fstest.MapFS{"catalog.json": {Data: catalog}}
+	for _, record := range game.Calc.Metadata().Characters {
+		if record.ID == "1011" {
+			files[record.Script] = &fstest.MapFile{Data: []byte(rule)}
+		}
+	}
+	profile.Files = files
+	if game.Calc, err = reference.New(profile); err != nil {
+		t.Fatal(err)
+	}
+	return game
+}
+
+// cleanRule is a damage rule for 安比 with a buff the panel shows and two
+// skills; faultyRule adds a skill that throws and a buff of no known type.
+const (
+	cleanRule = `var characterRule={
+		buffs:[{name:'核心被动：测试',type:'增伤',value:0.2,showInPanel:true}],
+		skills:[{name:'普攻：落雷',type:'AX'},{name:'终结技：过载引擎',type:'RZ'}],
+	};`
+	faultyRule = `var characterRule={
+		buffs:[{name:'核心被动：测试',type:'增伤',value:0.2,showInPanel:true},{name:'核心被动：无效',type:'无效类型',value:1}],
+		skills:[{name:'普攻：落雷',type:'AX'},{name:'闪避反击：出错',type:'CF',dmg(){throw Error('synthetic')}},{name:'终结技：过载引擎',type:'RZ'}],
+	};`
+)
+
+// ZZZ-Plugin's calculation logs a skill that throws and a buff it cannot
+// register and goes on, so the panel card and 伤害 come out as they do for
+// the rule without them. A rule upstream fails to import leaves the agent
+// without damage, and 伤害 answers 暂无角色X的伤害计算.
+func TestDamageGoesOnAfterRuleErrorsAsUpstream(t *testing.T) {
+	ctx := context.Background()
+	panel := damagePanel(t, "1011")
+	clean := &App{Game: ruleGame(t, cleanRule)}
+	faulty := &App{Game: ruleGame(t, faultyRule)}
+	broken := &App{Game: ruleGame(t, `var characterRule=(()=>{throw Error('synthetic')})();`)}
+	for _, skill := range []*string{nil, new("")} {
+		want, err := clean.panelDamages(ctx, panel, skill)
+		if err != nil || len(want.Damages) != 2 {
+			t.Fatalf("clean rule = %+v, %v", want, err)
+		}
+		if got, err := faulty.panelDamages(ctx, panel, skill); err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("faulty rule = %+v, %v; want %+v", got, err, want)
+		}
+		if got, err := broken.panelDamages(ctx, panel, skill); err != nil || len(got.Damages) != 0 {
+			t.Errorf("rule failing to load = %+v, %v", got, err)
+		}
 	}
 }

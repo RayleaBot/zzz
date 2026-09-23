@@ -1,4 +1,4 @@
-const scoreRule=(()=>{const exports={};
+var scoreRule=(()=>{const exports={};
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = default_1;
