@@ -18,8 +18,7 @@ func (a *App) queryCharacterPanel(ctx context.Context, client AccountsClient, ch
 	if err != nil || id <= 0 || id > 1000000000 {
 		return CharacterPanel{}, gameError("input_invalid", "请选择有效角色。")
 	}
-	key := "id_list"
-	result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{key: []any{characterID}})
+	result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{"id_list": []any{characterID}})
 	if err != nil {
 		return CharacterPanel{}, err
 	}

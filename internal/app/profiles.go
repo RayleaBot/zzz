@@ -251,21 +251,14 @@ func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice S
 		return nil, err
 	}
 	ids := []any{}
-	for _, field := range []string{"list", "avatar_list", "avatars"} {
-		for _, raw := range asList(listed.Data[field]) {
-			item := asObject(raw)
-			if base := asObject(item["base"]); base != nil {
-				item = base
-			}
-			if id := asText(item["id"]); id != "" {
-				ids = append(ids, id)
-			}
+	for _, raw := range asList(listed.Data["avatar_list"]) {
+		if id := asText(asObject(raw)["id"]); id != "" {
+			ids = append(ids, id)
 		}
 	}
-	key := "id_list"
 	panels := []CharacterPanel{}
 	for batch := range slices.Chunk(ids, 50) {
-		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{key: batch})
+		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{"id_list": batch})
 		if err != nil {
 			return nil, err
 		}
