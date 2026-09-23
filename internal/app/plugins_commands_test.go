@@ -118,6 +118,37 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 	}
 }
 
+// ZZZ-Plugin's help writes a 技能 or 天赋 page's levels "以空格或英文句号点分隔"
+// after the word; the page reads them all whether glued or after spaces.
+func TestTalentWikiReadsLevelsAfterTheWord(t *testing.T) {
+	manifest, err := pluginmeta.Read(pluginFile(t, "info.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := newCommandSet(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		word       string
+		args       []string
+		name, text string
+	}{
+		{"艾莲技能", nil, "艾莲", "艾莲技能"},
+		{"艾莲技能12.12.10.12.12.6", nil, "艾莲", "艾莲技能12.12.10.12.12.6"},
+		{"艾莲技能", []string{"12.12.10.12.12.6"}, "艾莲", "艾莲技能 12.12.10.12.12.6"},
+		{"猫又天赋6", []string{"12", "11", "10", "9", "6"}, "猫又", "猫又天赋6 12 11 10 9 6"},
+		// Upstream reads nothing after 影画, so the words stay the name.
+		{"艾莲影画", []string{"2"}, "艾莲 2", "艾莲影画"},
+	} {
+		id, args, _ := set.resolve(tc.word, tc.args)
+		name, text := talentWords(tc.word, args)
+		if id != "talent-wiki" || name != tc.name || text != tc.text {
+			t.Errorf("%s %v read as %s %q %q, want %q %q", tc.word, tc.args, id, name, text, tc.name, tc.text)
+		}
+	}
+}
+
 // A hint or static picture answers a command by ID, so each must name one
 // the manifest has.
 func TestShippedHintsNameManifestCommands(t *testing.T) {

@@ -415,18 +415,19 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			view = PanelView(a.Game, []CharacterPanel{panel}, uid)
 		}
 	case "talent-wiki":
-		entry, ok := a.Catalog.Resolve(strings.Join(args, " "), "character", a.aliasMap(event))
+		name, word := talentWords(event.Event.Command(), args)
+		entry, ok := a.Catalog.Resolve(name, "character", a.aliasMap(event))
 		if !ok {
 			return event.SendText("未找到该角色，请使用角色全名或别名。")
 		}
 		view = EntryView(a.Game, entry)
-		view.Image = a.entryImage(ctx, event, command, entry)
+		view.Image = a.entryImage(ctx, command, word, entry)
 	case "catalog":
 		query := strings.Join(args, " ")
 		entries := a.Catalog.Search(query, "", 20, a.aliasMap(event))
 		if len(entries) == 1 {
 			view = EntryView(a.Game, entries[0])
-			view.Image = a.entryImage(ctx, event, command, entries[0])
+			view.Image = a.entryImage(ctx, command, event.Event.Command(), entries[0])
 		}
 		// Without a drawn page, the downloaded 图鉴 libraries answer as Atlas
 		// does.

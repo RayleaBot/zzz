@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,7 +81,8 @@ type GachaImage struct {
 type GachaImageBuilder func(ImageContext, GachaImage) (Image, bool)
 
 // EntryImage is what a reference page draws on: the command's ID, the
-// command word as sent and the catalog entry it names.
+// command word as sent (with the levels a 技能 page reads after it) and the
+// catalog entry it names.
 type EntryImage struct {
 	Command, Word string
 	Entry         Entry
@@ -91,15 +93,28 @@ type EntryImage struct {
 type EntryImageBuilder func(ImageContext, EntryImage) (Image, bool)
 
 // entryImage draws an entry with the plugin's reference pages, if any.
-func (a *App) entryImage(ctx context.Context, event *rayleabot.EventContext, command string, entry Entry) *Image {
+func (a *App) entryImage(ctx context.Context, command, word string, entry Entry) *Image {
 	if a.entryPage == nil {
 		return nil
 	}
-	image, ok := a.entryPage(a.imageContext(ctx), EntryImage{Command: command, Word: event.Event.Command(), Entry: entry})
+	image, ok := a.entryPage(a.imageContext(ctx), EntryImage{Command: command, Word: word, Entry: entry})
 	if !ok {
 		return nil
 	}
 	return &image
+}
+
+var talentLevels = regexp.MustCompile(`(?:天赋|技能)[0-9A-Za-z.]*$`)
+
+// talentWords splits a talent-wiki command into the agent's name and the text
+// its page reads. ZZZ-Plugin reads a 技能 or 天赋 page's levels to the end of
+// the message, split by dots or spaces, so levels after the word belong to
+// the page, as in "艾莲技能12 12 10".
+func talentWords(word string, args []string) (name, text string) {
+	if len(args) > 1 && talentLevels.MatchString(word) {
+		return args[0], strings.Join(append([]string{word}, args[1:]...), " ")
+	}
+	return strings.Join(args, " "), word
 }
 
 // CalendarImage is what a 日历 image draws on: the command word as sent,
