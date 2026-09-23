@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
@@ -257,9 +259,14 @@ func (a *App) syncTaskCommand(ctx context.Context, event *rayleabot.EventContext
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	choice, _, err := Choose(accounts, a.Game.ID, uid)
+	choice, role, err := Choose(accounts, a.Game.ID, uid)
 	if err != nil {
 		return event.SendText(friendlyError(err))
+	}
+	// ZZZ-Plugin's 刷新抽卡间隔 spaces two refreshes of a UID.
+	interval := settings(event).GachaInterval
+	if mode == "once" && !a.gachaRefreshes.allow(role.UID, time.Duration(interval)*time.Second) {
+		return event.SendText(strconv.Itoa(interval) + "秒内只能更新一次，请稍后再试")
 	}
 	if mode == "once" {
 		items, err := a.SyncTasks.List()
@@ -291,4 +298,26 @@ func (a *App) syncTaskCommand(ctx context.Context, event *rayleabot.EventContext
 }
 func syncTaskState(state string) string {
 	return map[string]string{"creating": "创建中", "waiting": "等待调度", "running": "同步中", "completed": "已完成", "paused": "已暂停", "expired": "已到期"}[state]
+}
+
+// refreshTimes remembers when each UID last refreshed, for a wait between
+// two refreshes that lasts only while the plugin runs.
+type refreshTimes struct {
+	mu sync.Mutex
+	at map[string]time.Time
+}
+
+// allow reports whether the UID may refresh now, and if so marks it.
+func (r *refreshTimes) allow(uid string, wait time.Duration) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now()
+	if last, ok := r.at[uid]; ok && wait > 0 && now.Sub(last) < wait {
+		return false
+	}
+	if r.at == nil || len(r.at) >= 4096 {
+		r.at = map[string]time.Time{}
+	}
+	r.at[uid] = now
+	return true
 }

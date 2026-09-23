@@ -21,11 +21,9 @@ import (
 // character read from the account is kept when it is viewed, and 面板,
 // 评分 and 伤害 read the kept panel first.
 
-// PanelSettings are a game's 更新面板 rules and upstream's wording for its
-// replies.
+// PanelSettings are upstream's wording for the 更新面板 replies; the wait
+// between two refreshes of a UID is the panel_refresh_interval setting.
 type PanelSettings struct {
-	// Cooldown is the wait in seconds between two refreshes of a UID.
-	Cooldown int `json:"cooldown"`
 	// Replies are upstream's replies by key: failed, unreachable, empty,
 	// none, slow, account_start, account_failed, cooldown, list_empty and
 	// missing. {prefix}, {uid}, {name}, {service}, {status}, {seconds} and
@@ -273,8 +271,9 @@ func (a *App) refreshShowcase(ctx context.Context, event *rayleabot.EventContext
 }
 
 // accountPanels reads every character of the user's own UID from the
-// account's official data, fifty characters a request.
-func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection) ([]CharacterPanel, error) {
+// account's official data, fifty characters a request, waiting pause between
+// requests as ZZZ-Plugin waits between its per-character requests.
+func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection, pause time.Duration) ([]CharacterPanel, error) {
 	listed, err := client.Execute(ctx, choice, a.Game.ID+".characters", map[string]any{})
 	if err != nil {
 		return nil, err
@@ -287,6 +286,13 @@ func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice S
 	}
 	panels := []CharacterPanel{}
 	for batch := range slices.Chunk(ids, 50) {
+		if len(panels) > 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(pause):
+			}
+		}
 		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{"id_list": batch})
 		if err != nil {
 			return nil, err
@@ -362,15 +368,16 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	if wait := time.Duration(a.Game.Panels.Cooldown)*time.Second - time.Since(time.UnixMilli(saved.RefreshedAtMS)); a.Game.Panels.Cooldown > 0 && wait > 0 {
-		return event.SendText(a.panelReply("cooldown", map[string]string{"seconds": strconv.Itoa(a.Game.Panels.Cooldown)}))
+	config := settings(event)
+	if wait := time.Duration(config.PanelInterval)*time.Second - time.Since(time.UnixMilli(saved.RefreshedAtMS)); config.PanelInterval > 0 && wait > 0 {
+		return event.SendText(a.panelReply("cooldown", map[string]string{"seconds": strconv.Itoa(config.PanelInterval)}))
 	}
 	var panels []CharacterPanel
 	service := a.showcase.Name
 	if account {
 		service = "米游社"
 		notice(ctx, event, a.panelReply("account_start", nil))
-		panels, err = a.accountPanels(ctx, a.accountClient(event), owner.Choice)
+		panels, err = a.accountPanels(ctx, a.accountClient(event), owner.Choice, time.Duration(config.PanelRoleInterval)*time.Millisecond)
 		if err != nil {
 			if text := a.panelReply("account_failed", map[string]string{"error": friendlyError(err)}); text != "" {
 				return event.SendText(text)

@@ -45,7 +45,10 @@
     "challenge_remind_time": "每日20时",
     "challenge_abyss_level": 5,
     "challenge_deadly_stars": 6,
-    "group_rank_enabled": true
+    "group_rank_enabled": true,
+    "gacha_refresh_interval": 60,
+    "panel_refresh_interval": 60,
+    "panel_role_interval": 3000
   },
   "commands": [
     {
@@ -1251,6 +1254,39 @@
       }
     },
     {
+      "id": "setting-gacha-interval",
+      "name": "刷新抽卡间隔",
+      "description": "设置同一 UID 两次更新抽卡记录的最短间隔（0–1000 秒）",
+      "usage": "#设置刷新抽卡间隔60",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:设置)?刷新抽卡间隔(?P<value>[0-9]*)$"
+      }
+    },
+    {
+      "id": "setting-panel-interval",
+      "name": "刷新面板间隔",
+      "description": "设置同一 UID 两次更新面板的最短间隔（0–1000 秒）",
+      "usage": "#设置刷新面板间隔60",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:设置)?刷新面板间隔(?P<value>[0-9]*)$"
+      }
+    },
+    {
+      "id": "setting-role-interval",
+      "name": "刷新角色间隔",
+      "description": "设置更新面板时两次读取角色详情之间的等待（100–10000 毫秒）",
+      "usage": "#设置刷新角色间隔3000",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:设置)?刷新角色间隔(?P<value>[0-9]*)$"
+      }
+    },
+    {
       "id": "select",
       "name": "绑定",
       "description": "绑定 UID：账号角色设为默认，其他 UID 无需 CK 直接绑定",
@@ -1410,12 +1446,23 @@
     {
       "id": "guide-default",
       "name": "设置默认攻略",
-      "description": "设置默认使用的攻略来源序号",
-      "usage": "#设置默认攻略<来源序号>",
+      "description": "设置默认使用的攻略来源序号，0 或 all 为前几个来源的合集",
+      "usage": "#设置默认攻略<来源序号|all>",
       "permission": "super_admin",
       "trigger": {
         "type": "pattern",
-        "pattern": "^设置默认攻略(?P<source>[0-9]+)?$"
+        "pattern": "^设置默认攻略(?P<source>[0-9]+|all)?$"
+      }
+    },
+    {
+      "id": "guide-forward-count",
+      "name": "设置所有攻略显示个数",
+      "description": "设置 all 或 0 时显示前几个攻略来源（1–7，默认 4）",
+      "usage": "#设置所有攻略显示个数4",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^设置所有攻略显示个数(?P<count>[0-9]*)$"
       }
     },
     {
@@ -1587,6 +1634,7 @@
         "guides",
         "guide-help",
         "guide-default",
+        "guide-forward-count",
         "talent-wiki",
         "catalog"
       ]
@@ -1665,6 +1713,9 @@
         "artwork-status",
         "artwork-all",
         "artwork-delete",
+        "setting-gacha-interval",
+        "setting-panel-interval",
+        "setting-role-interval",
         "alias-set",
         "alias-remove",
         "aliases"

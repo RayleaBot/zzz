@@ -19,10 +19,23 @@ type GuideSource struct {
 
 var guideSources = []GuideSource{{"1", "新艾利都快讯", []string{"2712859"}}, {"2", "清茶沐沐Kiyotya", []string{"2727116"}}, {"3", "小橙子阿", []string{"2721968"}}, {"4", "猫冬", []string{"2724610"}}, {"5", "月光中心", []string{"2722266"}}, {"6", "苦雪的清心花凉糕Suki", []string{"2723586"}}, {"7", "HoYo青枫", []string{"2716049"}}}
 
+// GuideConfig is the default source, "0" for ZZZ-Plugin's all, and how many
+// sources all shows.
 type GuideConfig struct {
-	Revision uint64 `json:"revision"`
-	Default  string `json:"default_source"`
+	Revision     uint64 `json:"revision"`
+	Default      string `json:"default_source"`
+	ForwardCount int    `json:"forward_count,omitempty"`
 }
+
+// forwardCount is how many sources 攻略all shows, upstream's
+// max_forward_guides.
+func (c GuideConfig) forwardCount() int {
+	if c.ForwardCount < 1 || c.ForwardCount > len(guideSources) {
+		return 4
+	}
+	return c.ForwardCount
+}
+
 type GuideSettings struct {
 	mu   sync.Mutex
 	Path string
@@ -36,14 +49,21 @@ func (s *GuideSettings) Manage(action string, input map[string]any) (map[string]
 		return nil, err
 	}
 	if action == "guides.configure" {
-		var q GuideConfig
-		if decodeObject(input, &q) != nil || !slices.ContainsFunc(guideSources, func(s GuideSource) bool { return s.ID == q.Default }) {
+		var q struct {
+			Revision     uint64 `json:"revision"`
+			Default      string `json:"default_source"`
+			ForwardCount *int   `json:"forward_count"`
+		}
+		if decodeObject(input, &q) != nil || q.Default != "0" && !slices.ContainsFunc(guideSources, func(s GuideSource) bool { return s.ID == q.Default }) || q.ForwardCount != nil && (*q.ForwardCount < 1 || *q.ForwardCount > len(guideSources)) {
 			return nil, gameError("input_invalid", "攻略来源无效。")
 		}
 		if q.Revision != v.Revision {
 			return nil, gameError("settings_changed", "攻略设置已变化，请刷新。")
 		}
 		v.Default = q.Default
+		if q.ForwardCount != nil {
+			v.ForwardCount = *q.ForwardCount
+		}
 		v.Revision++
 		if err := localdata.Write(s.Path, v); err != nil {
 			return nil, err

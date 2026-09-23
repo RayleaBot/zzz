@@ -114,7 +114,6 @@
     }
   ],
   "panels": {
-    "cooldown": 300,
     "replies": {
       "cooldown": "{seconds}秒内只能更新一次，请稍后再试",
       "failed": "Enka服务调用失败，状态码：{status}",

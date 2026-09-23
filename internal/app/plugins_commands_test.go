@@ -70,6 +70,12 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"重置深渊排名", "query-rank-reset", nil},
 			{"清空爬塔S2排名", "query-rank-reset", nil},
 			{"设置默认设备", "device-default", nil},
+			{"设置默认攻略all", "guide-default", []string{"all"}},
+			{"设置所有攻略显示个数5", "guide-forward-count", []string{"5"}},
+			{"艾莲攻略all", "guides", []string{"艾莲"}},
+			{"刷新面板间隔60", "setting-panel-interval", []string{"60"}},
+			{"设置刷新抽卡间隔0", "setting-gacha-interval", []string{"0"}},
+			{"设置刷新角色间隔", "setting-role-interval", nil},
 		},
 	}
 	for game, list := range cases {

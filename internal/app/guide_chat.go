@@ -1,7 +1,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"net/url"
@@ -126,19 +125,49 @@ func (a *App) guideCommand(ctx context.Context, event *rayleabot.EventContext, c
 	switch command {
 	case "guide-help":
 		sample := guideSamples
-		lines := []string{a.Game.Name + "攻略帮助:", a.Game.Prefix + sample + "攻略[来源序号]", a.Game.Prefix + "更新" + sample + "攻略[来源序号]", a.Game.Prefix + "设置默认攻略[来源序号]", "示例: " + a.Game.Prefix + sample + "攻略2", "", "攻略来源:"}
+		lines := []string{a.Game.Name + "攻略帮助:", a.Game.Prefix + sample + "攻略[来源序号]", a.Game.Prefix + "更新" + sample + "攻略[来源序号]", a.Game.Prefix + "设置默认攻略[来源序号]", a.Game.Prefix + "设置所有攻略显示个数[个数]", "示例: " + a.Game.Prefix + sample + "攻略2", "", "攻略来源:"}
 		for _, source := range sources {
 			lines = append(lines, source.ID+"——"+source.Name)
 		}
 		return event.SendText(strings.Join(lines, "\n"))
 	case "guide-default":
-		if len(args) == 0 {
-			return event.SendText("默认攻略设置方式为: \n" + a.Game.Prefix + "设置默认攻略[1-" + strconv.Itoa(len(sources)) + "]")
+		// As upstream, all or 0 is the collection of the first sources.
+		arg := ""
+		if len(args) > 0 {
+			arg = args[0]
 		}
-		if _, err := a.GuideSettings.Manage("guides.configure", map[string]any{"revision": settings.Revision, "default_source": args[0]}); err != nil {
+		if arg == "all" {
+			arg = "0"
+		}
+		index, err := strconv.Atoi(arg)
+		if err != nil || index < 0 || index > len(sources) {
+			return event.SendText(strings.Join([]string{a.Game.Name + "默认攻略设置方式为:", a.Game.Prefix + "设置默认攻略[0123...]", "请增加数字0-" + strconv.Itoa(len(sources)) + "其中一个，或者增加 all 以显示所有攻略", "攻略来源请输入 " + a.Game.Prefix + "攻略帮助 查看"}, "\n"))
+		}
+		name := "all"
+		if index > 0 {
+			name = sources[index-1].Name
+		}
+		if _, err := a.GuideSettings.Manage("guides.configure", map[string]any{"revision": settings.Revision, "default_source": strconv.Itoa(index)}); err != nil {
 			return event.SendText(friendlyError(err))
 		}
-		return event.SendText("默认攻略已设置为: " + args[0])
+		return event.SendText(a.Game.Name + "默认攻略已设置为: " + strconv.Itoa(index) + " (" + name + ")")
+	case "guide-forward-count":
+		count := -1
+		if len(args) > 0 {
+			if parsed, err := strconv.Atoi(args[0]); err == nil {
+				count = parsed
+			}
+		}
+		switch {
+		case count < 1:
+			return event.SendText("所有攻略显示个数不能小于1")
+		case count > len(sources):
+			return event.SendText("所有攻略显示个数不能大于" + strconv.Itoa(len(sources)))
+		}
+		if _, err := a.GuideSettings.Manage("guides.configure", map[string]any{"revision": settings.Revision, "default_source": settings.Default, "forward_count": count}); err != nil {
+			return event.SendText(friendlyError(err))
+		}
+		return event.SendText(a.Game.Name + "所有攻略显示个数已设置为: " + strconv.Itoa(count))
 	}
 	match := guideWord.FindStringSubmatch(strings.TrimSpace(event.Event.Command()))
 	if match == nil {
@@ -151,12 +180,15 @@ func (a *App) guideCommand(ctx context.Context, event *rayleabot.EventContext, c
 	}
 	name := entry.Name
 	picked := []int{}
+	if group == "" {
+		group = settings.Default
+	}
 	if group == "all" || group == "0" {
-		for i := range min(len(sources), 4) {
+		for i := range min(len(sources), settings.forwardCount()) {
 			picked = append(picked, i)
 		}
 	} else {
-		index, _ := strconv.Atoi(cmp.Or(group, settings.Default))
+		index, _ := strconv.Atoi(group)
 		if index < 1 || index > len(sources) {
 			return event.SendText("超过攻略数量（" + strconv.Itoa(len(sources)) + "）")
 		}
