@@ -295,7 +295,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return event.SendText(friendlyError(readErr))
 		}
 		applyGroupConfig(event, config)
-		if config.Enabled != nil && !*config.Enabled && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "challenge-status" && command != "community-stop" && command != "community-progress" && command != "cloud-game-stop" && command != "reminder-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
+		if config.Enabled != nil && !*config.Enabled && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "challenge-status" && command != "community-stop" && command != "community-progress" && command != "cloud-game-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
 			return event.Result(map[string]any{"handled": false})
 		}
 	}
@@ -386,8 +386,6 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			break
 		}
 		view = calendarView(a.Game, result)
-	case "reminder", "reminder-stop":
-		return a.chatReminder(ctx, event, command, args)
 	case "build":
 		if len(args) < 1 || len(args) > 2 {
 			return event.SendText("使用“" + prefix + "角色名伤害 [UID]”（如“" + prefix + "星见雅伤害”）查看固定参考情境下的角色伤害。")

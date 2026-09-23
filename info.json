@@ -415,34 +415,6 @@
       }
     },
     {
-      "id": "reminder",
-      "name": "开启体力推送",
-      "description": "电量达到设定比例时提醒",
-      "usage": "#开启体力推送 [百分比] [UID]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "开启体力推送",
-          "体力提醒"
-        ]
-      }
-    },
-    {
-      "id": "reminder-stop",
-      "name": "关闭体力推送",
-      "description": "关闭体力提醒",
-      "usage": "#关闭体力推送 [UID]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "关闭体力推送",
-          "关闭提醒"
-        ]
-      }
-    },
-    {
       "id": "group-settings",
       "name": "群设置",
       "description": "调整当前群的游戏设置",
@@ -1562,8 +1534,6 @@
       "id": "remind",
       "title": "体力与挑战提醒",
       "commands": [
-        "reminder",
-        "reminder-stop",
         "challenge-remind",
         "challenge-stop",
         "challenge-status",

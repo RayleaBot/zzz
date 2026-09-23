@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strconv"
-	"strings"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
@@ -342,57 +340,4 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 		return event.Fail(failure.Code, failure.Message)
 	}
 	return event.Result(map[string]any{"checked": true})
-}
-
-func (a *App) chatReminder(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	uid := ""
-	threshold := 80.0
-	create := command == "reminder"
-	if create {
-		if len(args) < 1 || len(args) > 2 {
-			return event.SendText("使用“" + a.Game.Prefix + "体力提醒 百分数 [UID]”开启 30 天私聊提醒，例如 80。")
-		}
-		v, err := strconv.ParseFloat(strings.TrimSuffix(args[0], "%"), 64)
-		if err != nil || !finiteRange(v, 1, 100) {
-			return event.SendText("阈值应为 1–100 的百分数。")
-		}
-		threshold = v
-		if len(args) == 2 {
-			uid = args[1]
-		}
-	} else if len(args) > 1 {
-		return event.SendText("使用“" + a.Game.Prefix + "关闭提醒 [UID]”。")
-	} else if len(args) == 1 {
-		uid = args[0]
-	}
-	if !create {
-		items, err := a.Reminders.List()
-		if err != nil {
-			return event.SendText(friendlyError(err))
-		}
-		owner := Subject{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, BotID: event.Bot.ID, ActorID: event.Event.Actor.ID}
-		count := 0
-		for _, task := range items {
-			if task.Kind == "" && task.Owner == owner && (uid == "" || uid == task.Role.UID) {
-				if _, err = a.manageReminder(ctx, event, "reminder.remove", map[string]any{"ref": task.Ref}); err != nil {
-					return event.SendText(friendlyError(err))
-				}
-				count++
-			}
-		}
-		return event.SendText(fmt.Sprintf("已关闭 %d 个%s体力提醒。", count, a.Game.Name))
-	}
-	listed, err := a.accountClient(event).List(ctx, 0)
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	choice, _, err := Choose(listed, a.Game.ID, uid)
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	_, err = a.manageReminder(ctx, event, "reminder.create", map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "threshold": threshold, "days": 30})
-	if err != nil {
-		return event.SendText(friendlyError(err))
-	}
-	return event.SendText(fmt.Sprintf("已开启%s体力提醒：达到 %.0f%% 后私聊通知，有效 30 天，每十分钟检查一次。发送“%s关闭提醒”停止。", a.Game.Name, threshold, a.Game.Prefix))
 }
