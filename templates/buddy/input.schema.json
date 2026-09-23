@@ -1,9 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "required": ["uid", "buddies"],
+  "required": ["uid", "list8", "buddies"],
   "properties": {
     "uid": { "type": "string" },
+    "list8": { "type": "boolean" },
     "buddies": {
       "type": "array",
       "items": {

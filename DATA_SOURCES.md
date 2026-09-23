@@ -42,6 +42,6 @@
 
 `templates/uid-list/` 按 Miao-Yunzai 原神插件的 html/user/uid-list 改写（GPL-3.0，见 `LICENSES/Miao-Yunzai-GPL-3.0.txt`），页面框架与样式沿用 miao-plugin 的 common/layout/elem 与 common/common.css（MIT，见 `LICENSES/miao-plugin-MIT.txt`），同 miao 的 1.4 倍缩放；图片地址改为宿主渲染资源。与上游一样，每个 UID 都使用 miao 的通用头像与原神插件的绝区零横幅；为此新增两个素材来源：只取 `resources/common/` 的“喵喵插件图片”，以及只取 `resources/ZZZero/img/other/`、邦布列表用到的 `resources/ZZZero/img/buddy/`、`resources/img/icon/`、公告页用到的 `resources/html/mysNews/`、`resources/html/mysNews-list/` 与 `resources/font/tttgbnumber.ttf` 的“原神插件图片”。
 
-`templates/buddy/` 按 Yunzai 原神插件的 ZZZero/html/buddy 改写（GPL-3.0，见 `LICENSES/Miao-Yunzai-GPL-3.0.txt`），同上游的 1.5 倍缩放；邦布图片、稀有度条与数字字体取自“原神插件图片”素材来源，上游尚无图片的邦布改用 ZZZeroUID 镜像的方形头像。宿主以固定宽度出图，卡片铺满页面，上游八个及以下邦布时的窄版页面不保留。
+`templates/buddy/` 按 Yunzai 原神插件的 ZZZero/html/buddy 改写（GPL-3.0，见 `LICENSES/Miao-Yunzai-GPL-3.0.txt`），同上游的 1.5 倍缩放；邦布图片、稀有度条与数字字体取自“原神插件图片”素材来源，上游尚无图片的邦布改用 ZZZeroUID 镜像的方形头像。八个及以下邦布时与上游一样使用窄版页面，模板以 `fit_width` 按卡片宽度出图。
 
 `templates/news/` 与 `templates/news-list/` 按 Yunzai 原神插件的 html/mysNews 与 html/mysNews-list 改写（GPL-3.0，见 `LICENSES/Miao-Yunzai-GPL-3.0.txt`），公告、资讯、活动、米游社搜索、帖子与预估按其 mysNews 的规则出图；详情页的样式去掉了米游社编辑器、加载、提示与回复控件等页面用不到的规则。米游社正文是任意 HTML，而渲染器可以联网，因此正文按页面样式用到的标签、类名与颜色字号等样式重建，图片只经渲染资源引用（官方图片缓存），链接与脚本不保留。与上游不同之处：正文中没有地址的超链图片按帖子的 structured_content 补上（上游显示为空白）；纯图片帖显示全部图片（上游只显示最后一张）；上游按 4000 像素分段截图，这里出一整张长图；二维码由 go-qrcode 生成（MIT，见 `LICENSES/go-qrcode-MIT.txt`），指向帖子所在游戏的米游社地址（上游固定为原神路径）。页面的米游社标志、图标字体、列表页背景与数字字体取自“原神插件图片”素材来源。

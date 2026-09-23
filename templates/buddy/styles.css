@@ -1,26 +1,30 @@
 @property --render-resource { syntax: "*"; inherits: false; }
 /* Converted from the Yunzai 原神插件's ZZZero/html/buddy/buddy.css; the page
-   scales the body by 1.5. The host draws the page at a fixed width, so the
-   card spans the page instead of shrinking to its items, and the narrower
-   page upstream uses for eight Bangboo or fewer is left out. The number font
-   and the rarity strips are render resources. */
+   scales the body by 1.5 and narrows for eight Bangboo or fewer. The body
+   fits its floating card, and the template's fit_width takes the image width
+   from it, as upstream shoots the card alone. The number font and the rarity
+   strips are render resources. */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   user-select: none;
 }
-html {
-  background-color: #ececec;
-}
 body {
   font-size: 12px;
   color: #1e1f20;
-  width: 580px;
+  width: fit-content;
+  max-width: 580px;
   font-family: PingFangSC-Medium, "PingFang SC", sans-serif;
   zoom: 1.5;
 }
+.list8 {
+  max-width: 342px;
+}
 .container {
+  float: left;
+  min-width: 210px;
+  padding-right: 15px;
   padding: 10px;
   background-color: #ececec;
 }

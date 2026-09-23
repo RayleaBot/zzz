@@ -17,7 +17,7 @@ var buddyArtwork = [][3]string{
 
 // Buddies draws 邦布 the way the Yunzai 原神插件's ZZZero/html/buddy does:
 // the UID, then each owned Bangboo with its rarity strip, star badge above
-// one, level and name. Pictures are upstream's by name; a Bangboo newer than
+// one, level and name, on the narrower page for eight or fewer. Pictures are upstream's by name; a Bangboo newer than
 // those takes ZZZ-Plugin's square portrait instead of a blank.
 func Buddies(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
 	list, _ := result.Data["list"].([]any)
@@ -46,5 +46,5 @@ func Buddies(context app.ImageContext, result app.QueryResult) (app.Image, bool)
 		}
 		buddies = append(buddies, map[string]any{"name": name, "rarity": app.Text(buddy["rarity"]), "level": app.Text(buddy["level"]), "star": star, "image": image})
 	}
-	return app.Image{Template: "buddy", Data: map[string]any{"uid": result.Role.UID, "buddies": buddies}, Resources: resources.List}, true
+	return app.Image{Template: "buddy", Data: map[string]any{"uid": result.Role.UID, "list8": len(list) <= 8, "buddies": buddies}, Resources: resources.List}, true
 }

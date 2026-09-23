@@ -7,5 +7,6 @@
   "stylesheet": "styles.css",
   "input_schema": "input.schema.json",
   "width": 870,
-  "height": 600
+  "height": 600,
+  "fit_width": true
 }
