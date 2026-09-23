@@ -126,21 +126,6 @@ type CalendarImage struct {
 // false to keep the announcement list in text.
 type CalendarImageBuilder func(ImageContext, CalendarImage) (Image, bool)
 
-// RankImage is what a 排名 image draws on: the command word, the mode it
-// ranks by ("dmg" or "mark"), the character (zero when the ranking lists every
-// character's best), the entries in rank order and when the group's ranking
-// started.
-type RankImage struct {
-	Word, Mode string
-	Character  Entry
-	Entries    []RankEntry
-	SinceMS    int64
-}
-
-// RankImageBuilder draws a group ranking with the plugin's template, or
-// returns false to keep the ranking in text.
-type RankImageBuilder func(ImageContext, RankImage) (Image, bool)
-
 // MonthlyStats is what a 统计 image draws on: the role, the command word as
 // sent, which may name a year, and every saved month, oldest first.
 type MonthlyStats struct {

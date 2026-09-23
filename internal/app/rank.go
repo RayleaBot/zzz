@@ -28,45 +28,27 @@ type RankEntry struct {
 	Grade       string          `json:"grade,omitempty"`
 	Panel       *CharacterPanel `json:"panel,omitempty"`
 	UpdatedAtMS int64           `json:"updated_at_ms"`
-	// Avatar is the member's chat avatar for rank images; it is not stored.
-	Avatar string `json:"-"`
 }
 
 // rankLength is miao's default rankNumber, the rows a character's ranking
 // shows.
 const rankLength = 15
 
-// rankValue is what an entry ranks by in a mode. miao's score detail no
-// longer carries crit or weighted-roll counts, so upstream's 双爆 and 词条
-// rankings stay empty; they do here too.
-func rankValue(entry RankEntry, mode string) (float64, bool) {
-	if mode == "mark" {
-		return entry.Score, entry.Score > 0
-	}
-	return 0, false
-}
-
-// rankEntries picks a ranking: a character's top rows by the mode's value, or
-// with no character each character's best entry, by UID, rarity and ID as
-// miao lists them.
-func (a *App) rankEntries(all []RankEntry, id, mode string) []RankEntry {
+// rankEntries picks a ranking of the entries with an equipment score: a
+// character's top rows by the score, or with no character each character's
+// best entry, by UID, rarity and ID as miao lists them.
+func (a *App) rankEntries(all []RankEntry, id string) []RankEntry {
 	best := map[string]RankEntry{}
 	for _, entry := range all {
-		if entry.Panel == nil || id != "" && entry.CharacterID != id {
-			continue
-		}
-		value, ok := rankValue(entry, mode)
-		if !ok {
+		if entry.Panel == nil || entry.Score <= 0 || id != "" && entry.CharacterID != id {
 			continue
 		}
 		key := entry.CharacterID
 		if id != "" {
 			key = entry.UID
 		}
-		if current, seen := best[key]; seen {
-			if old, _ := rankValue(current, mode); old >= value {
-				continue
-			}
+		if current, seen := best[key]; seen && current.Score >= entry.Score {
+			continue
 		}
 		best[key] = entry
 	}
@@ -76,9 +58,7 @@ func (a *App) rankEntries(all []RankEntry, id, mode string) []RankEntry {
 	}
 	if id != "" {
 		slices.SortFunc(out, func(x, y RankEntry) int {
-			a, _ := rankValue(x, mode)
-			b, _ := rankValue(y, mode)
-			return cmp.Or(cmp.Compare(b, a), strings.Compare(x.UID, y.UID))
+			return cmp.Or(cmp.Compare(y.Score, x.Score), strings.Compare(x.UID, y.UID))
 		})
 		return out[:min(rankLength, len(out))]
 	}
@@ -168,34 +148,18 @@ func (a *App) rankCommand(ctx context.Context, event *rayleabot.EventContext, ar
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	mode := "mark"
-	entries := a.rankEntries(data.Rank, character.ID, mode)
+	entries := a.rankEntries(data.Rank, character.ID)
 	if len(entries) == 0 {
 		return event.SendText("暂无排名：请通过【" + a.Game.Prefix + "面板】查看角色面板以更新排名信息...")
 	}
-	view := rankView(a.Game, character, mode, entries)
-	if a.rankImage != nil {
-		for index := range entries {
-			// The host shows OneBot members' avatars from QQ's avatar service.
-			if scope.Protocol == "onebot11" {
-				entries[index].Avatar = "https://q1.qlogo.cn/g?b=qq&nk=" + entries[index].ActorID + "&s=100"
-			}
-		}
-		if drawn, ok := a.rankImage(a.imageContext(ctx), RankImage{Word: event.Event.Command(), Mode: mode, Character: character, Entries: entries, SinceMS: data.RankSinceMS}); ok {
-			view.Image = &drawn
-		}
-	}
-	return a.sendView(ctx, event, view)
+	return a.sendView(ctx, event, rankView(a.Game, character, entries))
 }
 
-// rankView is the ranking in text, for replies without images.
-func rankView(game Game, character Entry, mode string, entries []RankEntry) View {
-	title := "最强排行"
-	if mode == "mark" {
-		title = "最高分排行"
-	}
+// rankView is the 排行 reply in text.
+func rankView(game Game, character Entry, entries []RankEntry) View {
+	title := "最高分排行"
 	if character.ID != "" {
-		title = character.Name + map[string]string{"mark": "评分"}[mode] + "排行"
+		title = character.Name + "评分排行"
 	}
 	v := View{Title: game.Name + " · " + title, Rows: []Row{}, Note: "本群成员在群内查看过的面板。"}
 	for index, entry := range entries {
