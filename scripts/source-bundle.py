@@ -10,7 +10,10 @@ import zipfile
 
 plugin = pathlib.Path(__file__).resolve().parents[1]
 core = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else plugin.parent.parent / "RayleaBot"
-ignored_dirs = {".git", ".rayleabot", "node_modules", "dist", "data", "__pycache__", ".tmp", "logs", ".cache"}
+ignored_dirs = {".git", ".rayleabot", "node_modules", "dist", "__pycache__", ".tmp", "logs", ".cache"}
+# Runtime data sits at the top of the tree; internal/assets/data is embedded
+# source and stays.
+ignored_top = {"data"}
 allowed_suffixes = {".go", ".mod", ".sum", ".work", ".json", ".md", ".txt", ".ts", ".js", ".mjs", ".vue", ".css", ".html", ".yaml", ".yml", ".py"}
 allowed_names = {"LICENSE", ".gitignore", ".npmrc"}
 blocked_names = {"master-key.json", "go.work.sum", ".env", "credentials.json", "cookies.json"}
@@ -19,7 +22,7 @@ blocked_names = {"master-key.json", "go.work.sum", ".env", "credentials.json", "
 def add_tree(archive, source, destination):
     for file in sorted(source.rglob("*")):
         relative = file.relative_to(source)
-        if any(part in ignored_dirs for part in relative.parts) or not file.is_file() or file.is_symlink():
+        if relative.parts[0] in ignored_top or any(part in ignored_dirs for part in relative.parts) or not file.is_file() or file.is_symlink():
             continue
         if file.name in blocked_names or file.name.startswith(".env."):
             continue
