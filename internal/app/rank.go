@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
@@ -19,15 +18,11 @@ import (
 // RankEntry is one UID's character in a group's ranking: the panel viewed last
 // in the group with its equipment score and grade.
 type RankEntry struct {
-	ActorID     string          `json:"actor_id"`
-	Nickname    string          `json:"nickname"`
-	UID         string          `json:"uid"`
-	CharacterID string          `json:"character_id"`
-	Name        string          `json:"name"`
-	Score       float64         `json:"score"`
-	Grade       string          `json:"grade,omitempty"`
-	Panel       *CharacterPanel `json:"panel,omitempty"`
-	UpdatedAtMS int64           `json:"updated_at_ms"`
+	Nickname    string  `json:"nickname"`
+	UID         string  `json:"uid"`
+	CharacterID string  `json:"character_id"`
+	Name        string  `json:"name"`
+	Score       float64 `json:"score"`
 }
 
 // rankLength is miao's default rankNumber, the rows a character's ranking
@@ -40,7 +35,7 @@ const rankLength = 15
 func (a *App) rankEntries(all []RankEntry, id string) []RankEntry {
 	best := map[string]RankEntry{}
 	for _, entry := range all {
-		if entry.Panel == nil || entry.Score <= 0 || id != "" && entry.CharacterID != id {
+		if entry.Score <= 0 || id != "" && entry.CharacterID != id {
 			continue
 		}
 		key := entry.CharacterID
@@ -72,47 +67,26 @@ func (a *App) rankEntries(all []RankEntry, id string) []RankEntry {
 	return out
 }
 
-// recordRank puts a panel viewed in a group into that group's ranking, with
-// its equipment score when it could be calculated.
+// recordRank puts a panel viewed in a group into that group's ranking when
+// its equipment score could be calculated.
 func (a *App) recordRank(event *rayleabot.EventContext, uid string, panel CharacterPanel) {
 	scope := groupScope(event)
-	if event.Event.EventType != "message.group" || !scope.valid() || event.Event.Actor.ID == "" || uid == "" || panel.ID == "" {
+	if event.Event.EventType != "message.group" || !scope.valid() || event.Event.Actor.ID == "" || uid == "" || panel.ID == "" || panel.TotalScore == nil || panel.ScoredEquipment == 0 || *panel.TotalScore == 0 {
 		return
 	}
 	name := event.Event.Actor.Nickname
 	if name == "" {
 		name = event.Event.Actor.ID
 	}
-	entry := RankEntry{ActorID: event.Event.Actor.ID, Nickname: name, UID: uid, CharacterID: panel.ID, Name: panel.Name, UpdatedAtMS: time.Now().UnixMilli()}
-	a.rankScores(&entry, panel)
-	if entry.Score == 0 {
-		return
-	}
 	// A failed record must not cost the user the panel reply.
-	_ = a.Groups.Submit(scope, entry)
-}
-
-// rankScores fills an entry's panel, score and grade from a scored panel.
-func (a *App) rankScores(entry *RankEntry, panel CharacterPanel) {
-	stored := panel
-	entry.Panel = &stored
-	entry.Score, entry.Grade = 0, ""
-	if panel.TotalScore != nil && panel.ScoredEquipment > 0 {
-		entry.Score = *panel.TotalScore
-		if panel.ScoreDetail != nil {
-			entry.Grade = panel.ScoreDetail.Grade
-		}
-	}
+	_ = a.Groups.Submit(scope, RankEntry{Nickname: name, UID: uid, CharacterID: panel.ID, Name: panel.Name, Score: *panel.TotalScore})
 }
 
 // Submit keeps one entry per UID and character, replacing the older one.
 func (s *GroupStore) Submit(scope GroupScope, entry RankEntry) error {
 	return s.Update(scope, func(data *GroupData) error {
-		if entry.UID == "" || entry.CharacterID == "" || entry.Panel == nil || !finiteRange(entry.Score, 0, 100000) {
+		if entry.UID == "" || entry.CharacterID == "" || !finiteRange(entry.Score, 0, 100000) {
 			return gameError("input_invalid", "排名数据不完整。")
-		}
-		if data.RankSinceMS == 0 {
-			data.RankSinceMS = entry.UpdatedAtMS
 		}
 		index := slices.IndexFunc(data.Rank, func(r RankEntry) bool { return r.UID == entry.UID && r.CharacterID == entry.CharacterID })
 		if index >= 0 {

@@ -43,8 +43,6 @@ type GroupData struct {
 	Scope    GroupScope  `json:"scope"`
 	Config   GroupConfig `json:"config"`
 	Rank     []RankEntry `json:"rank"`
-	// RankSinceMS is when the ranking started.
-	RankSinceMS int64 `json:"rank_since_ms,omitempty"`
 	// QueryRanks are the UIDs in each query ranking, by ranking ID and UID.
 	QueryRanks map[string]map[string]QueryRankMember `json:"query_ranks,omitempty"`
 }
