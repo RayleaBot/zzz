@@ -275,7 +275,7 @@ func (a *App) fullPanelView(ctx context.Context, event *rayleabot.EventContext, 
 		missing = append(missing, "评分："+friendlyError(err))
 	}
 	view := PanelView(a.Game, []CharacterPanel{panel}, uid)
-	image := PanelImage{Panel: panel, UID: uid}
+	image := PanelImage{Panel: panel, UID: uid, Portrait: a.PanelImages.Random(panel.ID)}
 	if result, err := a.panelDamage(ctx, panel); err == nil {
 		damage := BuildView(a.Game, result)
 		view.Sections = append(view.Sections, Section{Title: "参考伤害 · " + result.Version, Rows: damage.Rows})

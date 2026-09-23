@@ -60,7 +60,11 @@ func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	}
 	maps := readMaps(context)
 	id := app.Text(official["id"])
-	if sprite := maps.partners[id].SpriteID; sprite != "" {
+	// A custom picture uploaded for the character replaces the portrait, as
+	// ZZZ-Plugin's 上传面板图.
+	if image.Portrait != "" {
+		resources = append(resources, rayleabot.RenderImageResource{ID: "role-icon", Path: image.Portrait})
+	} else if sprite := maps.partners[id].SpriteID; sprite != "" {
 		fetch("role-icon", "role/IconRole"+sprite+".png")
 	}
 

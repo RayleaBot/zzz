@@ -140,7 +140,13 @@ func (s *MediaStore) Close() {
 	s.uploads = nil
 }
 func mediaInfo(raw []byte) (string, int, int, error) {
-	if len(raw) < 12 || len(raw) > mediaMaxBytes {
+	return imageInfo(raw, mediaMaxBytes)
+}
+
+// imageInfo checks a picture of at most limit bytes and returns its MIME
+// type and size.
+func imageInfo(raw []byte, limit int) (string, int, int, error) {
+	if len(raw) < 12 || len(raw) > limit {
 		return "", 0, 0, gameError("media_invalid", "图片大小无效。")
 	}
 	config, format, err := image.DecodeConfig(bytes.NewReader(raw))

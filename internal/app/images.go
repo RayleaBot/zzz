@@ -57,6 +57,9 @@ type PanelImage struct {
 	UID    string
 	Record reference.Character
 	Damage *BuildResult
+	// Portrait is a custom picture of the character, as a path in the plugin
+	// data directory, shown instead of the default portrait; "" for none.
+	Portrait string
 }
 
 // PanelImageBuilder draws a single-character panel with the plugin's

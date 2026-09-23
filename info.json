@@ -191,6 +191,39 @@
       }
     },
     {
+      "id": "panel-image-upload",
+      "name": "上传面板图",
+      "description": "为角色添加自定义面板图：随消息附带图片，或引用含图片（含合并转发）的消息",
+      "usage": "#上传艾莲面板图",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:上传|添加)(?P<character>\\S+?)(?:角色|面板)图$"
+      }
+    },
+    {
+      "id": "panel-image-list",
+      "name": "查看面板图",
+      "description": "查看角色的自定义面板图及其 ID，每页五张",
+      "usage": "#查看艾莲面板图[页码]",
+      "permission": "everyone",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^(?:获取|查看)(?P<character>\\S+?)(?:角色|面板)图(?P<page>[0-9]*)$"
+      }
+    },
+    {
+      "id": "panel-image-remove",
+      "name": "删除面板图",
+      "description": "按 ID 删除角色的自定义面板图，ID 用逗号、顿号或空格分隔",
+      "usage": "#删除艾莲面板图1,2",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^删除(?P<character>\\S+?)(?:角色|面板)图(?P<ids>\\S*)$"
+      }
+    },
+    {
       "id": "gacha-help",
       "name": "抽卡帮助",
       "description": "抽卡记录的获取与查看方法",
@@ -1417,6 +1450,9 @@
       "commands": [
         "panel-refresh",
         "panel-list",
+        "panel-image-upload",
+        "panel-image-list",
+        "panel-image-remove",
         "character",
         "build",
         "score",

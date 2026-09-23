@@ -59,6 +59,9 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"设置全局提醒时间每日20时", "challenge-global-time", []string{"每日20时"}},
 			{"关闭全局挑战提醒", "challenge-global-switch", []string{"关闭"}},
 			{"个人提醒时间", "challenge-time-status", nil},
+			{"上传艾莲面板图", "panel-image-upload", []string{"艾莲"}},
+			{"查看艾莲角色图2", "panel-image-list", []string{"艾莲", "2"}},
+			{"删除艾莲面板图1,2", "panel-image-remove", []string{"艾莲", "1,2"}},
 		},
 	}
 	for game, list := range cases {
