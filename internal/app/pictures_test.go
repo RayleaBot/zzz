@@ -42,3 +42,24 @@ func TestPicturesReadDownloadedLibraries(t *testing.T) {
 		t.Fatal(hint)
 	}
 }
+
+func TestAtlasFindsPicturesByTheLibraryAliases(t *testing.T) {
+	root := t.TempDir()
+	a := App{Artwork: &artwork.Store{Root: root}, Game: Game{Pictures: Pictures{Atlas: []PictureSource{{Source: "atlas", Index: "path.json", Skip: []string{"guide for role"}}}}}}
+	writeArtwork(t, root, "atlas/guide/1001.png", "guide")
+	if _, ok := a.atlasPicture([]string{"role"}); ok {
+		t.Error("sent an alias file")
+	}
+	// Star Rail's library keys pictures by ID; othername lists each key's
+	// names.
+	writeArtwork(t, root, "atlas/path.json", `{"guide for role":{"1001":"/guide/1001.png"},"othername":{"role":"/othername/role.yaml"},"role":{"1001":"/role/1001.png","1002":"/role/1002.png"}}`)
+	writeArtwork(t, root, "atlas/othername/role.yaml", "# roles\n'1001':\n  - 三月七\n  - mar7th\n\"1002\":\n- 丹恒\n- 三月七\n")
+	writeArtwork(t, root, "atlas/role/1001.png", "a")
+	writeArtwork(t, root, "atlas/role/1002.png", "b")
+	// The guide module answers 攻略, not 图鉴.
+	for name, want := range map[string]string{"三月七": "role/1001.png", "mar7th": "role/1001.png", "丹恒": "role/1002.png", "1002": "role/1002.png"} {
+		if file, ok := a.atlasPicture([]string{name}); !ok || file.Path != want {
+			t.Errorf("%s: %+v %v", name, file, ok)
+		}
+	}
+}

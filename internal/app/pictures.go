@@ -33,6 +33,9 @@ type PictureSource struct {
 	Source string   `json:"source"`
 	Index  string   `json:"index,omitempty"`
 	Paths  []string `json:"paths,omitempty"`
+	// Skip are index modules 图鉴 leaves out: Atlas answers them only for
+	// their own words, such as 攻略 or 材料.
+	Skip []string `json:"skip,omitempty"`
 }
 
 // artworkFile is a downloaded file of an artwork source.
@@ -66,12 +69,20 @@ type atlasIndexes struct {
 
 type atlasIndex struct {
 	modified time.Time
-	// modules map names to image paths, in the file's order, which Atlas
-	// searches in.
-	modules []map[string]string
+	// modules are in the file's order, which Atlas searches in.
+	modules []atlasModule
 }
 
-func (c *atlasIndexes) read(root string, source PictureSource) []map[string]string {
+// atlasModule maps the keys of a path.json module to image paths, and the
+// aliases in the library's othername/<module>.yaml to keys, which is how
+// Atlas turns a name into a key; Star Rail's keys are IDs.
+type atlasModule struct {
+	name    string
+	paths   map[string]string
+	aliases map[string]string
+}
+
+func (c *atlasIndexes) read(root string, source PictureSource) []atlasModule {
 	file := filepath.Join(root, source.Source, filepath.FromSlash(source.Index))
 	info, err := os.Stat(file)
 	if err != nil {
@@ -86,18 +97,22 @@ func (c *atlasIndexes) read(root string, source PictureSource) []map[string]stri
 	if err != nil {
 		return nil
 	}
-	modules := []map[string]string{}
+	modules := []atlasModule{}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
 		return nil
 	}
 	for decoder.More() {
-		if _, err := decoder.Token(); err != nil {
+		name, err := decoder.Token()
+		if err != nil {
 			return nil
 		}
-		module := map[string]string{}
-		if decoder.Decode(&module) != nil {
+		module := atlasModule{name: name.(string), paths: map[string]string{}}
+		if decoder.Decode(&module.paths) != nil {
 			return nil
+		}
+		if aliases, err := os.ReadFile(filepath.Join(root, source.Source, "othername", module.name+".yaml")); err == nil {
+			module.aliases = atlasAliases(aliases)
 		}
 		modules = append(modules, module)
 	}
@@ -108,6 +123,35 @@ func (c *atlasIndexes) read(root string, source PictureSource) []map[string]stri
 	return modules
 }
 
+// atlasAliases reads an Atlas othername file: top-level keys, each followed
+// by a list of its names. An alias listed under several keys belongs to the
+// first, as Atlas finds it.
+func atlasAliases(raw []byte) map[string]string {
+	unquote := func(value string) string {
+		if len(value) >= 2 && (value[0] == '\'' || value[0] == '"') && value[len(value)-1] == value[0] {
+			return strings.ReplaceAll(value[1:len(value)-1], "''", "'")
+		}
+		return value
+	}
+	aliases := map[string]string{}
+	key := ""
+	for _, line := range strings.Split(string(raw), "\n") {
+		trimmed := strings.TrimSpace(line)
+		switch {
+		case trimmed == "" || strings.HasPrefix(trimmed, "#"):
+		case strings.HasPrefix(trimmed, "- "):
+			if alias := unquote(strings.TrimSpace(trimmed[2:])); key != "" && alias != "" {
+				if _, taken := aliases[alias]; !taken {
+					aliases[alias] = key
+				}
+			}
+		case line[0] != ' ' && strings.HasSuffix(trimmed, ":"):
+			key = unquote(strings.TrimSuffix(trimmed, ":"))
+		}
+	}
+	return aliases
+}
+
 // atlasPicture finds the first downloaded 图鉴 image of any of the names.
 func (a *App) atlasPicture(names []string) (artworkFile, bool) {
 	for _, source := range a.Game.Pictures.Atlas {
@@ -116,8 +160,17 @@ func (a *App) atlasPicture(names []string) (artworkFile, bool) {
 		}
 		if source.Index != "" {
 			for _, module := range a.atlases.read(a.Artwork.Root, source) {
+				if slices.Contains(source.Skip, module.name) {
+					continue
+				}
 				for _, name := range names {
-					if file, ok := module[name]; ok {
+					// Atlas looks the name up among the aliases first.
+					key, aliased := module.aliases[name]
+					if !aliased {
+						key = name
+					}
+					// Some modules also index the library's alias files.
+					if file, ok := module.paths[key]; ok && slices.Contains(pictureExtensions, strings.ToLower(path.Ext(file))) {
 						if _, found := a.Artwork.File(source.Source, strings.TrimPrefix(file, "/")); found {
 							return artworkFile{source.Source, strings.TrimPrefix(file, "/")}, true
 						}

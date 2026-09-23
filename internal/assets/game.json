@@ -325,7 +325,10 @@
     "atlas": [
       {
         "source": "zzz-atlas",
-        "index": "path.json"
+        "index": "path.json",
+        "skip": [
+          "material for role"
+        ]
       }
     ]
   }
