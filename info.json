@@ -858,19 +858,6 @@
       }
     },
     {
-      "id": "monthly-save",
-      "name": "保存月报",
-      "description": "读取并保存指定月报",
-      "usage": "#保存月报 [月份] [UID]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "保存月报"
-        ]
-      }
-    },
-    {
       "id": "community-status",
       "name": "米游币查询",
       "description": "查询社区米游币与任务",
@@ -1514,8 +1501,7 @@
         "buddies",
         "exploration",
         "monthly",
-        "monthly-history",
-        "monthly-save"
+        "monthly-history"
       ]
     },
     {

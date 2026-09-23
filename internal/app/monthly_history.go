@@ -183,12 +183,7 @@ func (a *App) monthlyAction(ctx context.Context, client AccountsClient, action s
 }
 
 func (a *App) monthlyCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	uid, month := "", ""
-	fetch := command == "monthly-save"
-	if fetch && len(args) > 0 {
-		month = args[0]
-		args = args[1:]
-	}
+	uid := ""
 	if len(args) > 1 {
 		return event.SendText("请提供至多一个 UID。")
 	}
@@ -204,14 +199,7 @@ func (a *App) monthlyCommand(ctx context.Context, event *rayleabot.EventContext,
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	input := map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "month": month}
-	if fetch {
-		result, err := a.monthlyAction(ctx, client, "monthly.fetch", input)
-		if err != nil {
-			return event.SendText(friendlyError(err))
-		}
-		return event.SendText("已保存 " + asText(result["month"]) + " 月报 · UID " + role.UID + "。")
-	}
+	input := map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef}
 	// Upstream saves the months the official report still offers before it
 	// counts.
 	if err := a.refreshMonthly(ctx, client, choice); err != nil {
