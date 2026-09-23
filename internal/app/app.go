@@ -233,6 +233,19 @@ func (a *App) operation(name string) (Operation, bool) {
 	return Operation{}, false
 }
 
+// routedQuery is the official query a command runs, query unless the command
+// draws on another operation's query, and the operation its text reply reads
+// as.
+func (a *App) routedQuery(operation Operation, query string) (string, Operation) {
+	if route := a.queries[operation.Name]; route != nil {
+		query = route(time.Now())
+		if queried, ok := a.operation(query); ok {
+			return query, queried
+		}
+	}
+	return query, operation
+}
+
 func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	// Replies name commands with the first prefix the host gives this plugin;
 	// the list is fixed for the process session.
@@ -490,16 +503,9 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			err = chooseErr
 			break
 		}
-		query := operation.Name
 		// A routed command's text reply reads as the query that ran; its image
 		// is the command's own.
-		textOperation := operation
-		if route := a.queries[operation.Name]; route != nil {
-			query = route(time.Now())
-			if queried, ok := a.operation(query); ok {
-				textOperation = queried
-			}
-		}
+		query, textOperation := a.routedQuery(operation, operation.Name)
 		result, queryErr := a.accountClient(event).Execute(ctx, choice, query, input)
 		if queryErr != nil {
 			err = queryErr
@@ -635,11 +641,12 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 			return nil, gameError("operation_denied", "查询操作不存在。")
 		}
 		parameters := asObject(input["input"])
-		result, err := a.accountClient(event).Execute(ctx, Selection{AccountRef: asText(input["account_ref"]), RoleRef: asText(input["role_ref"])}, operation.Name, parameters)
+		query, textOperation := a.routedQuery(operation, operation.Name)
+		result, err := a.accountClient(event).Execute(ctx, Selection{AccountRef: asText(input["account_ref"]), RoleRef: asText(input["role_ref"])}, query, parameters)
 		if err != nil {
 			return nil, err
 		}
-		output := map[string]any{"view": BusinessView(a.Game, operation, result, a.Catalog), "result": result}
+		output := map[string]any{"view": BusinessView(a.Game, textOperation, result, a.Catalog), "result": result}
 		if strings.HasSuffix(operation.Name, ".character") {
 			output["panels"] = NormalizePanels(result, a.Catalog)
 			delete(output, "result")
