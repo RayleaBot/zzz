@@ -82,3 +82,26 @@ func TestRunIsBoundedAndRejectsForeignScripts(t *testing.T) {
 		t.Fatal("a catalog naming a non-character script was accepted")
 	}
 }
+
+// Damage loads the character's damage and scoring rules together, and runs
+// for a character that only has a scoring rule.
+func TestDamageLoadsBothRules(t *testing.T) {
+	profile := syntheticProfile()
+	files := profile.Files.(fstest.MapFS)
+	files["catalog.json"] = &fstest.MapFile{Data: []byte(`{"characters":[{"key":"t_1","id":"1","script":"characters/1-测试.js","score_script":"scores/1-测试.js"},{"key":"t_3","id":"3","score_script":"scores/1-测试.js"}]}`)}
+	files["scores/1-测试.js"] = &fstest.MapFile{Data: []byte(`shared.scored=true;`)}
+	files["runner.js"] = &fstest.MapFile{Data: []byte(`function runDamage(){return {count:shared.count,scored:!!shared.scored}}`)}
+	engine, err := New(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, want := range []string{`{"count":1,"scored":true}`, `{"count":0,"scored":true}`} {
+		raw, err := engine.Damage(context.Background(), engine.Metadata().Characters[index], map[string]any{})
+		if err != nil || string(raw) != want {
+			t.Errorf("character %d ran %s, %v; want %s", index, raw, err, want)
+		}
+	}
+	if _, err = engine.Damage(context.Background(), Character{Script: "runner.js"}, map[string]any{}); err == nil {
+		t.Error("a script outside characters/ ran")
+	}
+}

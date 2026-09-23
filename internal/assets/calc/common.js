@@ -2655,3 +2655,323 @@ class EquipGrade {
 exports.EquipGrade = EquipGrade;
 
 return exports;})();
+const {Property}=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Property = void 0;
+class Property {
+    constructor(data) {
+        const { property_name, property_id, base, add, final } = data;
+        this.property_name = property_name;
+        this.property_id = property_id;
+        this.base = base;
+        this.add = add;
+        this.final = final;
+    }
+}
+exports.Property = Property;
+
+return exports;})();
+const {Skill}=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Skill = exports.SkillItem = void 0;
+class SkillItem {
+    constructor(title, text) {
+        this.title = title;
+        this.text = text;
+    }
+}
+exports.SkillItem = SkillItem;
+class Skill {
+    constructor(data) {
+        const { level, skill_type, items } = data;
+        this.level = level;
+        this.skill_type = skill_type;
+        this.items = items;
+    }
+}
+exports.Skill = Skill;
+
+return exports;})();
+const {ZZZAvatarInfo}=(()=>{const exports={};
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ZZZAvatarInfo = exports.Rank = exports.Weapon = exports.Equip = exports.EquipMainProperty = exports.EquipProperty = void 0;
+const Score = ZZZScore;
+class EquipProperty {
+    constructor(data) {
+        const { property_name, property_id, base } = data;
+        this.property_name = property_name;
+        this.property_id = property_id;
+        this.base = base;
+        this.base_score = 0;
+        this.classname = property.idToClassName(property_id);
+        /** 词条强化次数 */
+        this.count = getEquipPropertyEnhanceCount(property_id, base);
+    }
+}
+exports.EquipProperty = EquipProperty;
+class EquipMainProperty {
+    constructor(data) {
+        const { property_name, property_id, base } = data;
+        this.property_name = property_name;
+        this.property_id = property_id;
+        this.base = base;
+        this.classname = property.idToClassName(property_id);
+    }
+    get short_name() {
+        if (this.property_name.includes('属性伤害加成')) {
+            return this.property_name.replace('属性伤害加成', '伤加成');
+        }
+        if (this.property_name === '能量自动回复') {
+            return '能量回复';
+        }
+        return this.property_name;
+    }
+}
+exports.EquipMainProperty = EquipMainProperty;
+class Equip {
+    constructor(data) {
+        this.score = false;
+        const { id, level, name, icon, rarity, properties, main_properties, equip_suit, equipment_type, } = data;
+        this.id = id;
+        this.level = level;
+        this.name = name;
+        this.icon = icon;
+        this.rarity = rarity;
+        this.properties = properties.map(item => new EquipProperty(item));
+        this.main_properties = main_properties.map(item => new EquipMainProperty(item));
+        this.equip_suit = equip_suit;
+        this.equipment_type = equipment_type;
+    }
+    get_property(id) {
+        var _a;
+        const result = ((_a = this.properties.find(item => item.property_id === id)) === null || _a === void 0 ? void 0 : _a.base) || '0';
+        return Number(result);
+    }
+    get_score(weight) {
+        if (!weight) {
+            this.score = false;
+            return this.score;
+        }
+        this.properties.forEach(item => item.base_score = weight[item.property_id] || 0);
+        this.score = Score.main(this, weight);
+        return this.score;
+    }
+    get comment() {
+        if (this.score === false) {
+            return false;
+        }
+        if (this.score <= 12) {
+            return 'C';
+        }
+        if (this.score < 20) {
+            return 'B';
+        }
+        if (this.score < 28) {
+            return 'A';
+        }
+        if (this.score < 32) {
+            return 'S';
+        }
+        if (this.score < 36) {
+            return 'SS';
+        }
+        if (this.score < 40) {
+            return 'SSS';
+        }
+        if (this.score < 48) {
+            return 'ACE';
+        }
+        if (this.score >= 48) {
+            return 'MAX';
+        }
+        return false;
+    }
+}
+exports.Equip = Equip;
+class Weapon {
+    constructor(data) {
+        const { id, level, name, star, icon, rarity, properties, main_properties, talent_title, talent_content, profession, } = data;
+        this.id = id;
+        this.level = level;
+        this.name = name;
+        this.star = star;
+        this.icon = icon;
+        this.rarity = rarity;
+        this.properties = properties.map(item => new EquipProperty(item));
+        this.main_properties = main_properties.map(item => new EquipMainProperty(item));
+        this.talent_title = talent_title;
+        this.talent_content = talent_content;
+        this.profession = profession;
+        this.level_rank = Math.floor(level / 10);
+    }
+}
+exports.Weapon = Weapon;
+class Rank {
+    constructor(data) {
+        const { id, name, desc, pos, is_unlocked } = data;
+        this.id = id;
+        this.name = name;
+        this.desc = desc;
+        this.pos = pos;
+        this.is_unlocked = is_unlocked;
+    }
+}
+exports.Rank = Rank;
+class ZZZAvatarInfo {
+    constructor(data) {
+        var _a, _b, _c;
+        const { id, level, name_mi18n, full_name_mi18n, element_type, sub_element_type, camp_name_mi18n, avatar_profession, rarity, group_icon_path, hollow_icon_path, equip, weapon, properties, skills, rank, ranks, role_vertical_painting_url, isNew, skin_id, } = data;
+        this.id = id;
+        this.level = level;
+        this.name_mi18n = name_mi18n;
+        this.full_name_mi18n = full_name_mi18n;
+        this.element_type = element_type;
+        this.sub_element_type = sub_element_type;
+        this.camp_name_mi18n = camp_name_mi18n;
+        this.avatar_profession = avatar_profession;
+        this.rarity = rarity;
+        this.group_icon_path = group_icon_path;
+        this.hollow_icon_path = hollow_icon_path;
+        this.equip =
+            (equip &&
+                (Array.isArray(equip)
+                    ? equip.map(equip => new Equip(equip))
+                    : [new Equip(equip)])) ||
+                [];
+        this.weapon = weapon ? new Weapon(weapon) : null;
+        this.properties =
+            properties && properties.map(property => new Property(property));
+        this.skills = skills && skills.map(skill => new Skill(skill));
+        this.rank = rank;
+        this.ranks = ranks && ranks.map(rank => new Rank(rank));
+        this.ranks_num = rank;
+        this.element_str = element.idToName(element_type);
+        this.sub_element_str = element.idToName(element_type, sub_element_type);
+        this.role_vertical_painting_url = role_vertical_painting_url;
+        this.isNew = isNew || false;
+        this.skin_id = +(skin_id || ((_c = (_b = (_a = this.role_vertical_painting_url) === null || _a === void 0 ? void 0 : _a.match) === null || _b === void 0 ? void 0 : _b.call(_a, /role_vertical_painting_\d+_(\d+).png$/)) === null || _c === void 0 ? void 0 : _c[1]) || 0);
+        this.level_rank = Math.floor(this.level / 10);
+        const weight = Score.getFinalWeight(this);
+        this.weightRule = weight[0];
+        this.scoreWeight = weight[1];
+        for (const equip of this.equip) {
+            equip.get_score(this.scoreWeight);
+        }
+    }
+    getProperty(name) {
+        return this.properties.find(property => property.property_name === name);
+    }
+    get basic_properties() {
+        const data = {
+            hpmax: this.getProperty('生命值'),
+            attack: this.getProperty('攻击力'),
+            def: this.getProperty('防御力'),
+            breakstun: this.getProperty('冲击力'),
+            crit: this.getProperty('暴击率'),
+            critdam: this.getProperty('暴击伤害'),
+            elementabnormalpower: this.getProperty('异常掌控'),
+            elementmystery: this.getProperty('异常精通'),
+            sheerforce: this.getProperty('贯穿力'),
+            laceration: this.getProperty('锐暴伤害'),
+            penratio: this.getProperty('穿透率'),
+            sprecover: this.getProperty('能量自动回复'),
+            adrenalineaccumulate: this.getProperty('闪能自动累积'),
+            sharpnessaccumulate: this.getProperty('锐能自动累积'),
+            /** 属性增伤 */
+            dmgbonus: this.properties.find(property => property.property_id == element.idToPropertyId(this.element_type)),
+        };
+        return data;
+    }
+    get base_properties() {
+        if (this._base_properties)
+            return this._base_properties;
+        const basic_properties = this.basic_properties;
+        const get = (name) => {
+            const data = basic_properties[name];
+            return Number((data === null || data === void 0 ? void 0 : data.base) || (data === null || data === void 0 ? void 0 : data.final) || 0);
+        };
+        return this._base_properties = {
+            HP: get('hpmax'),
+            ATK: get('attack'),
+            DEF: get('def'),
+            Impact: get('breakstun'),
+            AnomalyMastery: get('elementabnormalpower'),
+            AnomalyProficiency: get('elementmystery'),
+            EnergyRegen: get('sprecover')
+        };
+    }
+    get initial_properties() {
+        var _a;
+        if (this._initial_properties)
+            return this._initial_properties;
+        const basic_properties = this.basic_properties;
+        const get = (name) => {
+            if (!basic_properties[name])
+                return 0;
+            const data = basic_properties[name].final;
+            return Number(data.includes('%') ? +data.replace('%', '') / 100 : data);
+        };
+        return this._initial_properties = {
+            HP: get('hpmax'),
+            ATK: get('attack'),
+            DEF: get('def'),
+            Impact: get('breakstun'),
+            CRITRate: get('crit'),
+            CRITDMG: get('critdam'),
+            /** 异常掌控 */
+            AnomalyMastery: get('elementabnormalpower'),
+            /** 异常精通 */
+            AnomalyProficiency: get('elementmystery'),
+            Pen: ((_a = this.equip) === null || _a === void 0 ? void 0 : _a.reduce((prev, curr) => prev + curr.get_property(23203), 0)) || 0,
+            PenRatio: get('penratio'),
+            EnergyRegen: get('sprecover')
+        };
+    }
+    get equip_score() {
+        var _a;
+        if (!((_a = this.equip) === null || _a === void 0 ? void 0 : _a.length))
+            return 0;
+        if (this.scoreWeight) {
+            let score = 0;
+            for (const equip of this.equip) {
+                score += equip.score || 0;
+            }
+            return score;
+        }
+        return 0;
+    }
+    get equip_comment() {
+        const score = this.equip_score;
+        if (score < 80) {
+            return 'C';
+        }
+        if (score < 120) {
+            return 'B';
+        }
+        if (score < 160) {
+            return 'A';
+        }
+        if (score < 180) {
+            return 'S';
+        }
+        if (score < 200) {
+            return 'SS';
+        }
+        if (score < 220) {
+            return 'SSS';
+        }
+        if (score < 280) {
+            return 'ACE';
+        }
+        if (score >= 280) {
+            return 'MAX';
+        }
+        return 'C';
+    }
+}
+exports.ZZZAvatarInfo = ZZZAvatarInfo;
+
+return exports;})();

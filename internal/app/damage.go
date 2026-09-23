@@ -1,0 +1,155 @@
+package app
+
+import (
+	"context"
+	"encoding/json"
+	"regexp"
+	"strconv"
+
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
+	"github.com/RayleaBot/plugin-zzz/internal/reference"
+)
+
+// DamageResult is ZZZ-Plugin's 伤害 for one panel, as the runner's runDamage
+// returns it: every skill's damage, the chosen skill (an index into Damages)
+// with its damage areas and useful buffs, the change of its expected damage
+// when one sub or main stat is swapped for another, and the scoring weights
+// that pick those stats and colour the property labels.
+type DamageResult struct {
+	Damages []DamageRow        `json:"damages"`
+	Skill   int                `json:"skill"`
+	Anomaly bool               `json:"anomaly"`
+	Sheer   bool               `json:"sheer"`
+	Areas   map[string]float64 `json:"areas"`
+	Buffs   []DamageBuff       `json:"buffs"`
+	Sub     DamageTable        `json:"sub"`
+	Main    DamageTable        `json:"main"`
+	Weights map[string]float64 `json:"weights"`
+}
+
+// DamageRow is one skill's damage; Critical is 0 for anomaly damage that
+// cannot crit.
+type DamageRow struct {
+	Name     string  `json:"name"`
+	Critical float64 `json:"critical"`
+	Expected float64 `json:"expected"`
+}
+
+type DamageBuff struct {
+	Name   string  `json:"name"`
+	Source string  `json:"source"`
+	Type   string  `json:"type"`
+	Value  float64 `json:"value"`
+}
+
+// DamageTable compares stats: Columns are the stat added, and each row is a
+// stat removed with the change of expected damage under every column.
+type DamageTable struct {
+	Columns []DamageStat          `json:"columns"`
+	Rows    []DamageDifferenceRow `json:"rows"`
+}
+
+// DamageStat is a stat by upstream's short name and the value of one roll.
+type DamageStat struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type DamageDifferenceRow struct {
+	Name        string    `json:"name"`
+	Value       string    `json:"value"`
+	Differences []float64 `json:"differences"`
+}
+
+// DamageImage is what the 伤害 page draws: the panel with its official
+// entry, the UID, a custom portrait as a path in the plugin data directory
+// ("" for the default one) and the calculation.
+type DamageImage struct {
+	Panel    CharacterPanel
+	UID      string
+	Portrait string
+	Result   DamageResult
+}
+
+// DamageImageBuilder draws the 伤害 page, or returns false to answer in text.
+type DamageImageBuilder func(ImageContext, DamageImage) (Image, bool)
+
+// damageSkill is the number ZZZ-Plugin reads after 伤害.
+var damageSkill = regexp.MustCompile(`伤害([0-9]*)$`)
+
+// damageCommand is ZZZ-Plugin's <角色>伤害[序号]: the panel is read as 面板
+// reads it, and the page lists every skill's damage with the chosen one's
+// areas, buffs and stat comparisons. As upstream, 原图 then sends the
+// portrait the page shows.
+func (a *App) damageCommand(ctx context.Context, event *rayleabot.EventContext, args []string) error {
+	if len(args) > 2 {
+		return event.Result(map[string]any{"handled": false})
+	}
+	panel, uid, err := a.commandPanel(ctx, event, args)
+	if err != nil {
+		return event.SendText(friendlyError(err))
+	}
+	name := args[0]
+	// A panel kept before the official entry was saved with it cannot be
+	// calculated until it is updated.
+	if panel.Official == nil {
+		return event.SendText(a.panelReply("missing", map[string]string{"uid": uid, "name": name}))
+	}
+	skill := ""
+	if match := damageSkill.FindStringSubmatch(event.Event.Command()); match != nil {
+		skill = match[1]
+	}
+	result, err := a.panelDamages(ctx, panel, skill)
+	if err != nil {
+		return event.SendText(friendlyError(err))
+	}
+	if len(result.Damages) == 0 {
+		return event.SendText("暂无角色" + name + "的伤害计算")
+	}
+	view := DamageView(panel, uid, result)
+	if a.damage != nil {
+		image := DamageImage{Panel: panel, UID: uid, Portrait: a.PanelImages.Random(panel.ID), Result: result}
+		if drawn, ok := a.damage(a.imageContext(ctx), image); ok {
+			view.Image = &drawn
+			if portrait := panelPortrait(drawn); portrait != "" {
+				_ = a.rememberImage(event, portrait)
+			}
+		}
+	}
+	return a.sendView(ctx, event, view)
+}
+
+// panelDamages runs ZZZ-Plugin's 伤害 on a panel's official entry; skill is
+// the number written after 伤害, "" for none. A character the pinned
+// calculation does not know has no damages, as upstream.
+func (a *App) panelDamages(ctx context.Context, panel CharacterPanel, skill string) (DamageResult, error) {
+	var record reference.Character
+	for _, candidate := range a.Game.Calc.Metadata().Characters {
+		if candidate.ID == panel.ID {
+			record = candidate
+		}
+	}
+	if record.ID == "" {
+		return DamageResult{}, nil
+	}
+	raw, err := a.Game.Calc.Damage(ctx, record, map[string]any{"avatar": panel.Official, "skill": skill})
+	var result DamageResult
+	if err != nil || json.Unmarshal(raw, &result) != nil || len(result.Damages) > 0 && (result.Skill < 0 || result.Skill >= len(result.Damages)) {
+		return DamageResult{}, buildUnavailable("reference_calculation")
+	}
+	return result, nil
+}
+
+// DamageView is the 伤害 reply in text: each skill's damage, and the skill
+// the comparisons are for.
+func DamageView(panel CharacterPanel, uid string, result DamageResult) View {
+	rows := []Row{}
+	for index, damage := range result.Damages {
+		value := "期望伤害 " + strconv.FormatFloat(damage.Expected, 'f', 0, 64)
+		if damage.Critical != 0 {
+			value = "暴击伤害 " + strconv.FormatFloat(damage.Critical, 'f', 0, 64) + " · " + value
+		}
+		rows = append(rows, Row{Label: strconv.Itoa(index+1) + ". " + damage.Name, Value: value})
+	}
+	return View{Title: panel.Name + " · 伤害统计", Subtitle: "UID " + uid, Rows: rows, Note: "以 " + result.Damages[result.Skill].Name + " 为计算目标"}
+}

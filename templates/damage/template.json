@@ -1,0 +1,11 @@
+{
+  "id": "damage",
+  "name": "绝区零伤害计算",
+  "description": "单角色伤害计算图片，含乘区、增益与词条差异，布局参照 ZZZ-Plugin",
+  "version": "1",
+  "entry_html": "template.html",
+  "stylesheet": "styles.css",
+  "input_schema": "input.schema.json",
+  "width": 1680,
+  "height": 4000
+}

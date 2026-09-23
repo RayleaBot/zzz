@@ -88,6 +88,34 @@ function runBuild(record,_weapons,input){
  if(input.candidate_weapon||input.candidate_equipment||input.conditions){const next=input.candidate_weapon||original.selected;if(next.id&&!zzzPromotions(next.level,true).includes(next.promote))throw Error('weapon.promote');const nextGear=input.candidate_equipment?zzzGear(input.candidate_equipment):gear;candidate=zzzScenario(info,input,nextGear,next,original.promote,core,original.properties,input.conditions)}
  return {source:'simulation',version:'zzz-fb66219cec-reference-v1',character_id:record.id,character:record.name,enemy_level:input.enemy_level,baseline,candidate};
 }
+// ZZZ-Plugin's 伤害 (apps/damage.ts): the saved panel becomes a ZZZAvatarInfo,
+// avatar_calc registers the agent's rule with the W-Engine and drive disc
+// effects upstream has, and one skill is compared against swapped sub and main
+// stats. input.skill is the number written after 伤害, or '' for none; without
+// one the skill is the one the comparison picks (the main skill, else the
+// highest expected damage). The plugin's own W-Engine supplements stay out, as
+// upstream gives those W-Engines no effect.
+function runDamage(record,_weapons,input){
+ if(typeof scoreRule!=='undefined')scoreFnc[record.id]=scoreRule.default;
+ if(typeof characterRule!=='undefined'){charData[record.id]=record.data.calculation;freshZZZRules(record)}
+ for(const id of supplementalZZZWeapons)delete calcFnc.weapon[referenceMaps.WeaponId2Data[id].Name];
+ const avatar=new ZZZAvatarInfo(input.avatar),calc=avatarPipeline.avatar_calc(avatar),damages=calc?.calc();
+ if(!calc||!damages?.length)return {damages:[]};
+ // Upstream only clamps a number above the count, so the one right after the
+ // last skill leaves no damage to draw; it is clamped to the last here.
+ let index=input.skill?Math.min(Math.max(Number(input.skill)-1,0),damages.length-1):null;
+ const sub=calc.calc_sub_differences(index===null?undefined:damages[index].skill);
+ if(index===null){const chosen=sub[0]?.[0].damage.skill;index=((chosen&&damages.findIndex(({skill})=>skill.name===chosen.name&&skill.type===chosen.type)+1)||damages.length)-1}
+ const damage=damages[index],main=calc.calc_main_differences(damage.skill);
+ // Each table's columns are the stats added and its rows the stats removed.
+ const table=rows=>({columns:(rows[0]||[]).map(d=>({name:d.add.shortName,value:d.add.valueBase})),rows:rows.map(row=>({name:row[0].del.shortName,value:row[0].del.valueBase,differences:row.map(d=>d.difference)}))});
+ return {
+  damages:damages.map(d=>({name:d.skill.name,critical:d.result.critDMG,expected:d.result.expectDMG})),
+  skill:index,anomaly:!!damage.skill.isAnomalyDMG,sheer:!!damage.skill.isSheerDMG,areas:damage.areas,
+  buffs:damage.usefulBuffs.map(b=>({name:b.name,source:b.source,type:b.type,value:b.value})),
+  sub:table(sub),main:table(main),weights:avatar.scoreWeight,
+ };
+}
 // Showcase agents become official avatar entries through ZZZ-Plugin's
 // Enka2Mys, which skips an agent its data does not know with a warning.
 function runShowcase(_record,_weapons,input){

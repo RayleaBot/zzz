@@ -4,7 +4,8 @@
 // Usage: node scripts/bundle-reference-calculation.mjs <参考项目/2026-09-15>
 //
 // Writes internal/assets/calc: data.js (upstream id maps and the
-// agent aliases), common.js (Calculator, BuffManager and the drive disc Score),
+// agent aliases), common.js (Calculator, BuffManager, the drive disc Score and
+// the agent models 伤害 reads a panel with),
 // buffs.js (weapon and drive disc effects), catalog.json,
 // characters/<id>-<name>.js from calc.js and scores/<id>-<name>.js from
 // score.js. Agents without calc.js enter the catalog for scoring only.
@@ -62,7 +63,8 @@ common += `const buffRuntime=${await module('src/model/damage/BuffManager.ts')};
 common += `const {Calculator}=${await module('src/model/damage/Calculator.ts')};\nconst EnkaFormat=${await module('src/model/Enka/formater.ts')};\n`
 const avatarModel = typescript.createSourceFile('avatar-model.ts', await read('src/model/avatar.ts'), typescript.ScriptTarget.Latest, true)
 const avatarClass = avatarModel.statements.find(n => typescript.isClassDeclaration(n) && n.name?.text === 'ZZZAvatarInfo')
-const members = avatarClass.members.filter(n => ['getProperty', 'basic_properties', 'base_properties', 'initial_properties', 'equip_score', 'equip_comment'].includes(n.name?.getText(avatarModel))).map(n => n.getText(avatarModel)).join('\n')
+const propertyMembers = ['getProperty', 'basic_properties', 'base_properties', 'initial_properties', 'equip_score', 'equip_comment']
+const members = avatarClass.members.filter(n => propertyMembers.includes(n.name?.getText(avatarModel))).map(n => n.getText(avatarModel)).join('\n')
 common += `const {AvatarProperties}=${compile('export class AvatarProperties {\n' + members + '\n}', 'selected-properties.ts')};\n`
 const avatarSource = await read('src/model/damage/avatar.ts')
 const avatarAst = typescript.createSourceFile('avatar.ts', avatarSource, typescript.ScriptTarget.Latest, true)
@@ -78,6 +80,25 @@ const equipModel = typescript.createSourceFile('equip.ts', await read('src/model
 const equipClass = equipModel.statements.find(n => typescript.isClassDeclaration(n) && n.name?.text === 'Equip')
 const comment = equipClass.members.find(n => n.name?.getText(equipModel) === 'comment').getText(equipModel)
 common += `const {EquipGrade}=${compile('export class EquipGrade {\nconstructor(score){this.score=score}\n' + comment + '\n}', 'selected-equip.ts')};\n`
+// 伤害 builds the agent from a saved panel with ZZZ-Plugin's ZZZAvatarInfo
+// and its property, skill, Mindscape and equipment models, leaving out the
+// members that download pictures.
+const modelClass = (model, name, members) => {
+  const node = model.statements.find(n => typescript.isClassDeclaration(n) && n.name?.text === name)
+  const kept = node.members.filter(n => members(n.name?.getText(model) ?? 'constructor'))
+  return `export class ${name} {\n${kept.map(n => n.getText(model)).join('\n')}\n}`
+}
+const withoutAssets = name => name !== 'get_assets'
+common += `const {Property}=${await module('src/model/property.ts')};\nconst {Skill}=${await module('src/model/skill.ts')};\n`
+const models = [
+  modelClass(equipModel, 'EquipProperty', withoutAssets),
+  modelClass(equipModel, 'EquipMainProperty', withoutAssets),
+  modelClass(equipModel, 'Equip', withoutAssets),
+  modelClass(equipModel, 'Weapon', withoutAssets),
+  modelClass(avatarModel, 'Rank', withoutAssets),
+  modelClass(avatarModel, 'ZZZAvatarInfo', name => name === 'constructor' || propertyMembers.includes(name)),
+]
+common += `const {ZZZAvatarInfo}=${compile('const Score=ZZZScore;\n' + models.join('\n'), 'selected-models.ts')};\n`
 await fs.writeFile(path.join(calc, 'common.js'), common)
 
 // Unreleased agents carry the placeholder full name '...'.

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["uid", "rarity", "name", "level", "rank", "skills", "sub_element", "properties", "damage"],
+  "properties": {
+    "uid": { "type": "string" },
+    "rarity": { "type": "string" },
+    "name": { "type": "string" },
+    "level": { "type": "integer" },
+    "rank": { "type": "integer" },
+    "skills": { "type": "array" },
+    "sub_element": { "type": "string" },
+    "properties": { "type": "array" },
+    "weapon": { "type": "object" },
+    "damage": { "type": "object" },
+    "sub": { "type": "object" },
+    "main": { "type": "object" },
+    "render_footer": { "type": "string" }
+  },
+  "additionalProperties": false
+}

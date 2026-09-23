@@ -163,7 +163,7 @@ func (e *Engine) Run(ctx context.Context, character Character, input map[string]
 	if !validScript(character.Script, "characters") {
 		return nil, errors.New("no calculation rule for this character")
 	}
-	return e.call(ctx, "runBuild", character.Script, character, input)
+	return e.call(ctx, "runBuild", []string{character.Script}, character, input)
 }
 
 // Score rates the equipment with the character's scoring rule, or with the
@@ -172,16 +172,27 @@ func (e *Engine) Score(ctx context.Context, character Character, input map[strin
 	if character.ScoreScript != "" && !validScript(character.ScoreScript, "scores") {
 		return nil, errors.New("invalid scoring rule")
 	}
-	return e.call(ctx, "runScore", character.ScoreScript, character, input)
+	return e.call(ctx, "runScore", []string{character.ScoreScript}, character, input)
+}
+
+// Damage runs the runner's runDamage with both of the character's rules, for
+// games whose upstream compares damage across the stats its scoring weighs.
+// A character without a damage rule still runs, and the runner reports that
+// it has no damage.
+func (e *Engine) Damage(ctx context.Context, character Character, input map[string]any) (json.RawMessage, error) {
+	if character.Script != "" && !validScript(character.Script, "characters") || character.ScoreScript != "" && !validScript(character.ScoreScript, "scores") {
+		return nil, errors.New("invalid calculation rule")
+	}
+	return e.call(ctx, "runDamage", []string{character.Script, character.ScoreScript}, character, input)
 }
 
 // Showcase turns a showcase service's answer into the official format with
 // the runner's runShowcase, for games whose upstream does so in its scripts.
 func (e *Engine) Showcase(ctx context.Context, input map[string]any) (json.RawMessage, error) {
-	return e.call(ctx, "runShowcase", "", Character{}, input)
+	return e.call(ctx, "runShowcase", nil, Character{}, input)
 }
 
-func (e *Engine) call(ctx context.Context, entry, script string, character Character, input map[string]any) (json.RawMessage, error) {
+func (e *Engine) call(ctx context.Context, entry string, scripts []string, character Character, input map[string]any) (json.RawMessage, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -193,8 +204,11 @@ func (e *Engine) call(ctx context.Context, entry, script string, character Chara
 	if err != nil {
 		return nil, err
 	}
-	list := append(make([]*goja.Program, 0, len(e.prelude)+2), e.prelude...)
-	if script != "" {
+	list := append(make([]*goja.Program, 0, len(e.prelude)+len(scripts)+1), e.prelude...)
+	for _, script := range scripts {
+		if script == "" {
+			continue
+		}
 		rule, err := e.character(script)
 		if err != nil {
 			return nil, err

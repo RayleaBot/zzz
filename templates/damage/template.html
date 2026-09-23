@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><style>{{ .Stylesheet }}</style></head>
+<body>
+<div class="container">
+<div class="damage">
+  <div class="uid">UID {{ .uid }}</div>
+  <div class="basic">
+    <div class="char">
+      <div class="avatar"><img data-render-resource="role-icon" alt=""></div>
+      <div class="skills">
+        {{ range .skills }}<div class="skill">{{ . }}</div>{{ end }}
+      </div>
+    </div>
+    <div class="info">
+      <div class="char_info">
+        <div class="base">
+          <div class="rank rank-icon {{ .rarity }}"></div>
+          <div class="element-icon {{ .sub_element }}"></div>
+          <div class="name">{{ .name }}</div>
+        </div>
+        <div class="addition">
+          <div class="level">Lv.{{ .level }}</div>
+          <div class="role_ranks r{{ .rank }}"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="property_info">
+        <div class="title">
+          <div class="special-title">
+            <div class="bg-content">PROPERTY</div>
+            <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="content">属性</div>
+            <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+        <div class="list">
+          {{ range .properties }}
+          <div class="properties">
+            <div class="{{ .icon }} {{ .icon_class }}"></div>
+            <div class="label {{ .label }}">{{ .name }}</div>
+            {{ if .detail }}<div class="value-detail no-zzz-font"><span class="base">{{ .base }}</span><span class="add">+{{ .add }}</span></div>{{ end }}
+            <div class="value">{{ .final }}</div>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+      <div class="weapon_info">
+        {{ with .weapon }}
+        <div class="info">
+          <div class="base">
+            <div class="rarity-icon {{ .rarity }}"></div>
+            <div class="name">{{ .name }}</div>
+          </div>
+          <div class="main">
+            <div class="addition">
+              <div class="star star{{ .star }}"></div>
+              <div class="level">Lv.{{ .level }}</div>
+            </div>
+            {{ range .main }}<div class="properties"><div class="prop-icon {{ .class }}"></div><div class="label">{{ .name }}</div><div class="value">{{ .base }}</div></div>{{ end }}
+            {{ range .sub }}<div class="properties sub"><div class="prop-icon {{ .class }}"></div><div class="label">{{ .name }}</div><div class="value">{{ .base }}</div></div>{{ end }}
+          </div>
+        </div>
+        <div class="icon"><img data-render-resource="weapon-icon" alt=""></div>
+        {{ else }}
+        <div class="info empty"><div class="base"><div class="rarity-icon"></div><div class="name"></div></div></div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+  <div class="damage-data">
+    {{ with .damage }}
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">DAMAGE</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">伤害统计</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="data-list damage-list">
+      <div class="tr dmg-tr column4 titlebar no-zzz-font">
+        <div class="td dmg-td">%</div>
+        <div class="td dmg-td">技能类型</div>
+        <div class="td dmg-td">暴击伤害</div>
+        <div class="td dmg-td">期望伤害</div>
+      </div>
+      {{ range .rows }}
+      <div class="tr dmg-tr {{ if .crit }}column4{{ else }}column3{{ end }}{{ if .current }} current{{ end }}">
+        <div class="td dmg-td">{{ .index }}</div>
+        <div class="td dmg-td no-zzz-font">{{ .name }}</div>
+        {{ if .crit }}<div class="td dmg-td">{{ .crit }}</div>{{ end }}
+        <div class="td dmg-td">{{ .expect }}</div>
+      </div>
+      {{ end }}
+      <div class="tr dmg-tr info-tr no-zzz-font">
+        <div>伤害计算取有弱点、敌人等级{{ .level }}、1级基础防御力为50的敌方数据，且不考虑失衡易伤区</div>
+        <div>当前指令：<span>{{ .command }}</span></div>
+        <div>下列计算以 <span>{{ .skill }}</span> 为计算目标</div>
+        <div>可通过 <span>{{ .hint }}</span> 切换需要查看的伤害计算</div>
+      </div>
+    </div>
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">AREA</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">乘区数据</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="data-list area-list">
+      <div class="tr area-tr titlebar no-zzz-font">
+        {{ range .areas }}<div class="td area-td">{{ .label }}</div>{{ end }}
+      </div>
+      <div class="tr area-tr titlebar">
+        {{ range .areas }}<div class="td area-td">{{ .value }}</div>{{ end }}
+      </div>
+      {{ with .anomaly }}
+      <div class="tr area-tr anomaly titlebar no-zzz-font">
+        {{ range . }}<div class="td area-td">{{ .label }}</div>{{ end }}
+      </div>
+      <div class="tr area-tr anomaly titlebar">
+        {{ range . }}<div class="td area-td">{{ .value }}</div>{{ end }}
+      </div>
+      {{ end }}
+      <div class="tr area-tr info-tr no-zzz-font">
+        <div>注：一个技能可能分为多个出伤部分分别计算累加，此时该数据仅为一部分的乘区，下同</div>
+      </div>
+    </div>
+    {{ with .buffs }}
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">BUFF</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">Buff统计</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="data-list buff-list">
+      <div class="tr buff-tr titlebar no-zzz-font">
+        <div class="td buff-td">%</div>
+        <div class="td buff-td">名称</div>
+        <div class="td buff-td">来源</div>
+        <div class="td buff-td">增益类型</div>
+        <div class="td buff-td">增益值</div>
+      </div>
+      {{ range . }}
+      <div class="tr buff-tr titlebar">
+        <div class="td buff-td">{{ .index }}</div>
+        <div class="td buff-td no-zzz-font">{{ .name }}</div>
+        <div class="td buff-td no-zzz-font">{{ .source }}</div>
+        <div class="td buff-td no-zzz-font">{{ .type }}</div>
+        <div class="td buff-td">{{ .value }}</div>
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+    {{ end }}
+    {{ with .sub }}
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">SUBSTAT</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">副词条差异计算</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="data-list difference-list">
+      <div class="tr difference-tr d{{ len .columns }}">
+        <div class="td difference-td no-zzz-font">词条变化</div>
+        {{ range .columns }}<div class="td difference-td no-zzz-font">{{ .name }}<span>+{{ .value }}</span></div>{{ end }}
+      </div>
+      {{ $size := len .columns }}
+      {{ range .rows }}
+      <div class="tr difference-tr d{{ $size }}">
+        <div class="td difference-td no-zzz-font">{{ .name }}<span>-{{ .value }}</span></div>
+        {{ range .cells }}<div class="td difference-td no-zzz-font {{ .class }}">{{ .text }}</div>{{ end }}
+      </div>
+      {{ end }}
+      <div class="tr difference-tr info-tr no-zzz-font">
+        <div>反映在上述buff作用下置换<span>单位副词条</span>后的<span>{{ $.damage.skill }}</span>期望伤害变化</div>
+        <div><span>横轴</span>表示<span>增加</span>的词条，<span>纵轴</span>表示<span>减少</span>的词条，对应坐标即为<span>期望伤害变化</span>，下同</div>
+      </div>
+    </div>
+    {{ end }}
+    {{ with .main }}
+    <div class="title">
+      <div class="special-title">
+        <div class="bg-content">MAINSTAT</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">主词条差异计算</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="data-list difference-list">
+      <div class="tr difference-tr d{{ len .columns }}">
+        <div class="td difference-td no-zzz-font">词条变化</div>
+        {{ range .columns }}<div class="td difference-td no-zzz-font">{{ .name }}<span>+{{ .value }}</span></div>{{ end }}
+      </div>
+      {{ $size := len .columns }}
+      {{ range .rows }}
+      <div class="tr difference-tr d{{ $size }}">
+        <div class="td difference-td no-zzz-font">{{ .name }}<span>-{{ .value }}</span></div>
+        {{ range .cells }}<div class="td difference-td no-zzz-font {{ .class }}">{{ .text }}</div>{{ end }}
+      </div>
+      {{ end }}
+      <div class="tr difference-tr info-tr no-zzz-font">
+        <div>反映在上述buff作用下置换<span>单位主词条</span>后的<span>{{ $.damage.skill }}</span>期望伤害变化</div>
+        <div>量化<span>不同主词条组合</span>对伤害的影响，但并非每个组合都可实现，仅供参考</div>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{ with .render_footer }}<div class="copyright">{{ . }}</div>{{ end }}
+</div>
+</body>
+</html>

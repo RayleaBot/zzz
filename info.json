@@ -1283,12 +1283,12 @@
     {
       "id": "build",
       "name": "伤害",
-      "description": "按固定参考情境自动计算代理人技能伤害",
-      "usage": "#<角色>伤害 [UID]",
+      "description": "按 ZZZ-Plugin 计算代理人各技能伤害，并比较替换词条后的伤害变化",
+      "usage": "#<角色>伤害[序号] [UID]",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?P<character>.*?)伤害(?:[0-9]*)$"
+        "pattern": "^(?P<character>.+)伤害[0-9]*$"
       }
     },
     {

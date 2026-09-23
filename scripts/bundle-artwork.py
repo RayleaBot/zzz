@@ -37,7 +37,8 @@ BUNDLES = {
         "resources/common/bg/bg-hydro.webp",
         "resources/common/item/face.webp",
     ]),
-    # The UID list page, the news pages and the Bangboo list.
+    # The UID list page, the news pages, the Bangboo list and the fonts
+    # ZZZ-Plugin's 伤害 page reads from the 原神插件 beside it.
     "yunzai-genshin": ("Yunzai-genshin", [
         "resources/img/icon/check.webp",
         "resources/ZZZero/img/other/banner.png",
@@ -49,6 +50,7 @@ BUNDLES = {
         "resources/html/mysNews/mys.png",
         "resources/html/mysNews-list/蒙德.png",
         "resources/font/tttgbnumber.ttf",
+        "resources/font/HYWenHei-55W.ttf",
     ]),
 }
 

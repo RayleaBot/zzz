@@ -233,7 +233,8 @@
         "resources/img/icon/",
         "resources/html/mysNews/",
         "resources/html/mysNews-list/",
-        "resources/font/tttgbnumber.ttf"
+        "resources/font/tttgbnumber.ttf",
+        "resources/font/HYWenHei-55W.ttf"
       ],
       "extensions": [
         ".png",

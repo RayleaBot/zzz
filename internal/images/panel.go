@@ -45,34 +45,73 @@ func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	if official == nil {
 		return app.Image{}, false
 	}
-	resources := []rayleabot.RenderImageResource{}
-	for _, item := range append(append([][2]string{}, commonArtwork...), panelArtwork...) {
-		if resource, ok := context.ArtworkResource(item[0], "zzz-plugin", item[1]); ok {
-			resources = append(resources, resource)
-		}
-	}
-	fetch := func(id, name string) bool {
-		resource, ok := context.FetchArtworkResource(id, "zzzerouid", name)
-		if ok {
-			resources = append(resources, resource)
-		}
-		return ok
-	}
-	maps := readMaps(context)
-	id := app.Text(official["id"])
-	// A custom picture uploaded for the character replaces the portrait, as
-	// ZZZ-Plugin's 上传面板图.
-	if image.Portrait != "" {
-		resources = append(resources, rayleabot.RenderImageResource{ID: "role-icon", Path: image.Portrait})
-	} else if sprite := maps.partners[id].SpriteID; sprite != "" {
-		fetch("role-icon", "role/IconRole"+sprite+".png")
-	}
-
-	weights := map[string]float64{}
 	var detail zzzDetail
 	if image.Panel.ScoreDetail != nil {
 		_ = json.Unmarshal(image.Panel.ScoreDetail.Raw, &detail)
-		weights = detail.Weights
+	}
+	card := newAgentCard(context)
+	data := card.basic(official, image.UID, image.Portrait, detail.Weights)
+	data["damage_hint"] = context.Game.Prefix + app.Text(official["name_mi18n"]) + "伤害"
+	if image.Panel.ScoreDetail != nil {
+		data["rating"] = rating(detail, image.Panel.ScoreDetail)
+	}
+	data["discs"] = discs(official, detail, card.maps, card.fetch)
+	if image.Damage != nil {
+		rows := []any{}
+		for index, result := range image.Damage.Baseline.Results {
+			row := map[string]any{"index": index + 1, "name": result.Title}
+			if result.Expected != nil {
+				row["expect"] = strconv.FormatFloat(*result.Expected, 'f', 0, 64)
+			} else {
+				row["expect"] = result.Text
+			}
+			if result.Critical != nil && *result.Critical != 0 {
+				row["crit"] = strconv.FormatFloat(*result.Critical, 'f', 0, 64)
+			}
+			rows = append(rows, row)
+		}
+		data["damage"] = map[string]any{"rows": rows, "level": app.Int(official["level"])}
+	}
+	return app.Image{Template: "panel", Data: data, Resources: card.resources}, true
+}
+
+// agentCard is what ZZZ-Plugin's panel card and damage page share: the
+// upstream ID tables, the card's pictures and the agent's own ones fetched on
+// demand.
+type agentCard struct {
+	context   app.ImageContext
+	maps      zzzMaps
+	resources []rayleabot.RenderImageResource
+}
+
+func newAgentCard(context app.ImageContext) *agentCard {
+	card := &agentCard{context: context, maps: readMaps(context)}
+	for _, item := range append(append([][2]string{}, commonArtwork...), panelArtwork...) {
+		if resource, ok := context.ArtworkResource(item[0], "zzz-plugin", item[1]); ok {
+			card.resources = append(card.resources, resource)
+		}
+	}
+	return card
+}
+
+func (c *agentCard) fetch(id, name string) bool {
+	resource, ok := c.context.FetchArtworkResource(id, "zzzerouid", name)
+	if ok {
+		c.resources = append(c.resources, resource)
+	}
+	return ok
+}
+
+// basic is the top of the card: the UID, the portrait with the skill levels,
+// rarity, element, name, level and Mindscape, the properties with labels
+// coloured by the score weights, and the W-Engine. A custom picture uploaded
+// for the character replaces the portrait, as ZZZ-Plugin's 上传面板图.
+func (c *agentCard) basic(official map[string]any, uid, portrait string, weights map[string]float64) map[string]any {
+	id := app.Text(official["id"])
+	if portrait != "" {
+		c.resources = append(c.resources, rayleabot.RenderImageResource{ID: "role-icon", Path: portrait})
+	} else if sprite := c.maps.partners[id].SpriteID; sprite != "" {
+		c.fetch("role-icon", "role/IconRole"+sprite+".png")
 	}
 	label := func(weightID string) string {
 		switch w := weights[weightID]; {
@@ -100,42 +139,21 @@ func Panel(context app.ImageContext, image app.PanelImage) (app.Image, bool) {
 	}
 
 	data := map[string]any{
-		"uid": image.UID, "rarity": app.Text(official["rarity"]), "name": app.Text(official["full_name_mi18n"]),
+		"uid": uid, "rarity": app.Text(official["rarity"]), "name": app.Text(official["full_name_mi18n"]),
 		"level": app.Int(official["level"]), "rank": app.Int(official["rank"]), "skills": levels,
-		"sub_element": maps.elementName(official["element_type"], official["sub_element_type"]),
-		"properties":  properties(official, maps, label),
-		"damage_hint": context.Game.Prefix + app.Text(official["name_mi18n"]) + "伤害",
+		"sub_element": c.maps.elementName(official["element_type"], official["sub_element_type"]),
+		"properties":  properties(official, c.maps, label),
 	}
 	if weapon, _ := official["weapon"].(map[string]any); weapon != nil {
-		if code := maps.weapons[app.Text(weapon["id"])].CodeName; code != "" {
-			fetch("weapon-icon", "weapon/"+code+"_High.png")
+		if code := c.maps.weapons[app.Text(weapon["id"])].CodeName; code != "" {
+			c.fetch("weapon-icon", "weapon/"+code+"_High.png")
 		}
 		data["weapon"] = map[string]any{
 			"rarity": app.Text(weapon["rarity"]), "name": app.Text(weapon["name"]), "star": app.Int(weapon["star"]), "level": app.Int(weapon["level"]),
 			"main": weaponProperties(weapon["main_properties"]), "sub": weaponProperties(weapon["properties"]),
 		}
 	}
-	if image.Panel.ScoreDetail != nil {
-		data["rating"] = rating(detail, image.Panel.ScoreDetail)
-	}
-	data["discs"] = discs(official, detail, maps, fetch)
-	if image.Damage != nil {
-		rows := []any{}
-		for index, result := range image.Damage.Baseline.Results {
-			row := map[string]any{"index": index + 1, "name": result.Title}
-			if result.Expected != nil {
-				row["expect"] = strconv.FormatFloat(*result.Expected, 'f', 0, 64)
-			} else {
-				row["expect"] = result.Text
-			}
-			if result.Critical != nil && *result.Critical != 0 {
-				row["crit"] = strconv.FormatFloat(*result.Critical, 'f', 0, 64)
-			}
-			rows = append(rows, row)
-		}
-		data["damage"] = map[string]any{"rows": rows, "level": app.Int(official["level"])}
-	}
-	return app.Image{Template: "panel", Data: data, Resources: resources}, true
+	return data
 }
 
 // properties lists the character property rows in upstream's order; the
