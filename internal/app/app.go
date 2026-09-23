@@ -101,12 +101,9 @@ type Settings struct {
 	// GroupRank is ZZZ-Plugin's rank.allow_group: whether the group
 	// challenge rankings answer and keep queried records.
 	GroupRank bool `json:"group_rank_enabled"`
-	// The intervals are ZZZ-Plugin's: seconds between two refreshes of a
-	// UID's gacha records or panels, and milliseconds between the character
-	// detail requests of a panel refresh.
-	GachaInterval     int `json:"gacha_refresh_interval"`
-	PanelInterval     int `json:"panel_refresh_interval"`
-	PanelRoleInterval int `json:"panel_role_interval"`
+	// PanelInterval is ZZZ-Plugin's panel.interval: the seconds between two
+	// refreshes of a UID's panels.
+	PanelInterval int `json:"panel_refresh_interval"`
 }
 type App struct {
 	Manifest      pluginmeta.Manifest
@@ -164,7 +161,6 @@ type App struct {
 	banners        BannerSource
 	downloads      ArtworkGroupsBuilder
 	artworkJobs    artworkJobs
-	gachaRefreshes refreshTimes
 	usageOnce      sync.Once
 }
 
@@ -200,7 +196,7 @@ func New(assets Assets, directory string) (*App, error) {
 	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, rankImage: assets.Rank, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Media: &MediaStore{Directory: filepath.Join(directory, "media")}, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
-	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, GachaInterval: 60, PanelInterval: 60, PanelRoleInterval: 3000}
+	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60}
 	_ = decodeObject(event.Config, &value)
 	return value
 }
@@ -319,8 +315,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.deviceCommand(ctx, event, command)
 	case "artwork", "artwork-status":
 		return a.artworkCommand(event, command, args)
-	case "setting-gacha-interval", "setting-panel-interval", "setting-role-interval":
-		return a.settingCommand(ctx, event, command, args)
+	case "setting-panel-interval":
+		return a.panelIntervalCommand(ctx, event, args)
 	case "artwork-all":
 		return a.artworkAll(ctx, event)
 	case "artwork-delete":

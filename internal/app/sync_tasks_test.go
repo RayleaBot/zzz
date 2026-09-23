@@ -199,13 +199,3 @@ func seedSyncTasks(s *SyncTaskStore, tasks ...SyncTask) error {
 		return nil
 	})
 }
-
-func TestRefreshTimesSpaceRefreshesOfAUID(t *testing.T) {
-	var times refreshTimes
-	if !times.allow("10000001", time.Minute) || times.allow("10000001", time.Minute) {
-		t.Fatal("a second refresh within the wait was allowed")
-	}
-	if !times.allow("10000002", time.Minute) || !times.allow("10000001", 0) {
-		t.Fatal("another UID or a zero wait was refused")
-	}
-}

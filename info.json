@@ -46,9 +46,7 @@
     "challenge_abyss_level": 5,
     "challenge_deadly_stars": 6,
     "group_rank_enabled": true,
-    "gacha_refresh_interval": 60,
-    "panel_refresh_interval": 60,
-    "panel_role_interval": 3000
+    "panel_refresh_interval": 60
   },
   "commands": [
     {
@@ -1250,17 +1248,6 @@
       }
     },
     {
-      "id": "setting-gacha-interval",
-      "name": "刷新抽卡间隔",
-      "description": "设置同一 UID 两次更新抽卡记录的最短间隔（0–1000 秒）",
-      "usage": "#设置刷新抽卡间隔60",
-      "permission": "super_admin",
-      "trigger": {
-        "type": "pattern",
-        "pattern": "^(?:设置)?刷新抽卡间隔(?P<value>[0-9]*)$"
-      }
-    },
-    {
       "id": "setting-panel-interval",
       "name": "刷新面板间隔",
       "description": "设置同一 UID 两次更新面板的最短间隔（0–1000 秒）",
@@ -1269,17 +1256,6 @@
       "trigger": {
         "type": "pattern",
         "pattern": "^(?:设置)?刷新面板间隔(?P<value>[0-9]*)$"
-      }
-    },
-    {
-      "id": "setting-role-interval",
-      "name": "刷新角色间隔",
-      "description": "设置更新面板时两次读取角色详情之间的等待（100–10000 毫秒）",
-      "usage": "#设置刷新角色间隔3000",
-      "permission": "super_admin",
-      "trigger": {
-        "type": "pattern",
-        "pattern": "^(?:设置)?刷新角色间隔(?P<value>[0-9]*)$"
       }
     },
     {
@@ -1721,9 +1697,7 @@
         "artwork-status",
         "artwork-all",
         "artwork-delete",
-        "setting-gacha-interval",
         "setting-panel-interval",
-        "setting-role-interval",
         "alias-set",
         "alias-remove",
         "aliases"

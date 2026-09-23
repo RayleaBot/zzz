@@ -271,9 +271,8 @@ func (a *App) refreshShowcase(ctx context.Context, event *rayleabot.EventContext
 }
 
 // accountPanels reads every character of the user's own UID from the
-// account's official data, fifty characters a request, waiting pause between
-// requests as ZZZ-Plugin waits between its per-character requests.
-func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection, pause time.Duration) ([]CharacterPanel, error) {
+// account's official data, fifty characters a request.
+func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection) ([]CharacterPanel, error) {
 	listed, err := client.Execute(ctx, choice, a.Game.ID+".characters", map[string]any{})
 	if err != nil {
 		return nil, err
@@ -286,13 +285,6 @@ func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice S
 	}
 	panels := []CharacterPanel{}
 	for batch := range slices.Chunk(ids, 50) {
-		if len(panels) > 0 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(pause):
-			}
-		}
 		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{"id_list": batch})
 		if err != nil {
 			return nil, err
@@ -377,7 +369,7 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 	if account {
 		service = "米游社"
 		notice(ctx, event, a.panelReply("account_start", nil))
-		panels, err = a.accountPanels(ctx, a.accountClient(event), owner.Choice, time.Duration(config.PanelRoleInterval)*time.Millisecond)
+		panels, err = a.accountPanels(ctx, a.accountClient(event), owner.Choice)
 		if err != nil {
 			if text := a.panelReply("account_failed", map[string]string{"error": friendlyError(err)}); text != "" {
 				return event.SendText(text)
