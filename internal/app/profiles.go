@@ -178,9 +178,22 @@ func notice(ctx context.Context, event *rayleabot.EventContext, text string) {
 		Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
 }
 
-// panelOwner is the UID a panel command is about: the one it names, or the
-// UID in use, bound with or without an account. Owned marks a UID of the
-// user's account, whose official data can be read.
+// mentionedUser is the first user a message mentions other than the bot.
+func mentionedUser(event *rayleabot.EventContext) string {
+	for _, segment := range event.Event.Message.Segments {
+		if segment.Type != "at" {
+			continue
+		}
+		if user := strings.TrimSpace(asText(segment.Data["user_id"])); user != "" && user != event.Bot.ID {
+			return user
+		}
+	}
+	return ""
+}
+
+// panelOwner is the UID a panel command is about: the one it names, that of
+// the user it mentions, or the UID in use, bound with or without an account.
+// Owned marks a UID of the user's account, whose official data can be read.
 type panelOwner struct {
 	UID    string
 	Choice Selection
@@ -189,7 +202,23 @@ type panelOwner struct {
 }
 
 func (a *App) panelOwner(ctx context.Context, event *rayleabot.EventContext, uid string) (panelOwner, error) {
-	listed, err := a.accountClient(event).List(ctx, 0)
+	client := a.accountClient(event)
+	if user := mentionedUser(event); uid == "" && user != "" {
+		// As upstream, a command that mentions someone reads their UID. Only
+		// data that needs no account is read for it; their account stays
+		// theirs.
+		var answer struct {
+			UID string `json:"uid"`
+		}
+		if err := client.call(ctx, "uids.current", map[string]any{"game": a.Game.ID, "user_id": user}, &answer); err != nil {
+			return panelOwner{}, err
+		}
+		if answer.UID == "" {
+			return panelOwner{}, gameError("uid_missing", "对方尚未绑定uid")
+		}
+		uid = answer.UID
+	}
+	listed, err := client.List(ctx, 0)
 	if err != nil && uid == "" {
 		return panelOwner{}, err
 	}
