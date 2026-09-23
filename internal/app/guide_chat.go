@@ -152,11 +152,9 @@ func (a *App) guideCommand(ctx context.Context, event *rayleabot.EventContext, c
 		}
 		return event.SendText(a.Game.Name + "默认攻略已设置为: " + strconv.Itoa(index) + " (" + name + ")")
 	case "guide-forward-count":
-		count := -1
-		if len(args) > 0 {
-			if parsed, err := strconv.Atoi(args[0]); err == nil {
-				count = parsed
-			}
+		count, ok := numberArg(args, 1)
+		if !ok {
+			return event.Result(map[string]any{"handled": false})
 		}
 		switch {
 		case count < 1:

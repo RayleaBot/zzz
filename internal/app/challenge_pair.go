@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -355,7 +356,10 @@ func (a *App) challengePairCommand(ctx context.Context, event *rayleabot.EventCo
 	case "challenge-global-time-status":
 		return event.SendText("当前全局提醒时间: " + global.Time)
 	case "challenge-global-time":
-		remindTime, reply := challengeRemindTime(args)
+		remindTime, ok, reply := challengeRemindTime(args)
+		if !ok {
+			return event.Result(map[string]any{"handled": false})
+		}
 		if reply != "" {
 			return event.SendText(reply)
 		}
@@ -369,16 +373,14 @@ func (a *App) challengePairCommand(ctx context.Context, event *rayleabot.EventCo
 		return event.SendText("全局提醒时间已更新为: " + remindTime)
 	case "challenge-global-threshold", "challenge-threshold":
 		isGlobal := command == "challenge-global-threshold"
+		value, ok := numberArg(args, 2)
+		if !ok {
+			return event.Result(map[string]any{"handled": false})
+		}
 		if !isGlobal && !global.Enabled {
 			return event.SendText(challengeRemindOff)
 		}
-		deadly := len(args) > 0 && challengeModeWord(args[0])
-		value := -1
-		if len(args) > 1 {
-			if parsed, err := strconv.Atoi(args[1]); err == nil {
-				value = parsed
-			}
-		}
+		deadly := challengeModeWord(args[0])
 		if !deadly && (value < 0 || value > 6) {
 			return event.SendText("防卫战阈值必须在0到6之间，设置为0时不提醒式舆防卫战")
 		}
@@ -431,10 +433,13 @@ func (a *App) challengePairCommand(ctx context.Context, event *rayleabot.EventCo
 		}
 		return event.SendText(text + "时提醒")
 	case "challenge-time":
+		remindTime, ok, reply := challengeRemindTime(args)
+		if !ok {
+			return event.Result(map[string]any{"handled": false})
+		}
 		if !global.Enabled {
 			return event.SendText(challengeRemindOff)
 		}
-		remindTime, reply := challengeRemindTime(args)
 		if reply != "" {
 			return event.SendText(reply)
 		}
@@ -498,18 +503,24 @@ func (a *App) challengePairCommand(ctx context.Context, event *rayleabot.EventCo
 	return event.Result(map[string]any{"handled": false})
 }
 
-// challengeRemindTime reads the time of a 提醒时间 command, returning
-// upstream's reply when it is malformed. Minutes need not be multiples of
-// ten: the reminders are checked every five minutes against their own next
-// time.
-func challengeRemindTime(args []string) (string, string) {
-	if len(args) == 0 {
-		return "", "时间格式错误"
+// challengeRemindTimes are upstream's 提醒时间 forms, 每日20时30分 and
+// 每周六20时.
+var challengeRemindTimes = regexp.MustCompile(`^(?:每日|每周.)[0-9]+时(?:[0-9]+分)?$`)
+
+// challengeRemindTime reads the time of a 提醒时间 command: ok is false when
+// the command holds no time in upstream's forms, which upstream's rule does
+// not match, and reply is upstream's when the time is not a valid one.
+// Upstream wants minutes in whole tens because it checks every ten minutes
+// on the minute; the reminders here are scheduled every five minutes and each
+// is checked at the first run after its own time, so any minute works.
+func challengeRemindTime(args []string) (remindTime string, ok bool, reply string) {
+	if len(args) != 1 || !challengeRemindTimes.MatchString(args[0]) {
+		return "", false, ""
 	}
-	if _, _, _, ok := parseChallengeTime(args[0]); !ok {
-		return "", "时间格式错误"
+	if _, _, _, valid := parseChallengeTime(args[0]); !valid {
+		return "", true, "时间格式错误"
 	}
-	return args[0], ""
+	return args[0], true, ""
 }
 
 // challengePairEnable is 开启挑战提醒: the pair for the user's role, unless

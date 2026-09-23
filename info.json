@@ -751,7 +751,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^设置(?P<mode>式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭战|强袭)阈值(?P<value>[0-9]*)$"
+        "pattern": "^设置(?P<mode>式舆|防卫战|危局)阈值(?P<value>[0-9]*)$"
       }
     },
     {
@@ -762,7 +762,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^设置个人提醒时间(?P<time>(?:每日|每周.)?[0-9]{1,2}(?::[0-9]{2}|时(?:[0-9]{1,2}分)?))?$"
+        "pattern": "^设置个人提醒时间(?P<time>(?:每日|每周.)[0-9]+时(?:[0-9]+分)?)?$"
       }
     },
     {
@@ -826,7 +826,7 @@
       "permission": "super_admin",
       "trigger": {
         "type": "pattern",
-        "pattern": "^设置全局(?P<mode>式舆防卫战|式舆|深渊|防卫战|防卫|危局强袭战|危局|强袭战|强袭)阈值(?P<value>[0-9]*)$"
+        "pattern": "^设置全局(?P<mode>式舆|危局)阈值(?P<value>[0-9]*)$"
       }
     },
     {
@@ -837,7 +837,7 @@
       "permission": "super_admin",
       "trigger": {
         "type": "pattern",
-        "pattern": "^设置全局提醒时间(?P<time>(?:每日|每周.)?[0-9]{1,2}(?::[0-9]{2}|时(?:[0-9]{1,2}分)?))?$"
+        "pattern": "^设置全局提醒时间(?P<time>(?:每日|每周.)[0-9]+时(?:[0-9]+分)?)?$"
       }
     },
     {
@@ -1251,11 +1251,11 @@
       "id": "setting-panel-interval",
       "name": "刷新面板间隔",
       "description": "设置同一 UID 两次更新面板的最短间隔（0–1000 秒）",
-      "usage": "#设置刷新面板间隔60",
+      "usage": "#刷新面板间隔60",
       "permission": "super_admin",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?:设置)?刷新面板间隔(?P<value>[0-9]*)$"
+        "pattern": "^刷新面板间隔(?P<value>[0-9]*)$"
       }
     },
     {

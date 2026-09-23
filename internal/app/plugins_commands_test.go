@@ -62,6 +62,8 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"关闭挑战提醒", "challenge-stop", nil},
 			{"设置式舆阈值6", "challenge-threshold", []string{"式舆", "6"}},
 			{"设置防卫战阈值", "challenge-threshold", []string{"防卫战"}},
+			{"设置深渊阈值5", "", nil},
+			{"设置刷新面板间隔60", "", nil},
 			{"设置全局危局阈值9", "challenge-global-threshold", []string{"危局", "9"}},
 			{"设置个人提醒时间每周六20时10分", "challenge-time", []string{"每周六20时10分"}},
 			{"设置全局提醒时间每日20时", "challenge-global-time", []string{"每日20时"}},
@@ -101,7 +103,8 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			if len(args) == 0 {
 				args = nil
 			}
-			if !ok || id != tc.id || !reflect.DeepEqual(args, tc.args) {
+			// An empty ID is a word no command takes.
+			if ok != (tc.id != "") || id != tc.id || !reflect.DeepEqual(args, tc.args) {
 				t.Errorf("%s %s resolved to %q %v %v, want %s %v", game, tc.word, id, args, ok, tc.id, tc.args)
 			}
 		}

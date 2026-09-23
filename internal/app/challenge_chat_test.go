@@ -31,3 +31,17 @@ func TestChallengeReminderChatForms(t *testing.T) {
 		t.Error(line)
 	}
 }
+
+func TestRemindTimeTakesUpstreamFormsAtAnyMinute(t *testing.T) {
+	for text, want := range map[string][2]any{"每日20时7分": {true, ""}, "每周六20时": {true, ""}, "每日25时": {true, "时间格式错误"}, "20:30": {false, ""}, "每天20时": {false, ""}} {
+		_, ok, reply := challengeRemindTime([]string{text})
+		if ok != want[0] || reply != want[1] {
+			t.Errorf("%s: %v %q", text, ok, reply)
+		}
+	}
+	for _, args := range [][]string{{"式舆"}, {"式舆", "五"}, {"式舆", "-1"}, {"式舆", "5", "6"}} {
+		if _, ok := numberArg(args, 2); ok {
+			t.Errorf("%v took a number", args)
+		}
+	}
+}
