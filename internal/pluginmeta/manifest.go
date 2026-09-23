@@ -16,6 +16,8 @@ type Command struct {
 		Type    string   `json:"type"`
 		Names   []string `json:"names"`
 		Pattern string   `json:"pattern"`
+		// Fallback takes part only when no ordinary command matches.
+		Fallback bool `json:"fallback"`
 	} `json:"trigger"`
 }
 type Group struct {

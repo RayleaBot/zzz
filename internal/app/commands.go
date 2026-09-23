@@ -19,15 +19,16 @@ type commandSet struct {
 }
 
 type declaredCommand struct {
-	id      string
-	names   []string
-	pattern *regexp.Regexp
+	id       string
+	names    []string
+	pattern  *regexp.Regexp
+	fallback bool
 }
 
 func newCommandSet(manifest pluginmeta.Manifest) (commandSet, error) {
 	set := commandSet{}
 	for _, command := range manifest.Commands {
-		declared := declaredCommand{id: command.ID}
+		declared := declaredCommand{id: command.ID, fallback: command.Trigger.Fallback}
 		switch command.Trigger.Type {
 		case "exact":
 			declared.names = command.Trigger.Names
@@ -47,13 +48,23 @@ func newCommandSet(manifest pluginmeta.Manifest) (commandSet, error) {
 
 // resolve returns the command ID and arguments for a delivered command word.
 // The named groups of a pattern trigger become the leading arguments, so
-// "雷神面板 1000" reaches the panel handler with ["雷神", "1000"].
+// "雷神面板 1000" reaches the panel handler with ["雷神", "1000"]. As the host
+// does, fallback commands are tried only after every ordinary one.
 func (s commandSet) resolve(word string, args []string) (string, []string, bool) {
-	word = strings.TrimSpace(word)
+	if id, leading, ok := s.match(strings.TrimSpace(word), args, false); ok {
+		return id, leading, ok
+	}
+	return s.match(strings.TrimSpace(word), args, true)
+}
+
+func (s commandSet) match(word string, args []string, fallback bool) (string, []string, bool) {
 	if word == "" {
 		return "", args, false
 	}
 	for _, command := range s.commands {
+		if command.fallback != fallback {
+			continue
+		}
 		if command.pattern == nil {
 			for _, name := range command.names {
 				if strings.TrimSpace(name) == word {
