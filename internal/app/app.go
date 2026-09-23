@@ -362,33 +362,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.panelCommand(ctx, event, command, args)
 	case "panel-image-upload", "panel-image-list", "panel-image-remove":
 		return a.panelImageCommand(ctx, event, command, args)
-	case "banner-history":
-		result, queryErr := a.bannerQuery(map[string]any{"query": strings.Join(args, " ")})
-		if queryErr != nil {
-			err = queryErr
-			break
-		}
-		view = calendarView(a.Game, result)
-	case "banner-current":
-		if len(args) == 0 {
-			result, queryErr := a.bannerQuery(map[string]any{"date": time.Now().In(time.FixedZone("UTC+8", 28800)).Format("2006-01-02")})
-			if queryErr != nil {
-				err = queryErr
-				break
-			}
-			view = calendarView(a.Game, result)
-			break
-		}
-		input := map[string]any{"version": args[0]}
-		if len(args) > 1 {
-			input["date"] = args[1]
-		}
-		result, queryErr := a.calendarQuery(input)
-		if queryErr != nil {
-			err = queryErr
-			break
-		}
-		view = calendarView(a.Game, result)
+	case "banner-history", "banner-current", "banner-all", "banner-version":
+		return a.poolCommand(ctx, event, command, args)
 	case "build":
 		return a.damageCommand(ctx, event, args)
 	case "score":

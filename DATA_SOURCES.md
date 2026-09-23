@@ -20,7 +20,7 @@
 
 ## 卡池资料
 
-绝区零卡池历史与 ZZZ-Plugin 一样运行时读取 [GachaClock](https://github.com/iaoongin/GachaClock) 的 `spider/data/zzz/history.json`（缓存六小时，读取失败时沿用上次结果），读不到时使用随插件的[固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746)快照（由 `scripts/import-banner-data.py` 转换），保留 `LICENSES/GachaClock-MIT.txt`。缺少起点的卡池按参考规则推算并标记；2026-09-22 时上游数据的末期结束日仍为 2026-05-05。仅转换文字和日期，没有下载或分发关联图片。
+绝区零卡池历史与 ZZZ-Plugin 一样运行时读取 [GachaClock](https://github.com/iaoongin/GachaClock) 的 `spider/data/zzz/history.json`（缓存一天，读取失败时沿用上次结果），并按上游 processData 补上缺少的 1.0 上半卡池、推算“版本更新后”的起点；管理页读不到时使用随插件的[固定提交](https://github.com/iaoongin/GachaClock/tree/99d16c10bfeeb5f885e9cb42861c50f993f3a746)快照（由 `scripts/import-banner-data.py` 转换），保留 `LICENSES/GachaClock-MIT.txt`。缺少起点的卡池按参考规则推算并标记；2026-09-22 时上游数据的末期结束日仍为 2026-05-05。插件只转换文字和日期，不下载关联图片；聊天中的卡池回复与上游一样以图片消息段发送 GachaClock 给出的卡池图片地址（哔哩哔哩绝区零 WIKI），由聊天平台获取。
 
 ## 计算脚本的兼容修正
 

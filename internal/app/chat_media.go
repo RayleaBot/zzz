@@ -136,7 +136,14 @@ func (a *App) sendForward(ctx context.Context, event *rayleabot.EventContext, pa
 			for _, part := range batch {
 				content := []any{}
 				for _, segment := range part {
-					content = append(content, map[string]any{"type": segment.Type, "data": segment.Data})
+					data := segment.Data
+					// Forwarded nodes reach OneBot as written, so an image
+					// address is given as its file, as the host does for
+					// ordinary messages.
+					if url, ok := data["url"]; segment.Type == "image" && ok && data["file"] == nil {
+						data = map[string]any{"file": url}
+					}
+					content = append(content, map[string]any{"type": segment.Type, "data": data})
 				}
 				messages = append(messages, rayleabot.ForwardMessage{"type": "node", "data": map[string]any{"user_id": event.Bot.ID, "nickname": a.Game.Name, "content": content}})
 			}

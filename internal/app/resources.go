@@ -6,20 +6,6 @@ import (
 	"time"
 )
 
-func calendarView(game Game, result map[string]any) View {
-	v := View{Title: game.Name + "固定资料", Rows: []Row{}, Note: "来源：" + asText(result["version"]) + "；固定快照，不代表已在线校准的当前活动。"}
-	for _, p := range result["pools"].([]PoolInfo) {
-		if len(v.Sections) >= 10 {
-			break
-		}
-		v.Sections = append(v.Sections, Section{Title: p.Version + " · " + p.Half, Rows: []Row{{Label: "国服时间", Value: p.From + " 至 " + p.To}, {Label: "五星角色", Value: strings.Join(p.Characters5, "、")}, {Label: "四星角色", Value: strings.Join(p.Characters4, "、")}, {Label: "五星装备", Value: strings.Join(p.Weapons5, "、")}, {Label: "四星装备", Value: strings.Join(p.Weapons4, "、")}}})
-	}
-	if len(v.Sections) == 0 {
-		v.Note = "固定资料中没有匹配卡池，未推断快照之外的日程。"
-	}
-	return v
-}
-
 type PoolInfo struct {
 	EstimatedStart bool     `json:"estimated_start,omitempty"`
 	Version        string   `json:"version"`

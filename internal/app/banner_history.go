@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -21,9 +22,27 @@ type BannerAppearance struct {
 
 func resourceVersion(game Game) string { return game.Data.Resources.Version }
 
-// BannerSource reads a game's banners online, as ZZZ-Plugin reads
-// GachaClock, with the source's version.
-type BannerSource func(ctx context.Context) ([]PoolInfo, string, error)
+// PoolRecord is one banner of GachaClock's history after ZZZ-Plugin's
+// processData: Timer reads "start ~ end", its start filled in where GachaClock
+// writes 公测开启后 or 版本更新后, and Start and End are those times in UTC+8,
+// zero when the text is not a time. Estimated marks a start inferred from the
+// previous banner's end.
+type PoolRecord struct {
+	Img       string
+	Title     string
+	Type      string
+	Version   string
+	Timer     string
+	S         string
+	A         []string
+	Start     time.Time
+	End       time.Time
+	Estimated bool
+}
+
+// BannerSource reads a game's banner history online, as ZZZ-Plugin reads
+// GachaClock, with the source's name.
+type BannerSource func(ctx context.Context) ([]PoolRecord, string, error)
 
 // bannerGame is the game with its banners from the plugin's online source
 // when it answers, else the bundled snapshot; the shared data is not changed.
@@ -34,7 +53,8 @@ func (a *App) bannerGame() Game {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	pools, version, err := a.banners(ctx)
+	records, version, err := a.banners(ctx)
+	pools := poolInfos(records)
 	if err != nil || len(pools) == 0 {
 		return game
 	}
@@ -42,6 +62,35 @@ func (a *App) bannerGame() Game {
 	data.Resources.Pools, data.Resources.Version = pools, version
 	game.Data = &data
 	return game
+}
+
+var versionHalf = regexp.MustCompile(`^([0-9.]+)(.*)$`)
+
+// poolInfos lists GachaClock's banners the way the bundled snapshot lists
+// them: the version apart from its half, and the times as UTC+8 text.
+func poolInfos(records []PoolRecord) []PoolInfo {
+	pools := []PoolInfo{}
+	for _, record := range records {
+		match := versionHalf.FindStringSubmatch(record.Version)
+		if record.End.IsZero() || match == nil {
+			continue
+		}
+		pool := PoolInfo{Version: match[1], Half: match[2], To: record.End.Format(time.DateTime), Kind: "character", EstimatedStart: record.Estimated, Characters5: []string{}, Characters4: []string{}, Weapons5: []string{}, Weapons4: []string{}}
+		if !record.Start.IsZero() {
+			pool.From = record.Start.Format(time.DateTime)
+		}
+		five := []string{}
+		if record.S != "" {
+			five = []string{record.S}
+		}
+		if record.Type == "角色" {
+			pool.Characters5, pool.Characters4 = five, append([]string{}, record.A...)
+		} else {
+			pool.Kind, pool.Weapons5, pool.Weapons4 = "weapon", five, append([]string{}, record.A...)
+		}
+		pools = append(pools, pool)
+	}
+	return pools
 }
 func allBannerNames(p PoolInfo, kind string) []string {
 	out := []string{}
