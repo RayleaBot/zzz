@@ -7,11 +7,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
-	"path/filepath"
 	"testing"
-	"time"
-
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 func pngFixture(t *testing.T) []byte {
@@ -111,34 +107,5 @@ func TestWebPDimensionsAndInvalidContainer(t *testing.T) {
 	}
 	if _, _, _, err = mediaInfo([]byte("<svg width=10 height=10/>")); err == nil {
 		t.Fatal("unsupported image accepted")
-	}
-}
-
-func TestPokeClaimHonorsReplayAndCooldown(t *testing.T) {
-	s := &InteractionStore{Path: filepath.Join(t.TempDir(), "interaction.json")}
-	owner := Subject{"onebot11", "adapter", "bot", "actor"}
-	if err := s.edit(owner, func(p *InteractionProfile) error { p.Poke = true; return nil }); err != nil {
-		t.Fatal(err)
-	}
-	now := time.Now().UnixMilli()
-	yes, err := s.claimPoke(owner, "event", now)
-	if err != nil || !yes {
-		t.Fatal(yes, err)
-	}
-	if yes, _ = s.claimPoke(owner, "event", now+20000); yes {
-		t.Fatal("event replayed")
-	}
-	if yes, _ = s.claimPoke(owner, "another", now+1000); yes {
-		t.Fatal("cooldown ignored")
-	}
-	a := App{Interactions: s}
-	if yes, err = a.interactionEligible(owner, rayleabot.Target{Type: "private", ID: "actor"}); err != nil || !yes {
-		t.Fatal("cooldown must not permit next game to reply", err)
-	}
-	other := owner
-	other.BotID = "other"
-	p, _ := s.Get(other)
-	if p.Poke || p.LastEvent != "" {
-		t.Fatal("preferences crossed bot identity")
 	}
 }

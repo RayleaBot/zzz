@@ -241,9 +241,6 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			a.Game.Prefix = event.CommandPrefixes[0]
 		}
 	})
-	if event.Event.EventType == "notice.poke" {
-		return a.handlePoke(ctx, event)
-	}
 	if event.Event.EventType == "scheduler.trigger" {
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), "game.content.") {
 			return a.runContentSubscription(ctx, event)
@@ -298,7 +295,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return event.SendText(friendlyError(readErr))
 		}
 		applyGroupConfig(event, config)
-		if config.Enabled != nil && !*config.Enabled && !(command == "poke" && len(args) > 0 && args[0] == "关闭") && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "challenge-status" && command != "community-stop" && command != "community-progress" && command != "cloud-game-stop" && command != "reminder-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
+		if config.Enabled != nil && !*config.Enabled && command != "help" && command != "version" && command != "unsubscribe" && command != "challenge-stop" && command != "challenge-status" && command != "community-stop" && command != "community-progress" && command != "cloud-game-stop" && command != "reminder-stop" && command != "gacha-stop" && command != "gacha-progress" && !(command == "gacha-schedule" && len(args) > 0 && args[0] == "关闭") && !(command == "signin-task" && len(args) > 0 && args[0] == "关闭") {
 			return event.Result(map[string]any{"handled": false})
 		}
 	}
@@ -322,7 +319,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.artworkAll(ctx, event)
 	case "artwork-delete":
 		return a.artworkDeleteAll(ctx, event)
-	case "photo", "image-library", "original-image", "interaction", "poke":
+	case "photo", "image-library", "original-image":
 		return a.interactionCommand(ctx, event, command, args)
 	case "guides", "guide-help", "guide-default", "guide-forward-count":
 		return a.guideCommand(ctx, event, command, args)
@@ -638,8 +635,6 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 		return out, err
 	case "aliases.validate":
 		return a.aliasAction(input)
-	case "interaction.list", "interaction.remove":
-		return a.interactionManage(action, input)
 	case "guides.schema", "guides.settings", "guides.configure":
 		return a.GuideSettings.Manage(action, input)
 	case "content.subscription.list", "content.subscription.remove":

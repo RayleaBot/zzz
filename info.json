@@ -26,8 +26,7 @@
     "message.private",
     "message.group",
     "config.changed",
-    "scheduler.trigger",
-    "notice.poke"
+    "scheduler.trigger"
   ],
   "default_config": {
     "account_provider": "raylea.mihoyo-accounts",
@@ -1109,32 +1108,6 @@
       }
     },
     {
-      "id": "interaction",
-      "name": "互动",
-      "description": "设置老婆、伙伴等角色偏好并看图",
-      "usage": "#互动 关系 操作 [角色名]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "互动"
-        ]
-      }
-    },
-    {
-      "id": "poke",
-      "name": "戳一戳",
-      "description": "开启或关闭本人的戳一戳角色互动",
-      "usage": "#戳一戳 开启/关闭",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "戳一戳"
-        ]
-      }
-    },
-    {
       "id": "help",
       "name": "帮助",
       "description": "查看全部命令，可按关键词筛选",
@@ -1625,9 +1598,7 @@
       "title": "图片与互动",
       "commands": [
         "photo",
-        "image-library",
-        "interaction",
-        "poke"
+        "image-library"
       ]
     },
     {
