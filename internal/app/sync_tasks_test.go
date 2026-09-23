@@ -199,3 +199,25 @@ func seedSyncTasks(s *SyncTaskStore, tasks ...SyncTask) error {
 		return nil
 	})
 }
+
+func TestChatSyncAnswersInItsChatOnce(t *testing.T) {
+	s, j, a, task, now := syncTaskFixture(t, "once")
+	task.ReplyType, task.ReplyID, task.Before = "group", "group-1", map[string]int{}
+	_ = s.edit(task.Ref, func(items *[]SyncTask, i int) error { (*items)[i] = task; return nil })
+	type sent struct{ target, text string }
+	answers := []sent{}
+	send := func(_ context.Context, task SyncTask, text string) error {
+		answers = append(answers, sent{task.ReplyType + ":" + task.ReplyID, text})
+		return nil
+	}
+	for i := 0; i < 6; i++ {
+		task = tickOne(t, s, j, a, task, now+int64(i)*60000, syncPage, send)
+	}
+	// ZZZ-Plugin's report goes to the chat that asked, and only once.
+	if len(answers) != 1 || answers[0].target != "group:group-1" || answers[0].text != gachaLinkSummary(map[string]int{}, map[string]int{"1": 1}) {
+		t.Fatal(answers)
+	}
+	if task.ReplyType != "" || task.Before != nil {
+		t.Fatal("reply target kept", task)
+	}
+}

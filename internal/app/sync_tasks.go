@@ -4,9 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
@@ -194,7 +192,11 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 		}) {
 			return gameError("bot_missing", "所属机器人暂不可用。")
 		}
-		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: task.Owner.SourceProtocol, SourceAdapter: task.Owner.SourceAdapter, TargetType: "private", TargetID: task.Owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+		targetType, targetID := "private", task.Owner.ActorID
+		if task.ReplyType != "" {
+			targetType, targetID = task.ReplyType, task.ReplyID
+		}
+		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: task.Owner.SourceProtocol, SourceAdapter: task.Owner.SourceAdapter, TargetType: targetType, TargetID: targetID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
 		return err
 	})
 	if err != nil {
@@ -203,91 +205,53 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 	}
 	return event.Result(map[string]any{"checked": true})
 }
-func (a *App) syncTaskCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	prefix := a.Game.Prefix
+
+// syncTaskCommand is ZZZ-Plugin's 刷新抽卡记录: the account's records are
+// read on the role's background task, run again when it exists, and the
+// chat it was sent in gets upstream's report when the round completes.
+func (a *App) syncTaskCommand(ctx context.Context, event *rayleabot.EventContext, args []string) error {
 	uid := ""
-	mode := "once"
-	full := false
-	list := command == "gacha-progress"
-	remove := command == "gacha-stop"
-	if command == "gacha-schedule" {
-		if len(args) < 1 || len(args) > 2 || (args[0] != "开启" && args[0] != "关闭") {
-			return event.SendText("使用“" + prefix + "自动同步 开启/关闭 [UID]”。开启每日北京时间 08:00 的增量同步，有效 30 天，默认不通知。")
-		}
-		remove = args[0] == "关闭"
-		mode = "daily"
-		args = args[1:]
-	} else if command == "gacha-background" && len(args) > 0 && (args[0] == "增量" || args[0] == "全量") {
-		full = args[0] == "全量"
-		args = args[1:]
-	}
 	if len(args) > 1 {
 		return event.SendText("请指定一个 UID，或省略以使用默认角色。")
 	}
 	if len(args) == 1 {
 		uid = args[0]
 	}
-	if list || remove {
-		items, err := a.SyncTasks.List()
-		if err != nil {
-			return event.SendText(friendlyError(err))
-		}
-		items = slices.DeleteFunc(items, func(t SyncTask) bool { return t.Owner != syncOwner(event) || (uid != "" && uid != t.Role.UID) })
-		if len(items) == 0 {
-			return event.SendText("没有匹配的后台同步任务。")
-		}
-		if remove && len(items) > 1 {
-			return event.SendText("存在多个任务，请指定 UID 后停止。")
-		}
-		if remove {
-			_, err := a.syncTaskAction(ctx, event, "gacha.task.remove", map[string]any{"ref": items[0].Ref})
-			if err != nil {
-				return event.SendText(friendlyError(err))
-			}
-			return event.SendText("后台同步已停止；已有抽卡档案保留。")
-		}
-		lines := []string{a.Game.Name + "后台同步"}
-		for _, t := range items {
-			lines = append(lines, fmt.Sprintf("%s · %s · %d 页 / %d 条 · %s", t.Role.UID, syncTaskState(t.State), t.Progress.Pages, t.Progress.Fetched, t.LastCode))
-		}
-		return event.SendText(strings.Join(lines, "\n"))
-	}
 	client := a.accountClient(event)
 	accounts, err := client.List(ctx, 0)
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	choice, _, err := Choose(accounts, a.Game.ID, uid)
+	choice, role, err := Choose(accounts, a.Game.ID, uid)
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	if mode == "once" {
-		items, err := a.SyncTasks.List()
-		if err != nil {
+	ref := syncTaskID(a.Game.ID, client.Provider, choice)
+	items, err := a.SyncTasks.List()
+	if err != nil {
+		return event.SendText(friendlyError(err))
+	}
+	if slices.ContainsFunc(items, func(t SyncTask) bool { return t.Ref == ref }) {
+		_, err = a.syncTaskAction(ctx, event, "gacha.task.run", map[string]any{"ref": ref, "confirm": true})
+		// A round already running answers here too.
+		if err != nil && PublicError(err).Code != "plugin.game_sync_task_running" {
 			return event.SendText(friendlyError(err))
 		}
-		for _, t := range items {
-			if t.Ref == syncTaskID(a.Game.ID, client.Provider, choice) {
-				if t.Full != full {
-					return event.SendText("已有任务的增量/全量模式不同，请先停止旧任务再创建。")
-				}
-				_, err = a.syncTaskAction(ctx, event, "gacha.task.run", map[string]any{"ref": t.Ref, "confirm": true})
-				if err != nil {
-					return event.SendText(friendlyError(err))
-				}
-				return event.SendText("已有后台任务已排队重新同步；使用“" + prefix + "同步进度”查看。")
-			}
+	} else if _, err = a.syncTaskAction(ctx, event, "gacha.task.create", map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "kind": "once", "hour": 8, "days": 7, "notify": false, "confirm": true}); err != nil {
+		return event.SendText(friendlyError(err))
+	}
+	before := gachaPoolCounts(a.archiveOrEmpty(role.UID, role.Region))
+	err = a.SyncTasks.edit(ref, func(items *[]SyncTask, i int) error {
+		if i < 0 {
+			return gameError("sync_task_missing", "同步任务不存在。")
 		}
-	}
-	days := 7
-	if mode == "daily" {
-		days = 30
-	}
-	_, err = a.syncTaskAction(ctx, event, "gacha.task.create", map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "kind": mode, "hour": 8, "days": days, "full": full, "notify": false, "confirm": true})
+		(*items)[i].ReplyType, (*items)[i].ReplyID, (*items)[i].Before = event.Event.Target.Type, event.Event.Target.ID, before
+		return nil
+	})
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}
-	return event.SendText("后台同步已开启，每分钟在事件时限内连续拉取记录，默认不发送通知。使用“" + prefix + "同步进度”查看，或“" + prefix + "停止同步 [UID]”停止。")
+	return event.SendText("抽卡记录获取中请稍等...可能需要一段时间，请耐心等待")
 }
 func syncTaskState(state string) string {
 	return map[string]string{"creating": "创建中", "waiting": "等待调度", "running": "同步中", "completed": "已完成", "paused": "已暂停", "expired": "已到期"}[state]

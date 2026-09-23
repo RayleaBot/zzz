@@ -15,15 +15,20 @@ import (
 type SyncTask struct {
 	Ref string `json:"ref"`
 	Selection
-	Owner              Subject        `json:"owner"`
-	Role               Role           `json:"role"`
-	Provider           string         `json:"provider"`
-	DelegationRef      string         `json:"delegation_ref"`
-	ExpiresAtMS        int64          `json:"expires_at_ms"`
-	Kind               string         `json:"kind"`
-	Hour               int            `json:"hour"`
-	Full               bool           `json:"full"`
-	Notify             bool           `json:"notify"`
+	Owner         Subject `json:"owner"`
+	Role          Role    `json:"role"`
+	Provider      string  `json:"provider"`
+	DelegationRef string  `json:"delegation_ref"`
+	ExpiresAtMS   int64   `json:"expires_at_ms"`
+	Kind          string  `json:"kind"`
+	Hour          int     `json:"hour"`
+	Full          bool    `json:"full"`
+	Notify        bool    `json:"notify"`
+	// ReplyType and ReplyID are the chat a 刷新抽卡记录 answers in when the
+	// round completes, and Before the records each channel held then.
+	ReplyType          string         `json:"reply_type,omitempty"`
+	ReplyID            string         `json:"reply_id,omitempty"`
+	Before             map[string]int `json:"before,omitempty"`
 	State              string         `json:"state"`
 	NextCheckMS        int64          `json:"next_check_ms"`
 	LastCheckedMS      int64          `json:"last_checked_ms"`
@@ -187,16 +192,25 @@ func (s *SyncTaskStore) run(ctx context.Context, task *SyncTask, now int64, jobs
 		task.NextCheckMS = nextDay
 		task.RunDay = day
 	}
-	if task.Notify {
+	if task.Notify || task.ReplyType != "" {
 		task.LastNotificationMS = now
 	}
 	// The notification is marked before it is sent, so a restart does not
 	// send it again.
+	answer := *task
+	task.ReplyType, task.ReplyID, task.Before = "", "", nil
 	if err = s.save(*task); err != nil {
 		return err
 	}
 	jobs.Forget(task.Progress.Ref)
-	if task.Notify && send != nil {
+	if answer.ReplyType != "" && send != nil {
+		// ZZZ-Plugin's report after 刷新抽卡记录.
+		archived, _ := archive.Read(task.Role.UID, task.Role.Region)
+		if err = send(ctx, answer, gachaLinkSummary(answer.Before, gachaPoolCounts(archived))); err != nil {
+			task.LastCode = "sync_completed.notification_failed"
+			return s.save(*task)
+		}
+	} else if task.Notify && send != nil {
 		result := task.Progress.Result
 		message := fmt.Sprintf("抽卡后台同步完成\n%s · %s\n新增 %d 条，档案共 %d 条。", task.Role.Nickname, task.Role.UID, result.Added, result.Total)
 		if err = send(ctx, *task, message); err != nil {
