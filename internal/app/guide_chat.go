@@ -55,7 +55,6 @@ func guidePostImage(name string, item map[string]any) string {
 // the first post naming the character, resized as upstream asks; "" when no
 // post names it.
 func (c PublicContentClient) guidePicture(ctx context.Context, source GuideSource, name string) (string, error) {
-	gid := bbsGID
 	pages := make([]map[string]any, len(source.Collections))
 	failures := make([]error, len(source.Collections))
 	var wait sync.WaitGroup
@@ -63,8 +62,7 @@ func (c PublicContentClient) guidePicture(ctx context.Context, source GuideSourc
 		wait.Add(1)
 		go func() {
 			defer wait.Done()
-			params := url.Values{"gids": {gid}, "order_type": {"2"}, "collection_id": {id}}
-			pages[i], failures[i] = c.get(ctx, "https://bbs-api.mihoyo.com/post/wapi/getPostFullInCollection?"+params.Encode(), nil)
+			pages[i], failures[i] = c.collection(ctx, id)
 		}()
 	}
 	wait.Wait()

@@ -18,6 +18,18 @@ type PublicContentClient struct{ HTTP HTTPDoer }
 var publicHosts = []string{"bbs-api.miyoushe.com", "bbs-api.mihoyo.com", "bbs-api-static.miyoushe.com", "api-takumi.mihoyo.com", "api-takumi-static.mihoyo.com", "hk4e-api.mihoyo.com", "hkrpg-api.mihoyo.com", "hkrpg-api-static.mihoyo.com", "announcement-api.mihoyo.com", "announcement-static.mihoyo.com"}
 
 func (c PublicContentClient) get(ctx context.Context, address string, headers map[string]string) (map[string]any, error) {
+	return c.getUpTo(ctx, address, headers, 2*1024*1024)
+}
+
+// collection reads a 米游社 collection's posts in full. Some collections the
+// upstreams read answer with several megabytes, which get's limit refuses.
+func (c PublicContentClient) collection(ctx context.Context, id string) (map[string]any, error) {
+	params := url.Values{"gids": {bbsGID}, "order_type": {"2"}, "collection_id": {id}}
+	return c.getUpTo(ctx, "https://bbs-api.mihoyo.com/post/wapi/getPostFullInCollection?"+params.Encode(), nil, 16*1024*1024)
+}
+
+// getUpTo is get for an answer of up to limit bytes.
+func (c PublicContentClient) getUpTo(ctx context.Context, address string, headers map[string]string, limit int64) (map[string]any, error) {
 	u, err := url.Parse(address)
 	if err != nil || u.Scheme != "https" || u.User != nil || !slices.Contains(publicHosts, u.Host) {
 		return nil, gameError("public_endpoint_invalid", "公开资料地址不在允许范围内。")
@@ -49,8 +61,8 @@ func (c PublicContentClient) get(ctx context.Context, address string, headers ma
 	if res.StatusCode != 200 {
 		return nil, gameError("public_unavailable", "官方公开资料暂时无法访问。")
 	}
-	raw, err := io.ReadAll(io.LimitReader(res.Body, 2*1024*1024+1))
-	if err != nil || len(raw) > 2*1024*1024 {
+	raw, err := io.ReadAll(io.LimitReader(res.Body, limit+1))
+	if err != nil || int64(len(raw)) > limit {
 		return nil, gameError("public_invalid", "公开资料过大或无法读取。")
 	}
 	var out map[string]any

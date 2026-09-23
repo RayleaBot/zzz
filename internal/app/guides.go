@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -78,9 +77,7 @@ func (c PublicContentClient) guides(ctx context.Context, q ContentQuery) (map[st
 		return nil, gameError("input_invalid", "攻略来源或筛选无效。")
 	}
 	source := sources[index]
-	gid := bbsGID
-	params := url.Values{"gids": {gid}, "order_type": {"2"}, "collection_id": {source.Collections[q.CollectionOffset]}}
-	data, err := c.get(ctx, "https://bbs-api.mihoyo.com/post/wapi/getPostFullInCollection?"+params.Encode(), nil)
+	data, err := c.collection(ctx, source.Collections[q.CollectionOffset])
 	if err != nil {
 		return nil, err
 	}
