@@ -565,13 +565,6 @@ func (a *App) commandInput(operation Operation, args []string, aliases map[strin
 				input["month"] = month
 			}
 			args = args[1:]
-		} else if len(args) > 0 {
-			month, err := strconv.Atoi(args[0])
-			if err != nil || month < 202001 || month > 210012 || month%100 < 1 || month%100 > 12 {
-				return nil, "", gameError("input_invalid", "月份使用 YYYYMM，例如 202609。")
-			}
-			input["month"] = month
-			args = args[1:]
 		}
 	case "agents":
 		if len(args) == 0 {

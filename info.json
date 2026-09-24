@@ -298,7 +298,7 @@
       "id": "monthly",
       "name": "月报",
       "description": "本月或指定月份的菲林、母带与邦布券收入",
-      "usage": "#月报[2025年3月|上月] [UID] / #月报 [YYYYMM] [UID]",
+      "usage": "#月报[2025年3月|上月] [UID]",
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
