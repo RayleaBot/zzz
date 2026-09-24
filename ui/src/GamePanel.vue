@@ -221,7 +221,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
       <template v-if="page === 'overview'">
         <section aria-labelledby="query-heading"><div class="section-heading"><h2 id="query-heading">游戏查询</h2><button :disabled="busy" @click="run(() => loadAccounts())">刷新账号</button></div>
           <p v-if="accountIssue" class="feedback attention">{{ accountIssue }} 可在米游社账号管理页扫码或调整授权。</p>
-          <p v-else-if="!roleOptions.length" class="empty">没有已授权角色。请先私聊机器人发送“扫码登录”，并授权{{ game.name }}。</p>
+          <p v-else-if="!roleOptions.length" class="empty">没有已授权角色。请先向机器人发送“扫码登录”，并授权{{ game.name }}。</p>
           <form v-else class="query-form" @submit.prevent="query">
             <label class="wide">游戏角色<select v-model="selection" :disabled="busy"><option v-for="item in roleOptions" :key="item.key" :value="item.key">{{ item.label }}</option></select></label>
             <label>查询内容<select v-model="operationName" :disabled="busy"><option v-for="item in game.operations" :key="item.name" :value="item.name">{{ item.label }}</option></select></label>

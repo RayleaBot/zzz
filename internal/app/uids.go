@@ -174,7 +174,7 @@ func (a *App) uidView(listed Accounts) (View, UIDListImage) {
 	view := View{Title: a.Game.Name + " UID", Rows: []Row{}, Note: "发送“" + a.Game.Prefix + "uid序号”切换，“" + a.Game.Prefix + "删除uid序号”删除绑定的 UID。"}
 	image := UIDListImage{Entries: []UIDListEntry{}}
 	if len(list) == 0 {
-		view.Note = "暂无绑定的" + a.Game.Name + " UID。发送“" + a.Game.Prefix + "绑定uid”加 UID 绑定，或私聊发送“扫码登录”绑定米游社账号。"
+		view.Note = "暂无绑定的" + a.Game.Name + " UID。发送“" + a.Game.Prefix + "绑定uid”加 UID 绑定，或发送“扫码登录”绑定米游社账号。"
 		return view, image
 	}
 	current := a.currentUID(listed)
