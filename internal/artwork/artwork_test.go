@@ -183,6 +183,17 @@ func TestFetchDownloadsOnDemandFilesOnce(t *testing.T) {
 	if _, ok := store.Fetch(t.Context(), "zzzerouid", "role/IconRole99.png"); ok || hits.Load() != before {
 		t.Fatalf("paused file requested again: %d -> %d", before, hits.Load())
 	}
+	// The pause lasts five minutes, after which the file is asked for again.
+	store.mu.Lock()
+	until := store.failed["zzzerouid/role/IconRole99.png"]
+	store.failed["zzzerouid/role/IconRole99.png"] = time.Now().Add(-time.Second)
+	store.mu.Unlock()
+	if left := time.Until(until); left <= 4*time.Minute || left > 5*time.Minute {
+		t.Fatalf("paused for %v", left)
+	}
+	if _, ok := store.Fetch(t.Context(), "zzzerouid", "role/IconRole99.png"); ok || hits.Load() == before {
+		t.Fatalf("file not requested after the pause: %d requests", hits.Load())
+	}
 	status := store.Statuses()[0]
 	if status.State != "on_demand" || status.Files != 1 {
 		t.Fatalf("status = %+v", status)

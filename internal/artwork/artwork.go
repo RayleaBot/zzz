@@ -92,7 +92,7 @@ type Store struct {
 	jobs   map[string]*job
 	errors map[string]string
 	// fetching and failed serve on-demand sources: one download per file at
-	// a time, and an hour's pause after a file could not be fetched.
+	// a time, and a pause of fetchPause after a file could not be fetched.
 	fetching map[string]*sync.Mutex
 	failed   map[string]time.Time
 	ctx      context.Context
@@ -514,7 +514,10 @@ func (r *progressReader) Read(buffer []byte) (int, error) {
 	return count, err
 }
 
-const fetchPause = time.Hour
+// fetchPause is how long a file that could not be fetched is not asked for
+// again. On-demand sources are the images official answers link to; a CDN
+// failure is usually brief, and the pages draw another picture meanwhile.
+const fetchPause = 5 * time.Minute
 
 // Fetch returns a file of an on-demand source, downloading it from the first
 // mirror that has it when it is not cached yet. The path is relative to the
