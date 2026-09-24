@@ -1229,7 +1229,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?P<period>本期|上期|往期)?(?:式舆防卫战|式舆|深渊|防卫战|防卫)$"
+        "pattern": "^(?P<period>上期|往期)?(?:式舆防卫战|式舆|深渊|防卫战|防卫)$"
       }
     },
     {
@@ -1240,7 +1240,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?P<period>本期|上期|往期)?(?:危局强袭战|危局|强袭战|强袭)$"
+        "pattern": "^(?P<period>上期|往期)?(?:危局强袭战|危局|强袭战|强袭)$"
       }
     },
     {
@@ -1251,7 +1251,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?P<period>本期|上期|往期)?(?:拟境湮灭战|拟境|湮灭战|湮灭)$"
+        "pattern": "^(?P<period>上期|往期)?(?:拟境湮灭战|拟境|湮灭战|湮灭)$"
       }
     },
     {
@@ -1262,7 +1262,7 @@
       "permission": "everyone",
       "trigger": {
         "type": "pattern",
-        "pattern": "^(?P<period>本期|上期|往期)?(?:临界推演|临界|推演)$"
+        "pattern": "^(?P<period>上期|往期)?(?:临界推演|临界|推演)$"
       }
     },
     {

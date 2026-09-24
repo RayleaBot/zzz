@@ -549,13 +549,11 @@ func (a *App) commandInput(operation Operation, word string, args []string, alia
 	uid := ""
 	switch operation.Input {
 	case "period":
-		// Upstream names the period in words before the command, as in
-		// "上期深渊".
-		if len(args) > 0 && strings.HasPrefix(word, args[0]) {
-			if period, ok := map[string]int{"本期": 1, "上期": 2, "往期": 2}[args[0]]; ok {
-				input["schedule_type"] = period
-				args = args[1:]
-			}
+		// Upstream reads the last period for 上期 or 往期 before the command,
+		// as in "上期深渊", and the current one otherwise.
+		if len(args) > 0 && strings.HasPrefix(word, args[0]) && (args[0] == "上期" || args[0] == "往期") {
+			input["schedule_type"] = 2
+			args = args[1:]
 		}
 	case "year_month":
 		if len(args) > 0 && strings.HasSuffix(word, args[0]) && strings.ContainsAny(args[0], "年月") {

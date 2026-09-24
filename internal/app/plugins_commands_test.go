@@ -26,6 +26,8 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"更新展柜面板", "panel-refresh", nil},
 			{"面板刷新", "panel-refresh", nil},
 			{"上期式舆防卫战", "challenge", []string{"上期"}},
+			{"往期危局", "deadly", []string{"往期"}},
+			{"本期深渊", "", nil},
 			{"艾莲伤害", "build", []string{"艾莲"}},
 			{"艾莲伤害12", "build", []string{"艾莲"}},
 			{"伤害", "", nil},
