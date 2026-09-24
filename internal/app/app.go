@@ -498,7 +498,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if !matched {
 			return event.Result(map[string]any{"handled": false})
 		}
-		input, uid, parseErr := a.commandInput(operation, strings.TrimSpace(event.Event.Command()), args, a.aliasMap(event))
+		input, uid, parseErr := commandInput(operation, strings.TrimSpace(event.Event.Command()), args)
 		if parseErr != nil {
 			err = parseErr
 			break
@@ -544,7 +544,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 // commandInput reads a command's query input and UID from its arguments.
 // Upstream writes the period and the month only in the command word, so they
 // are read only from the arguments its trigger took from word.
-func (a *App) commandInput(operation Operation, word string, args []string, aliases map[string]string) (map[string]any, string, error) {
+func commandInput(operation Operation, word string, args []string) (map[string]any, string, error) {
 	input := map[string]any{}
 	uid := ""
 	switch operation.Input {
@@ -568,19 +568,6 @@ func (a *App) commandInput(operation Operation, word string, args []string, alia
 			}
 			args = args[1:]
 		}
-	case "agents":
-		if len(args) == 0 {
-			return nil, "", gameError("input_invalid", "请提供角色名或角色 ID。")
-		}
-		id := args[0]
-		if entry, ok := a.Catalog.Resolve(id, "character", aliases); ok {
-			id = entry.ID
-		}
-		if _, err := strconv.Atoi(id); err != nil {
-			return nil, "", gameError("character_ambiguous", "角色名未唯一匹配，请先查询图鉴或使用角色 ID。")
-		}
-		input["id_list"] = []any{id}
-		args = args[1:]
 	}
 	if len(args) > 0 {
 		uid = args[0]

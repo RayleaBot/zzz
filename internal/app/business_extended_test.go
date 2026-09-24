@@ -39,24 +39,23 @@ func TestMonthlyAndChallengeViewsUseBusinessFields(t *testing.T) {
 	}
 }
 func TestExtendedCommandInputs(t *testing.T) {
-	app := &App{}
 	for _, tc := range []struct{ mode, word, valid, key string }{{"year_month", "月报2025年3月", "2025年3月", "month"}, {"period", "上期深渊", "上期", "schedule_type"}} {
-		input, uid, err := app.commandInput(Operation{Input: tc.mode}, tc.word, []string{tc.valid, "100000001"}, nil)
+		input, uid, err := commandInput(Operation{Input: tc.mode}, tc.word, []string{tc.valid, "100000001"})
 		if err != nil || uid != "100000001" || input[tc.key] == nil {
 			t.Fatal("valid selector failed")
 		}
 	}
-	if _, _, err := app.commandInput(Operation{Input: "year_month"}, "月报2025年13月", []string{"2025年13月"}, nil); err == nil {
+	if _, _, err := commandInput(Operation{Input: "year_month"}, "月报2025年13月", []string{"2025年13月"}); err == nil {
 		t.Fatal("invalid month accepted")
 	}
 	// 往期 is the last period.
-	if input, _, err := app.commandInput(Operation{Input: "period"}, "往期深渊", []string{"往期"}, nil); err != nil || input["schedule_type"] != 2 {
+	if input, _, err := commandInput(Operation{Input: "period"}, "往期深渊", []string{"往期"}); err != nil || input["schedule_type"] != 2 {
 		t.Errorf("往期 = %v, %v", input["schedule_type"], err)
 	}
 	// Upstream writes periods and months only in the command word; what
 	// follows the command is neither.
 	for _, tc := range []struct{ mode, word, arg string }{{"period", "深渊", "2"}, {"period", "深渊", "上期"}, {"year_month", "月报", "202609"}, {"year_month", "月报", "上月"}} {
-		if input, uid, err := app.commandInput(Operation{Input: tc.mode}, tc.word, []string{tc.arg}, nil); err != nil || len(input) != 0 || uid != tc.arg {
+		if input, uid, err := commandInput(Operation{Input: tc.mode}, tc.word, []string{tc.arg}); err != nil || len(input) != 0 || uid != tc.arg {
 			t.Errorf("%s %s = %v, %q, %v", tc.word, tc.arg, input, uid, err)
 		}
 	}
