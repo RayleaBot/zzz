@@ -36,11 +36,6 @@ func (s *InteractionStore) read() ([]InteractionProfile, error) {
 	err := localdata.Read(s.Path, &items)
 	return items, err
 }
-func (s *InteractionStore) List() ([]InteractionProfile, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.read()
-}
 func (s *InteractionStore) Get(owner Subject) (InteractionProfile, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,8 +77,9 @@ func validInteractionOwner(s Subject) bool {
 	return s.SourceProtocol != "" && s.SourceAdapter != "" && s.BotID != "" && s.ActorID != "" && len(s.ActorID) <= 256 && len(s.BotID) <= 256
 }
 
-// originalImage answers 原图 with the image the requester last viewed in this
-// chat within ten minutes.
+// originalImage answers 原图 with the portrait of the panel or damage image
+// the requester last viewed in this chat within ten minutes, as ZZZ-Plugin
+// sends the portrait of a panel message.
 func (a *App) originalImage(event *rayleabot.EventContext) error {
 	owner := chatOwner(event)
 	if !validInteractionOwner(owner) {

@@ -1003,7 +1003,7 @@
     {
       "id": "original-image",
       "name": "原图",
-      "description": "发送本人最近十分钟在本聊天查看的面板立绘或图鉴图片原图",
+      "description": "发送本人最近十分钟在本聊天查看的面板图或伤害图中的立绘原图",
       "usage": "#原图",
       "permission": "everyone",
       "trigger": {

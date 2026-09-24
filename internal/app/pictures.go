@@ -227,7 +227,8 @@ func (a *App) pictureHint(sources []PictureSource) string {
 	return "管理员可发送“" + a.Game.Prefix + "素材更新 " + strings.Join(missing, " ") + "”下载图片素材。"
 }
 
-// rememberImage keeps the image just sent for 原图.
+// rememberImage keeps the portrait of the panel or damage image just sent for
+// 原图, as ZZZ-Plugin keeps a panel message's portrait.
 func (a *App) rememberImage(event *rayleabot.EventContext, ref string) error {
 	return a.Interactions.edit(chatOwner(event), func(p *InteractionProfile) error {
 		p.LastImage = ref
@@ -243,9 +244,6 @@ func (a *App) sendArtwork(event *rayleabot.EventContext, file artworkFile) error
 	data, err := a.Artwork.Open(file.Source, file.Path)
 	if err != nil {
 		return event.SendText("图片素材读取失败，请重新下载素材。")
-	}
-	if err = a.rememberImage(event, "artwork:"+file.Source+"/"+file.Path); err != nil {
-		return event.SendText(friendlyError(err))
 	}
 	return event.Send(event.Event.Target.Type, event.Event.Target.ID, rayleabot.Image("base64://"+base64.StdEncoding.EncodeToString(data)))
 }
