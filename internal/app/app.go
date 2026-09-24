@@ -498,7 +498,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if !matched {
 			return event.Result(map[string]any{"handled": false})
 		}
-		input, uid, parseErr := a.commandInput(operation, args, a.aliasMap(event))
+		input, uid, parseErr := a.commandInput(operation, strings.TrimSpace(event.Event.Command()), args, a.aliasMap(event))
 		if parseErr != nil {
 			err = parseErr
 			break
@@ -541,20 +541,24 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	return a.sendView(ctx, event, view)
 }
 
-func (a *App) commandInput(operation Operation, args []string, aliases map[string]string) (map[string]any, string, error) {
+// commandInput reads a command's query input and UID from its arguments.
+// Upstream writes the period and the month only in the command word, so they
+// are read only from the arguments its trigger took from word.
+func (a *App) commandInput(operation Operation, word string, args []string, aliases map[string]string) (map[string]any, string, error) {
 	input := map[string]any{}
 	uid := ""
 	switch operation.Input {
 	case "period":
-		// Upstream names the period only in words, as in "上期深渊".
-		if len(args) > 0 {
+		// Upstream names the period in words before the command, as in
+		// "上期深渊".
+		if len(args) > 0 && strings.HasPrefix(word, args[0]) {
 			if period, ok := map[string]int{"本期": 1, "上期": 2, "往期": 2}[args[0]]; ok {
 				input["schedule_type"] = period
 				args = args[1:]
 			}
 		}
 	case "year_month":
-		if len(args) > 0 && strings.ContainsAny(args[0], "年月") {
+		if len(args) > 0 && strings.HasSuffix(word, args[0]) && strings.ContainsAny(args[0], "年月") {
 			// ZZZ-Plugin's 月报2025年3月 and 月报上月; a month it cannot use
 			// reads the default month.
 			month, valid := monthlyWord(args[0], time.Now())
