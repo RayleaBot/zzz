@@ -81,7 +81,7 @@ $env:RAYLEA_PLUGIN_BUILD_USE_WORKSPACE='1'
 go run github.com/RayleaBot/RayleaBot/sdk/go/cmd/raylea-plugin build-go --backend ./cmd/plugin-zzz --target windows-x64 --include DATA_SOURCES.md=DATA_SOURCES.md --include .rayleabot/source.zip=ui/source.zip
 ```
 
-打包前运行 `python scripts/bundle-artwork.py --references <参考项目/2026-09-15>`，把模板用到的上游图片、字体与资料文件从固定提交复制到 `assets/`（不纳入版本库，构建时随包分发），再运行 `python scripts/source-bundle.py` 生成管理页提供下载的源码包。源码包含本插件与相邻 RayleaBot 的 SDK 源码及 `go.work`，可按上述命令构建；SDK v0.7.1 发布前，独立检出仍需相邻的 RayleaBot 仓库。
+打包前运行 `python scripts/bundle-artwork.py --references <参考项目/2026-09-15>`，把模板用到的上游图片、字体与资料文件从固定提交复制到 `assets/`（不纳入版本库，构建时随包分发），再运行 `python scripts/source-bundle.py` 生成管理页提供下载的源码包。源码包含本插件与相邻 RayleaBot 的 SDK 源码及 `go.work`，可按上述命令构建；SDK v0.7.0 发布前，独立检出仍需相邻的 RayleaBot 仓库。
 
 固定资料与计算脚本由 `scripts/` 从已下载的参考项目（RayleaBot `external/参考项目/<日期>`）重新生成，依次运行：
 
