@@ -503,6 +503,11 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			err = parseErr
 			break
 		}
+		if uid != "" && !uidPattern.MatchString(uid) {
+			// Upstream's rules end with the command word. What follows it here
+			// is a UID; anything else is not this command, as upstream.
+			return event.Result(map[string]any{"handled": false})
+		}
 		listed, listErr := a.accountClient(event).List(ctx, 0)
 		if listErr != nil {
 			err = listErr
@@ -541,17 +546,12 @@ func (a *App) commandInput(operation Operation, args []string, aliases map[strin
 	uid := ""
 	switch operation.Input {
 	case "period":
+		// Upstream names the period only in words, as in "上期深渊".
 		if len(args) > 0 {
-			// Upstream names the period in words, as in "上期深渊".
-			if word, ok := map[string]string{"本期": "1", "上期": "2", "往期": "2"}[args[0]]; ok {
-				args = append([]string{word}, args[1:]...)
+			if period, ok := map[string]int{"本期": 1, "上期": 2, "往期": 2}[args[0]]; ok {
+				input["schedule_type"] = period
+				args = args[1:]
 			}
-			period, err := strconv.Atoi(args[0])
-			if err != nil || period < 1 || period > 2 {
-				return nil, "", gameError("input_invalid", "期数使用 1 或 2。")
-			}
-			input["schedule_type"] = period
-			args = args[1:]
 		}
 	case "year_month":
 		if len(args) > 0 && strings.ContainsAny(args[0], "年月") {
