@@ -1001,35 +1001,9 @@
       }
     },
     {
-      "id": "photo",
-      "name": "照片",
-      "description": "随机发送导入图库中该角色的照片",
-      "usage": "#照片 角色名",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "照片"
-        ]
-      }
-    },
-    {
-      "id": "image-library",
-      "name": "图鉴图",
-      "description": "按分类发送一张图库图片",
-      "usage": "#图鉴图 分类 [关键词]",
-      "permission": "everyone",
-      "trigger": {
-        "type": "exact",
-        "names": [
-          "图鉴图"
-        ]
-      }
-    },
-    {
       "id": "original-image",
       "name": "原图",
-      "description": "发送本人最近十分钟查看的图库图片原图",
+      "description": "发送本人最近十分钟在本聊天查看的面板立绘或图鉴图片原图",
       "usage": "#原图",
       "permission": "everyone",
       "trigger": {
@@ -1545,14 +1519,6 @@
       ]
     },
     {
-      "id": "images",
-      "title": "图片与互动",
-      "commands": [
-        "photo",
-        "image-library"
-      ]
-    },
-    {
       "id": "news",
       "title": "公告资讯",
       "commands": [
@@ -1681,7 +1647,7 @@
       },
       {
         "id": "media",
-        "label": "素材与互动"
+        "label": "图片素材"
       },
       {
         "id": "help",

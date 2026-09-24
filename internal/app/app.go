@@ -41,7 +41,7 @@ type Game struct {
 	// Artwork lists the upstream image repositories an administrator can
 	// download into the data directory.
 	Artwork []artwork.Source `json:"artwork"`
-	// Pictures are where 照片, 老婆 and 图鉴 find downloaded images.
+	// Pictures are where 图鉴 finds downloaded images.
 	Pictures Pictures `json:"pictures"`
 	// Calc runs this game's pinned upstream calculation scripts.
 	Calc *reference.Engine `json:"-"`
@@ -107,7 +107,6 @@ type Settings struct {
 }
 type App struct {
 	Manifest      pluginmeta.Manifest
-	Media         *MediaStore
 	Artwork       *artwork.Store
 	Interactions  *InteractionStore
 	GuideSettings *GuideSettings
@@ -194,7 +193,7 @@ func New(assets Assets, directory string) (*App, error) {
 	if directory == "" {
 		return nil, fmt.Errorf("plugin data directory is required")
 	}
-	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Media: &MediaStore{Directory: filepath.Join(directory, "media")}, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
+	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
 	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60}
@@ -202,12 +201,9 @@ func settings(event *rayleabot.EventContext) Settings {
 	return value
 }
 
-// Close stops the plugin's background work: media uploads, artwork downloads
-// and public content jobs.
+// Close stops the plugin's background work: artwork downloads and public
+// content jobs.
 func (a *App) Close() {
-	if a.Media != nil {
-		a.Media.Close()
-	}
 	if a.Artwork != nil {
 		a.Artwork.Close()
 	}
@@ -332,8 +328,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.artworkAll(ctx, event)
 	case "artwork-delete":
 		return a.artworkDeleteAll(ctx, event)
-	case "photo", "image-library", "original-image":
-		return a.interactionCommand(ctx, event, command, args)
+	case "original-image":
+		return a.originalImage(event)
 	case "guides", "guide-help", "guide-default", "guide-forward-count":
 		return a.guideCommand(ctx, event, command, args)
 	case "subscribe", "unsubscribe", "content-push":
@@ -696,9 +692,6 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 		}
 		return map[string]any{"entry": entry, "view": EntryView(a.Game, entry)}, nil
 	default:
-		if strings.HasPrefix(action, "media.") {
-			return a.mediaAction(action, input)
-		}
 		if strings.HasPrefix(action, "artwork.") {
 			return a.artworkAction(action, input)
 		}

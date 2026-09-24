@@ -20,7 +20,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -285,32 +284,6 @@ func (s *Store) File(sourceID, name string) (string, bool) {
 		return "", false
 	}
 	return "assets/" + sourceID + "/" + name, true
-}
-
-// List names the files directly inside a directory of a source, downloaded or
-// shipped, as paths relative to the source, in name order.
-func (s *Store) List(sourceID, dir string) []string {
-	if !validName(sourceID) || !validName(dir) {
-		return nil
-	}
-	seen := map[string]bool{}
-	for _, root := range s.roots(sourceID) {
-		entries, err := os.ReadDir(filepath.Join(root, filepath.FromSlash(dir)))
-		if err != nil {
-			continue
-		}
-		for _, entry := range entries {
-			if entry.Type().IsRegular() {
-				seen[dir+"/"+entry.Name()] = true
-			}
-		}
-	}
-	names := make([]string, 0, len(seen))
-	for name := range seen {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }
 
 // Ready tells whether a source has files, downloaded or shipped.

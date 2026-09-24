@@ -16,24 +16,19 @@ import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// 照片, 老婆 and 图鉴 read the upstream images an administrator downloaded:
-// photos the way miao-plugin reads character-img, 图鉴 the way Atlas and
-// xiaoyao read their libraries. Each game declares where in game.json.
+// 图鉴 reads the upstream images an administrator downloaded the way Atlas
+// reads its libraries. Each game declares where in game.json.
 
 // Pictures are where a game's downloaded chat images are.
 type Pictures struct {
-	// Photos are directories of a character's photos; {name} stands for the
-	// character.
-	Photos []PictureSource `json:"photos"`
 	// Atlas are the 图鉴 libraries, tried in order: an Atlas repository's
 	// path.json index.
 	Atlas []PictureSource `json:"atlas"`
 }
 
 type PictureSource struct {
-	Source string   `json:"source"`
-	Index  string   `json:"index,omitempty"`
-	Paths  []string `json:"paths,omitempty"`
+	Source string `json:"source"`
+	Index  string `json:"index,omitempty"`
 	// Rules are Atlas's rules for the library's modules (its
 	// rule_default/<module>.yaml), config for the others.
 	Rules map[string]AtlasRule `json:"rules,omitempty"`
@@ -86,24 +81,6 @@ func (r AtlasRule) pick(word string) (string, bool) {
 type artworkFile struct{ Source, Path string }
 
 var pictureExtensions = []string{".png", ".jpg", ".jpeg", ".webp", ".gif"}
-
-// characterPhotos lists a character's downloaded photos.
-func (a *App) characterPhotos(entry Entry) []artworkFile {
-	names := []string{entry.Name}
-	files := []artworkFile{}
-	for _, source := range a.Game.Pictures.Photos {
-		for _, pattern := range source.Paths {
-			for _, name := range names {
-				for _, file := range a.Artwork.List(source.Source, strings.ReplaceAll(pattern, "{name}", name)) {
-					if slices.Contains(pictureExtensions, strings.ToLower(path.Ext(file))) {
-						files = append(files, artworkFile{source.Source, file})
-					}
-				}
-			}
-		}
-	}
-	return files
-}
 
 // atlasIndexes keeps each Atlas path.json, read again when the file changes.
 type atlasIndexes struct {

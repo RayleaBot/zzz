@@ -41,7 +41,7 @@ onUnmounted(() => { disposed = true; clearTimeout(timer) })
 <template>
   <section class="artwork">
     <div class="section-heading"><h2>上游图片素材</h2></div>
-    <p>图片面板、图鉴与照片使用这些素材。插件包已随附模板用到的上游图片；“更新”从上游公开仓库下载新版本到插件数据目录，下载的文件优先使用，删除后恢复使用随附的文件。图鉴库需下载后使用，缺少素材时图片使用简化样式。也可以由超级管理员发送“{{ prefix }}素材更新”。</p>
+    <p>图片面板与图鉴使用这些素材。插件包已随附模板用到的上游图片；“更新”从上游公开仓库下载新版本到插件数据目录，下载的文件优先使用，删除后恢复使用随附的文件。图鉴库需下载后使用，缺少素材时图片使用简化样式。也可以由超级管理员发送“{{ prefix }}素材更新”。</p>
     <p v-if="error" role="alert" class="feedback danger">{{ error }}</p>
     <ul class="artwork-list">
       <li v-for="source in sources" :key="source.id">

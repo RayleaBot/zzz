@@ -20,7 +20,6 @@ import CommunityPanel from './CommunityPanel.vue'
 import CodesPanel from './CodesPanel.vue'
 import PublicContent from './PublicContent.vue'
 import HelpPanel from './HelpPanel.vue'
-import MediaLibrary from './MediaLibrary.vue'
 import ArtworkPanel from './ArtworkPanel.vue'
 import GuidesPanel from './GuidesPanel.vue'
 
@@ -244,7 +243,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
 
       <template v-else-if="page === 'content'"><PublicContent :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/></template>
-      <template v-else-if="page === 'media'"><ArtworkPanel :prefix="game.prefix" :invoke="invoke"/><MediaLibrary :prefix="game.prefix" :invoke="invoke"/></template>
+      <template v-else-if="page === 'media'"><ArtworkPanel :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'guides'"><GuidesPanel :invoke="invoke"/></template>
       <template v-else-if="page === 'assets'"><CodesPanel :roles="roleOptions" :invoke="invoke"/><button v-if="nextAccountPage!==null" :disabled="busy" @click="run(()=>loadAccounts(nextAccountPage!))">更多账号</button></template>
       <template v-else-if="page === 'community'"><CommunityPanel :accounts="accounts" :invoke="invoke"/><button v-if="nextAccountPage!==null" :disabled="busy" @click="run(()=>loadAccounts(nextAccountPage!))">更多社区账号</button></template>

@@ -1,10 +1,16 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -248,4 +254,84 @@ func (a *App) panelImageCommand(ctx context.Context, event *rayleabot.EventConte
 	}
 	parts = append(parts, []rayleabot.Segment{rayleabot.Text("删除或者添加后会重新排序ID，此时若想删除，请重新获取图片列表，否则可能会删除错误的图片。")})
 	return a.sendForward(ctx, event, parts)
+}
+
+// imageInfo checks a picture of at most limit bytes and returns its MIME
+// type and size.
+func imageInfo(raw []byte, limit int) (string, int, int, error) {
+	if len(raw) < 12 || len(raw) > limit {
+		return "", 0, 0, gameError("media_invalid", "图片大小无效。")
+	}
+	config, format, err := image.DecodeConfig(bytes.NewReader(raw))
+	width, height := config.Width, config.Height
+	if err != nil && string(raw[:4]) == "RIFF" && string(raw[8:12]) == "WEBP" {
+		width, height, err = webpDimensions(raw)
+		format = "webp"
+	}
+	if err != nil || !slices.Contains([]string{"png", "jpeg", "gif", "webp"}, format) || width < 1 || height < 1 || int64(width)*int64(height) > 24000000 {
+		return "", 0, 0, gameError("media_invalid", "仅支持有效 PNG/JPEG/GIF/WebP，最大2400万像素。")
+	}
+	return "image/" + format, width, height, nil
+}
+
+// Read RIFF dimensions only. Original pixels are decoded by the displaying client.
+func webpDimensions(raw []byte) (int, int, error) {
+	bad := fmt.Errorf("invalid webp container")
+	if len(raw) < 20 || uint64(binary.LittleEndian.Uint32(raw[4:8]))+8 != uint64(len(raw)) {
+		return 0, 0, bad
+	}
+	w, h := 0, 0
+	pixels := false
+	u24 := func(b []byte) int { return int(b[0]) | int(b[1])<<8 | int(b[2])<<16 }
+	for at := 12; at < len(raw); {
+		if at+8 > len(raw) {
+			return 0, 0, bad
+		}
+		n := int(binary.LittleEndian.Uint32(raw[at+4 : at+8]))
+		end := at + 8 + n
+		if n < 0 || end > len(raw) || end+(n&1) > len(raw) {
+			return 0, 0, bad
+		}
+		p := raw[at+8 : end]
+		switch string(raw[at : at+4]) {
+		case "VP8X":
+			if at != 12 || len(p) != 10 {
+				return 0, 0, bad
+			}
+			w, h = u24(p[4:7])+1, u24(p[7:10])+1
+		case "VP8 ":
+			if len(p) < 10 || p[0]&1 != 0 || !bytes.Equal(p[3:6], []byte{0x9d, 0x01, 0x2a}) {
+				return 0, 0, bad
+			}
+			if w == 0 {
+				w, h = int(binary.LittleEndian.Uint16(p[6:8])&0x3fff), int(binary.LittleEndian.Uint16(p[8:10])&0x3fff)
+			}
+			pixels = true
+		case "VP8L":
+			if len(p) < 5 || p[0] != 0x2f {
+				return 0, 0, bad
+			}
+			n := binary.LittleEndian.Uint32(p[1:5])
+			if n>>29 != 0 {
+				return 0, 0, bad
+			}
+			if w == 0 {
+				w, h = int(n&0x3fff)+1, int((n>>14)&0x3fff)+1
+			}
+			pixels = true
+		case "ANMF":
+			if len(p) < 24 || w == 0 {
+				return 0, 0, bad
+			}
+			pixels = true
+		}
+		if n&1 != 0 && raw[end] != 0 {
+			return 0, 0, bad
+		}
+		at = end + (n & 1)
+	}
+	if !pixels || w == 0 || h == 0 {
+		return 0, 0, bad
+	}
+	return w, h, nil
 }

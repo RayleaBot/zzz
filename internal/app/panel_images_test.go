@@ -1,12 +1,28 @@
 package app
 
 import (
+	"bytes"
+	"encoding/binary"
+	"image"
+	"image/color"
+	"image/png"
 	"reflect"
 	"strings"
 	"testing"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
+
+func pngFixture(t *testing.T) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 3, 2))
+	img.Set(0, 0, color.RGBA{255, 100, 10, 255})
+	var raw bytes.Buffer
+	if err := png.Encode(&raw, img); err != nil {
+		t.Fatal(err)
+	}
+	return raw.Bytes()
+}
 
 func TestPanelImagesKeepIDsInUploadOrder(t *testing.T) {
 	store := &PanelImages{Directory: t.TempDir()}
@@ -51,5 +67,33 @@ func TestPanelPortraitIsTheOriginalImage(t *testing.T) {
 	}
 	if panelPortrait(Image{}) != "" {
 		t.Error("a panel without a portrait has one")
+	}
+}
+
+func TestWebPDimensionsAndInvalidContainer(t *testing.T) {
+	makeWebp := func(kind string, data []byte) []byte {
+		n := len(data) + (len(data) & 1)
+		raw := make([]byte, 20+n)
+		copy(raw, "RIFF")
+		binary.LittleEndian.PutUint32(raw[4:8], uint32(len(raw)-8))
+		copy(raw[8:12], "WEBP")
+		copy(raw[12:16], kind)
+		binary.LittleEndian.PutUint32(raw[16:20], uint32(len(data)))
+		copy(raw[20:], data)
+		return raw
+	}
+	lossless := []byte{0x2f, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint32(lossless[1:], uint32(299|(199<<14)))
+	v := makeWebp("VP8L", lossless)
+	mime, w, h, err := imageInfo(v, panelImageLimit)
+	if err != nil || mime != "image/webp" || w != 300 || h != 200 {
+		t.Fatal(mime, w, h, err)
+	}
+	v[4]++
+	if _, _, _, err = imageInfo(v, panelImageLimit); err == nil {
+		t.Fatal("inconsistent RIFF accepted")
+	}
+	if _, _, _, err = imageInfo([]byte("<svg width=10 height=10/>"), panelImageLimit); err == nil {
+		t.Fatal("unsupported image accepted")
 	}
 }

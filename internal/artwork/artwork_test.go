@@ -225,8 +225,8 @@ func TestDownloadedFilesTakePrecedenceOverTheShippedOnes(t *testing.T) {
 		t.Fatalf("after download: %+v", status)
 	}
 	// A download replaces shipped files it carries and leaves the rest.
-	if read("images/a.png") != "new a" || read("images/b.png") != "shipped b" || len(store.List("miao", "images")) != 3 {
-		t.Fatalf("files %q %q, list %v", read("images/a.png"), read("images/b.png"), store.List("miao", "images"))
+	if read("images/a.png") != "new a" || read("images/b.png") != "shipped b" || read("images/c.png") != "new c" {
+		t.Fatalf("files %q %q %q", read("images/a.png"), read("images/b.png"), read("images/c.png"))
 	}
 	if err := store.Delete("miao"); err != nil {
 		t.Fatal(err)
