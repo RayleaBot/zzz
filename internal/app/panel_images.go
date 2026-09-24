@@ -174,9 +174,13 @@ func (s *PanelImages) Random(id string) string {
 
 var panelImageIDs = regexp.MustCompile(`[,，、\s]+`)
 
-// panelImageCommand answers 上传面板图, 查看面板图 and 删除面板图.
+// panelImageCommand answers 上传面板图, 查看面板图 and 删除面板图. Upstream's
+// 上传 and 查看 rules end with the command word and its page, so words after
+// them leave the message to others; 删除 takes the IDs after the word, spaces
+// included, and does not match without any.
 func (a *App) panelImageCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	if len(args) == 0 {
+	remove := command == "panel-image-remove"
+	if len(args) == 0 || !remove && len(event.Event.Args()) > 0 || remove && len(args) < 2 {
 		return event.Result(map[string]any{"handled": false})
 	}
 	entry, ok := a.Catalog.Resolve(args[0], "character", a.aliasMap(event))
@@ -208,9 +212,6 @@ func (a *App) panelImageCommand(ctx context.Context, event *rayleabot.EventConte
 			if text != "" {
 				ids = append(ids, text)
 			}
-		}
-		if len(ids) == 0 {
-			return event.SendText("请在命令后写上要删除的图片ID，如“" + a.Game.Prefix + "删除" + entry.Name + "面板图1,2”。")
 		}
 		removed, failed, err := a.PanelImages.Remove(entry.ID, ids)
 		if err != nil {
