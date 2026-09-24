@@ -135,7 +135,7 @@
     {
       "id": "device-bind",
       "name": "绑定设备",
-      "description": "出现 10041 时绑定设备（之后私聊发送设备信息）",
+      "description": "出现 10041 时绑定设备（之后发送设备信息）",
       "usage": "#绑定设备",
       "permission": "everyone",
       "trigger": {
@@ -174,7 +174,7 @@
     {
       "id": "device-default",
       "name": "设置默认设备",
-      "description": "设置没有绑定设备的账号使用的默认设备（之后私聊发送设备信息）",
+      "description": "设置没有绑定设备的账号使用的默认设备（之后发送设备信息）",
       "usage": "#设置默认设备",
       "permission": "super_admin",
       "trigger": {
