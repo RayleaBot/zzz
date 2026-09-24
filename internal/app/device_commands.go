@@ -14,7 +14,8 @@ import (
 // message that holds it, so it never passes through this plugin.
 func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, command string) error {
 	if command == "device-help" {
-		return event.SendText(strings.ReplaceAll(deviceHelp, "{prefix}", a.Game.Prefix))
+		help := strings.NewReplacer("{prefix}", a.Game.Prefix, "{url}", settings(event).DeviceURL).Replace(deviceHelp)
+		return a.sendForward(ctx, event, [][]rayleabot.Segment{{rayleabot.Text(help)}})
 	}
 	if command == "device-default" {
 		if err := a.accountClient(event).call(ctx, "device.default", map[string]any{}, nil); err != nil {
@@ -32,9 +33,13 @@ func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, 
 	if err := a.accountClient(event).call(ctx, method, map[string]any{}, &answer); err != nil {
 		switch PublicError(err).Code {
 		case "plugin.account_region_unsupported":
+			if command == "device-unbind" {
+				// Upstream leaves 解绑设备 of an overseas UID unanswered.
+				return event.Result(map[string]any{"handled": false})
+			}
 			return event.SendText("国际服不需要绑定设备")
 		case "plugin.account_not_found":
-			return event.SendText("还没有绑定米游社账号，请发送“扫码登录”。")
+			return event.SendText(a.deviceUIDReply(ctx, event, "尚未绑定cookie，请先绑定cookie，或者#扫码登录"))
 		}
 		return event.SendText(friendlyError(err))
 	}
@@ -42,14 +47,28 @@ func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, 
 		return event.SendText("解绑设备成功")
 	}
 	if answer.UID == "" {
-		// Upstream binds for the Zenless UID in use and answers as for
-		// any command without one.
-		return event.SendText(a.uidEmptyReply())
+		// The account holds no Zenless role: upstream finds no cookie
+		// for the UID in use.
+		return event.SendText(a.deviceUIDReply(ctx, event, "未绑定UID"))
 	}
 	return event.SendText(fmt.Sprintf("为UID %s绑定设备，请发送设备信息(建议私聊发送)，或者发送“取消”取消绑定", answer.UID))
 }
 
-// deviceHelp is ZZZ-Plugin's 绑定设备帮助.
+// deviceUIDReply answers 绑定设备 or 解绑设备 without an account for the UID
+// in use as upstream does: it first asks for a UID, which a user without
+// one is told, and otherwise replies reply.
+func (a *App) deviceUIDReply(ctx context.Context, event *rayleabot.EventContext, reply string) string {
+	if listed, err := a.accountClient(event).List(ctx, 0); err == nil && a.currentUID(listed) == "" {
+		return a.uidEmptyReply()
+	}
+	return reply
+}
+
+// defaultDeviceURL is ZZZ-Plugin's default config.url.
+const defaultDeviceURL = "https://ghproxy.mihomo.me/https://raw.githubusercontent.com/forchannot/get_device_info/main/app/build/outputs/apk/debug/app-debug.apk"
+
+// deviceHelp is ZZZ-Plugin's 绑定设备帮助, sent forwarded as upstream does;
+// {url} is the device_download_url setting, upstream's config.url.
 const deviceHelp = `[绑定设备]
 方法一：
 1. 使用抓包软件抓取米游社APP的请求
@@ -62,7 +81,8 @@ const deviceHelp = `[绑定设备]
 7. 提示绑定成功
 --------------------------------
 方法二（仅适用于安卓设备）：
-1. 在常用米游社的手机上安装 forchannot/get_device_info 的设备信息工具
+1. 使用常用米游社手机下载下面链接的APK文件，并安装
+{url}
 2. 打开后点击按钮复制
 3. 给机器人发送"{prefix}绑定设备"指令
 4. 机器人会提示发送设备信息

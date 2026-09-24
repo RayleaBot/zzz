@@ -104,6 +104,9 @@ type Settings struct {
 	// PanelInterval is ZZZ-Plugin's panel.interval: the seconds between two
 	// refreshes of a UID's panels.
 	PanelInterval int `json:"panel_refresh_interval"`
+	// DeviceURL is ZZZ-Plugin's config.url: the download of the device
+	// information tool 绑定设备帮助 links.
+	DeviceURL string `json:"device_download_url"`
 }
 type App struct {
 	Manifest      pluginmeta.Manifest
@@ -196,7 +199,7 @@ func New(assets Assets, directory string) (*App, error) {
 	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
-	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60}
+	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60, DeviceURL: defaultDeviceURL}
 	_ = decodeObject(event.Config, &value)
 	return value
 }
