@@ -39,7 +39,7 @@ func (a *App) deviceCommand(ctx context.Context, event *rayleabot.EventContext, 
 			}
 			return event.SendText("国际服不需要绑定设备")
 		case "plugin.account_not_found":
-			return event.SendText(a.deviceUIDReply(ctx, event, "尚未绑定cookie，请先绑定cookie，或者#扫码登录"))
+			return event.SendText(a.deviceUIDReply(ctx, event, "尚未绑定cookie，请先绑定cookie，或者扫码登录"))
 		}
 		return event.SendText(friendlyError(err))
 	}

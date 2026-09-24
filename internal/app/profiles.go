@@ -341,7 +341,7 @@ func (a *App) commandPanel(ctx context.Context, event *rayleabot.EventContext, a
 
 // uidEmptyReply is what ZZZ-Plugin's getUID replies to a user without a UID.
 func (a *App) uidEmptyReply() string {
-	return "uid为空，需要CK的功能请先绑定CK或者#扫码登录，需要SK的功能请#扫码登录，若不清楚需要CK或SK，请查看" + a.Game.Prefix + "帮助"
+	return "uid为空，需要CK的功能请先绑定CK或者扫码登录，需要SK的功能请扫码登录，若不清楚需要CK或SK，请查看" + a.Game.Prefix + "帮助"
 }
 
 // panelCommand answers 更新面板 and 面板列表. 更新面板 reads a user's own UID
