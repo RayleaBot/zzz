@@ -154,11 +154,6 @@ func (a *App) pushGroup(ctx context.Context, event *rayleabot.EventContext, sub 
 			sub.Sent = map[string]int64{}
 		}
 		sub.Sent[post.id] = now.UnixMilli()
-		// Reading, drawing and sending the post may take longer than a
-		// trigger's event; one the host keeps in the foreground pushes there.
-		if !event.Detached() {
-			_, _ = event.Detach(ctx, nil)
-		}
 		name := "公告"
 		if post.kind == "info" {
 			name = "资讯"

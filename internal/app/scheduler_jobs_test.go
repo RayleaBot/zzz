@@ -240,10 +240,10 @@ func TestTriggersRunTheirTasks(t *testing.T) {
 	}
 }
 
-// A group push reads, draws and sends a new post in its trigger's event,
-// which moves to the background first; a trigger with nothing to push stays
-// in the foreground. 推送公告 checks every group in the background.
-func TestGroupPushSendsAPostInTheBackground(t *testing.T) {
+// A group push reads, draws and sends a new post in the foreground of its
+// trigger's event, and the next trigger does not send it again. 推送公告
+// checks every group in the background.
+func TestGroupPushStaysInTheForeground(t *testing.T) {
 	a := pluginApp(t)
 	post := 1
 	a.Content = PublicContentClient{HTTP: httpDoer(func(r *http.Request) (*http.Response, error) {
@@ -261,10 +261,10 @@ func TestGroupPushSendsAPostInTheBackground(t *testing.T) {
 	host.groupMessage("%开启公告推送", "开启公告推送")
 	ref := host.job("game.content.")
 	end, _ := host.trigger(ref)
-	if end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2"}) || len(host.sent) != 1 || host.sent[0].TargetType != "group" || host.sent[0].TargetID != "g" || !strings.HasPrefix(sentText(host.sent[0].Message), "绝区零公告推送：公告1") {
+	if end["type"] != "result" || len(host.detached) != 0 || len(host.sent) != 1 || host.sent[0].TargetType != "group" || host.sent[0].TargetID != "g" || !strings.HasPrefix(sentText(host.sent[0].Message), "绝区零公告推送：公告1") {
 		t.Fatalf("the trigger ended with %v, detached %v, sent %v", end, host.detached, host.sent)
 	}
-	if host.trigger(ref); len(host.detached) != 1 || len(host.sent) != 1 {
+	if host.trigger(ref); len(host.detached) != 0 || len(host.sent) != 1 {
 		t.Fatalf("a trigger without a new post detached %v, sent %v", host.detached, host.sent)
 	}
 	// A new post, once the news lists groups share for a minute are stale.
@@ -273,7 +273,7 @@ func TestGroupPushSendsAPostInTheBackground(t *testing.T) {
 	a.pushLists.at = time.Time{}
 	a.pushLists.mu.Unlock()
 	end, _ = host.message("%推送公告", "推送公告")
-	if end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2", "chat-4"}) || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "绝区零公告推送：公告2") {
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"chat-4"}) || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "绝区零公告推送：公告2") {
 		t.Fatalf("推送公告 ended with %v, detached %v, sent %v", end, host.detached, host.sent)
 	}
 }
