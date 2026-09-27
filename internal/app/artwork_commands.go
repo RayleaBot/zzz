@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"strings"
 	"sync"
@@ -117,33 +116,28 @@ type ArtworkGroup struct {
 // know the file names.
 type ArtworkGroupsBuilder func(ImageContext) []ArtworkGroup
 
-// artworkTask prefixes the scheduled task that finishes 下载全部资源.
-const artworkTask = "game.artwork."
+// artworkTask prefixes the scheduled task that finishes 下载全部资源;
+// artworkRef is the task, one at a time as upstream's.
+const (
+	artworkTask = "game.artwork."
+	artworkRef  = artworkTask + "all"
+)
 
-// artworkJob is a running 下载全部资源: every file by its group and index, how
-// far it got, the counts by group and the chat to answer in.
+// artworkJob is 下载全部资源 as a chat task: every file by its group and
+// index, how far it got and the counts by group, which mu guards.
 type artworkJob struct {
 	groups          []ArtworkGroup
 	items           [][2]int
+	mu              sync.Mutex
 	next            int
 	success, failed []int
-	owner           Subject
-	target          rayleabot.Target
-	expires         time.Time
 }
 
-// artworkJobs holds the one 下载全部资源 that may run at a time, as
-// upstream's; job is nil while a trigger works on it.
-type artworkJobs struct {
-	mu      sync.Mutex
-	running bool
-	job     *artworkJob
-}
-
-// step fetches files, several at a time, until all are done or stop
-// passes, and reports whether all are done.
-func (j *artworkJob) step(ctx context.Context, store *artwork.Store, stop time.Time) bool {
-	for j.next < len(j.items) && time.Now().Before(stop) && ctx.Err() == nil {
+// step fetches files, several at a time, until all are done or stop passes,
+// and answers the counts once all are. A batch its event ran out on is
+// fetched again by the next trigger, the files it got from the cache.
+func (j *artworkJob) step(ctx context.Context, a *App, _ taskHost, stop time.Time) ([]rayleabot.Segment, bool) {
+	for j.next < len(j.items) && a.now().Before(stop) && ctx.Err() == nil {
 		batch := j.items[j.next:min(j.next+16, len(j.items))]
 		results := make([]bool, len(batch))
 		var group sync.WaitGroup
@@ -153,10 +147,14 @@ func (j *artworkJob) step(ctx context.Context, store *artwork.Store, stop time.T
 			slots <- struct{}{}
 			go func() {
 				defer func() { <-slots; group.Done() }()
-				_, results[index] = store.Fetch(ctx, j.groups[item[0]].Source, j.groups[item[0]].Files[item[1]])
+				_, results[index] = a.Artwork.Fetch(ctx, j.groups[item[0]].Source, j.groups[item[0]].Files[item[1]])
 			}()
 		}
 		group.Wait()
+		if ctx.Err() != nil {
+			break
+		}
+		j.mu.Lock()
 		for index, item := range batch {
 			if results[index] {
 				j.success[item[0]]++
@@ -165,12 +163,23 @@ func (j *artworkJob) step(ctx context.Context, store *artwork.Store, stop time.T
 			}
 		}
 		j.next += len(batch)
+		j.mu.Unlock()
 	}
-	return j.next >= len(j.items)
+	if j.next < len(j.items) {
+		return nil, false
+	}
+	return j.fail(a, nil), true
+}
+
+// fail answers the counts so far, as the finished download does.
+func (j *artworkJob) fail(*App, error) []rayleabot.Segment {
+	return []rayleabot.Segment{rayleabot.Text(j.summary())}
 }
 
 // summary is upstream's closing reply.
 func (j *artworkJob) summary() string {
+	j.mu.Lock()
+	defer j.mu.Unlock()
 	lines := []string{"资源下载完成（成功包含已下载资源）"}
 	for index, group := range j.groups {
 		lines = append(lines, fmt.Sprintf("%s：总数%d，成功%d，失败%d", group.Label, len(group.Files), j.success[index], j.failed[index]))
@@ -181,20 +190,16 @@ func (j *artworkJob) summary() string {
 // artworkAll is 下载全部资源: the repositories are updated as 素材更新 does,
 // and every file the templates may read from the on-demand sources is
 // fetched, as ZZZ-Plugin fetches every agent, W-Engine, drive disc and
-// Bangboo picture. What does not finish within the event continues on a
-// scheduled task, which answers in the same chat.
+// Bangboo picture. What does not finish within the event continues as a chat
+// task, which answers in the same chat.
 func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) error {
-	a.artworkJobs.mu.Lock()
-	if a.artworkJobs.running {
-		a.artworkJobs.mu.Unlock()
+	start := a.now()
+	ctx, cancel := a.eventWork(ctx, start)
+	defer cancel()
+	job := &artworkJob{}
+	task := a.beginChatTask(event, artworkRef, a.Game.Name+"下载全部资源", "artwork_all", 2*time.Hour, job)
+	if task == nil {
 		return event.SendText("下载任务正在进行中，请稍后再试")
-	}
-	a.artworkJobs.running = true
-	a.artworkJobs.mu.Unlock()
-	finish := func() {
-		a.artworkJobs.mu.Lock()
-		a.artworkJobs.running, a.artworkJobs.job = false, nil
-		a.artworkJobs.mu.Unlock()
 	}
 	started := []string{}
 	for _, source := range a.Artwork.Sources {
@@ -209,7 +214,6 @@ func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) err
 		text += "\n同时在后台更新：" + strings.Join(started, "、") + "，发送“" + a.Game.Prefix + "素材状态”查看进度。"
 	}
 	notice(ctx, event, text)
-	job := &artworkJob{owner: syncOwner(event), target: event.Event.Target, expires: time.Now().Add(2 * time.Hour)}
 	if a.downloads != nil {
 		for _, group := range a.downloads(a.imageContext(ctx)) {
 			if len(group.Files) == 0 {
@@ -222,52 +226,14 @@ func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) err
 		}
 	}
 	job.success, job.failed = make([]int, len(job.groups)), make([]int, len(job.groups))
-	if job.step(ctx, a.Artwork, time.Now().Add(40*time.Second)) {
-		finish()
-		return event.SendText(job.summary())
-	}
-	a.artworkJobs.mu.Lock()
-	a.artworkJobs.job = job
-	a.artworkJobs.mu.Unlock()
-	ref := artworkTask + rand.Text()
-	if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "* * * * *", LogLabel: a.Game.Name + "下载全部资源", Payload: taskPayload("artwork_all", ref)}); err != nil {
-		finish()
+	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, start.Add(chatTaskBudget))
+	switch {
+	case err != nil:
 		return event.SendText("资源较多，本次未能全部下载，请稍后再试。")
-	}
-	return event.Result(map[string]any{"handled": true})
-}
-
-// runArtworkJob continues 下载全部资源 on its scheduled task and answers in
-// the chat it was asked in.
-func (a *App) runArtworkJob(ctx context.Context, event *rayleabot.EventContext) error {
-	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
-		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
-	}
-	ref := triggerTask(event)
-	a.artworkJobs.mu.Lock()
-	job, running := a.artworkJobs.job, a.artworkJobs.running
-	a.artworkJobs.job = nil
-	a.artworkJobs.mu.Unlock()
-	if job == nil {
-		// A trigger still working keeps the task; one left from before a
-		// restart is removed.
-		if !running {
-			_, _ = event.Actions().SchedulerDelete(ctx, ref)
-		}
+	case !done:
 		return event.Result(map[string]any{"handled": true})
 	}
-	if !time.Now().After(job.expires) && !job.step(ctx, a.Artwork, time.Now().Add(40*time.Second)) {
-		a.artworkJobs.mu.Lock()
-		a.artworkJobs.job = job
-		a.artworkJobs.mu.Unlock()
-		return event.Result(map[string]any{"handled": true})
-	}
-	_, _ = event.Actions().SchedulerDelete(ctx, ref)
-	a.artworkJobs.mu.Lock()
-	a.artworkJobs.running = false
-	a.artworkJobs.mu.Unlock()
-	_, _ = event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: job.owner.SourceProtocol, SourceAdapter: job.owner.SourceAdapter, TargetType: job.target.Type, TargetID: job.target.ID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(job.summary())}}})
-	return event.Result(map[string]any{"handled": true})
+	return event.Send(event.Event.Target.Type, event.Event.Target.ID, reply...)
 }
 
 // artworkDeleteAll is 删除全部资源: the caches of the sources fetched on

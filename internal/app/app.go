@@ -167,7 +167,6 @@ type App struct {
 	aliases        customAliases
 	banners        BannerSource
 	downloads      ArtworkGroupsBuilder
-	artworkJobs    artworkJobs
 	usageOnce      sync.Once
 	// clock is nil for the wall clock.
 	clock clock
@@ -286,10 +285,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return a.runContentSubscription(ctx, event)
 		case strings.HasPrefix(task, "game.sync."):
 			return a.runSyncTask(ctx, event)
-		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, panelTask):
+		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, panelTask), strings.HasPrefix(task, artworkTask):
 			return a.runChatTask(ctx, event)
-		case strings.HasPrefix(task, artworkTask):
-			return a.runArtworkJob(ctx, event)
 		}
 		return a.runReminder(ctx, event)
 	}
