@@ -20,10 +20,12 @@ type gachaRead struct {
 
 // gachaAccounts answers the account plugin's service for one account of user
 // "u" with a mainland role whose exclusive channel holds records records and
-// whose other channels are empty: roles, list and each zzz.gacha page, which
-// only an event already in the background may ask for, without a
-// delegation. A page takes took of the fake clock; during, when set, runs
-// as the nth page is asked for.
+// whose other channels are empty: roles, list, delegation.create, which
+// grants "d1", delegation.revoke and each zzz.gacha page, which only an
+// event already in the background may ask for, a scheduler trigger with the
+// delegation and any other event without. A page takes took of the fake
+// clock; during, when set, runs as the nth page is asked for, and fail, when
+// set, is the failure code of every page.
 type gachaAccounts struct {
 	t       *testing.T
 	clock   *fakeClock
@@ -31,6 +33,9 @@ type gachaAccounts struct {
 	took    time.Duration
 	reads   []gachaRead
 	during  func(n int)
+	fail    string
+	grants  []map[string]any
+	revoked []string
 }
 
 func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
@@ -41,9 +46,15 @@ func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
 	case "list":
 		owner := map[string]any{"source_protocol": "onebot11", "source_adapter": "a", "bot_id": "bot", "actor_id": "u"}
 		return map[string]any{"items": []any{map[string]any{"ref": "account", "owner": owner, "roles": []any{role}, "status": "valid"}}, "default_roles": map[string]any{}, "uid_bindings": map[string]any{}}, ""
+	case "delegation.create":
+		s.grants = append(s.grants, call.Params)
+		return map[string]any{"delegation": map[string]any{"ref": "d1", "expires_at_ms": s.clock.Now().Add(7 * 24 * time.Hour).UnixMilli()}}, ""
+	case "delegation.revoke":
+		s.revoked = append(s.revoked, asText(call.Params["delegation_ref"]))
+		return map[string]any{}, ""
 	case "execute":
 		input := asObject(call.Params["input"])
-		if call.Scheduled || !call.Detached || call.Params["delegation_ref"] != nil || call.Params["operation"] != "zzz.gacha" {
+		if !call.Detached || call.Scheduled != (call.Params["delegation_ref"] == "d1") || call.Params["operation"] != "zzz.gacha" {
 			s.t.Errorf("%v was requested by %s, detached %v", call.Params, call.Parent, call.Detached)
 		}
 		page, _ := input["page"].(float64)
@@ -53,6 +64,9 @@ func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
 			s.during(len(s.reads))
 		}
 		_ = s.clock.Sleep(context.Background(), s.took)
+		if s.fail != "" {
+			return nil, s.fail
+		}
 		list := []any{}
 		if read.pool == "2001" {
 			first := 1

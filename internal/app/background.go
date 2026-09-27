@@ -63,9 +63,18 @@ func (f *flows) end(key string) {
 	delete(f.running, key)
 }
 
-// clock is what flows wait between their requests by; tests set their own.
+// clock is the time flows wait between their requests by and daily syncs
+// are due by; tests set their own.
 type clock interface {
+	Now() time.Time
 	Sleep(context.Context, time.Duration) error
+}
+
+func (a *App) now() time.Time {
+	if a.clock != nil {
+		return a.clock.Now()
+	}
+	return time.Now()
 }
 
 // sleep waits for d or until ctx ends.

@@ -126,8 +126,10 @@ type App struct {
 	Gacha         *gacha.Store
 	Transfers     gacha.Transfers
 	Syncs         gacha.Syncs
-	// BackgroundSyncs are the latest syncs the management page started.
+	// BackgroundSyncs are the latest syncs the management page started or
+	// a 每日同步 runs; DailySyncs are the stored 每日同步.
 	BackgroundSyncs backgroundSyncs
+	DailySyncs      *DailySyncStore
 	// fileImports are the senders 导入记录 is waiting on for a file.
 	fileImports fileImports
 	// LinkHTTP reads the official signal search (nil uses a default client).
@@ -201,7 +203,7 @@ func New(assets Assets, directory string) (*App, error) {
 	if directory == "" {
 		return nil, fmt.Errorf("plugin data directory is required")
 	}
-	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
+	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, Reminders: reminderStore(directory), DailySyncs: dailySyncStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
 	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60, PanelRoleInterval: 3000, DeviceURL: defaultDeviceURL}
@@ -268,8 +270,11 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	if event.Event.EventType == "scheduler.trigger" {
 		// A trigger is dispatched by the task ID the host gives it; one whose
 		// task is not stored deletes its job.
-		if strings.HasPrefix(event.Event.TaskID(), "game.content.") {
+		switch task := event.Event.TaskID(); {
+		case strings.HasPrefix(task, "game.content."):
 			return a.runContentSubscription(ctx, event)
+		case strings.HasPrefix(task, dailySyncTask):
+			return a.runDailySync(ctx, event)
 		}
 		return a.runReminder(ctx, event)
 	}
@@ -769,6 +774,9 @@ func (a *App) manageGacha(action string, input map[string]any) (map[string]any, 
 		return versionDraws(a.bannerGame(), archive), nil
 	case "gacha.remove":
 		a.cancelArchiveSyncs(uid, region)
+		if err := a.DailySyncs.pauseArchive(uid, region); err != nil {
+			return nil, err
+		}
 		err := a.Gacha.Remove(uid, region)
 		return map[string]any{"removed": err == nil}, err
 	case "gacha.import.start":

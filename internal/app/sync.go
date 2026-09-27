@@ -99,12 +99,16 @@ func (a *App) runSync(ctx context.Context, info gacha.SyncInfo, gap time.Duratio
 // which keeps the reads under 米游社's rate limits.
 const syncPageGap = time.Second
 
-// accountPages reads role's pages with the account; a page of another role
-// is invalid.
-func (a *App) accountPages(client AccountsClient, choice Selection, role Role) gacha.FetchPage {
+// accountPages reads role's pages with the account, under delegation when a
+// scheduler trigger reads them; a page of another role is invalid.
+func (a *App) accountPages(client AccountsClient, choice Selection, role Role, delegation string) gacha.FetchPage {
 	return func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
-		response, err := client.Execute(ctx, choice, a.Game.ID+".gacha", map[string]any{"gacha_type": pool, "end_id": endID, "page": page})
-		if err != nil {
+		params := map[string]any{"account_ref": choice.AccountRef, "role_ref": choice.RoleRef, "operation": a.Game.ID + ".gacha", "input": map[string]any{"gacha_type": pool, "end_id": endID, "page": page}}
+		if delegation != "" {
+			params["delegation_ref"] = delegation
+		}
+		var response QueryResult
+		if err := client.call(ctx, "execute", params, &response); err != nil {
 			return gacha.RemotePage{}, err
 		}
 		if response.Role.UID != role.UID || response.Role.Region != role.Region {
@@ -147,7 +151,7 @@ func (a *App) gachaRefresh(ctx context.Context, event *rayleabot.EventContext, a
 	if err != nil {
 		return event.SendText(friendlyError(syncError(err)))
 	}
-	info, err = a.runSync(ctx, info, syncPageGap, a.accountPages(client, choice, role), nil)
+	info, err = a.runSync(ctx, info, syncPageGap, a.accountPages(client, choice, role, ""), nil)
 	if err != nil {
 		return event.SendText(friendlyError(syncError(err)))
 	}
@@ -177,6 +181,8 @@ type BackgroundSync struct {
 	StartedMS  int64          `json:"started_ms"`
 	FinishedMS int64          `json:"finished_ms,omitempty"`
 	Progress   gacha.SyncInfo `json:"progress"`
+	// Task is the 每日同步 a round belongs to.
+	Task string `json:"task,omitempty"`
 }
 
 // backgroundSyncs are the latest background syncs of this process, newest
@@ -286,7 +292,8 @@ func (a *App) cancelArchiveSyncs(uid, region string) {
 func (a *App) backgroundSyncAction(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
 	switch action {
 	case "gacha.task.list":
-		return map[string]any{"items": a.BackgroundSyncs.list()}, nil
+		daily, err := a.DailySyncs.List()
+		return map[string]any{"items": a.BackgroundSyncs.list(), "daily": daily}, err
 	case "gacha.task.cancel":
 		ref := asText(input["ref"])
 		if !a.BackgroundSyncs.cancel(func(item BackgroundSync) bool { return item.Ref == ref }, "sync_canceled") {
@@ -295,6 +302,12 @@ func (a *App) backgroundSyncAction(ctx context.Context, event *rayleabot.EventCo
 		return map[string]any{"canceled": true}, nil
 	case "gacha.task.start":
 		return a.startBackgroundSync(ctx, event, input)
+	case "gacha.task.create":
+		return a.createDailySync(ctx, event, input)
+	case "gacha.task.run":
+		return a.runDailySyncNow(ctx, event, input)
+	case "gacha.task.remove":
+		return a.removeDailySync(ctx, event, input)
 	}
 	return nil, gameError("operation_denied", "操作不存在。")
 }
@@ -338,7 +351,12 @@ func (a *App) startBackgroundSync(ctx context.Context, event *rayleabot.EventCon
 		a.Syncs.Forget(info.Ref)
 		return nil, detachFailure(err)
 	}
-	item, err = a.readBackgroundSync(ctx, event, item, info, a.accountPages(client, q.Selection, role))
+	item, err = a.readBackgroundSync(ctx, item, info, a.accountPages(client, q.Selection, role, ""), func(done gacha.SyncInfo) error {
+		if !item.Notify {
+			return nil
+		}
+		return a.notifySync(ctx, event, item, *done.Result)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +364,9 @@ func (a *App) startBackgroundSync(ctx context.Context, event *rayleabot.EventCon
 }
 
 // readBackgroundSync reads a listed sync to the end and lists how it ended.
-func (a *App) readBackgroundSync(ctx context.Context, event *rayleabot.EventContext, item BackgroundSync, info gacha.SyncInfo, fetch gacha.FetchPage) (BackgroundSync, error) {
+// completed follows a completed sync with its final progress; its error is a
+// notification that failed.
+func (a *App) readBackgroundSync(ctx context.Context, item BackgroundSync, info gacha.SyncInfo, fetch gacha.FetchPage, completed func(gacha.SyncInfo) error) (BackgroundSync, error) {
 	info, err := a.runSync(ctx, info, syncPageGap, fetch, func(progress gacha.SyncInfo) bool {
 		return a.BackgroundSyncs.update(item.Ref, progress)
 	})
@@ -359,7 +379,7 @@ func (a *App) readBackgroundSync(ctx context.Context, event *rayleabot.EventCont
 		state, code = "failed", PublicError(err).Code
 	case info.State != "completed":
 		// Canceled: the listed sync already says so.
-	case item.Notify && a.notifySync(ctx, event, item, *info.Result) != nil:
+	case completed(info) != nil:
 		code = "sync_completed.notification_failed"
 	}
 	return a.BackgroundSyncs.finish(item.Ref, info, state, code), err
