@@ -658,6 +658,10 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 			return nil, gameError("operation_denied", "查询操作不存在。")
 		}
 		parameters := asObject(input["input"])
+		// As ZZZ-Plugin, an agent's details are asked one agent a request.
+		if strings.HasSuffix(operation.Name, ".character") && len(asList(parameters["id_list"])) != 1 {
+			return nil, gameError("input_invalid", "请选择一个角色。")
+		}
 		query, textOperation := a.routedQuery(operation, operation.Name)
 		result, err := a.accountClient(event).Execute(ctx, Selection{AccountRef: asText(input["account_ref"]), RoleRef: asText(input["role_ref"])}, query, parameters)
 		if err != nil {

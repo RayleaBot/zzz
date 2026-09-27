@@ -147,3 +147,14 @@ func TestPanelRefreshFailureKeepsNothing(t *testing.T) {
 		t.Fatal("a failed refresh kept panels")
 	}
 }
+
+// The management page asks an agent's details one agent a request.
+func TestManagementCharacterQueryAsksOneAgent(t *testing.T) {
+	a := pluginApp(t)
+	for _, input := range []map[string]any{{}, {"id_list": []any{"1011", "1021"}}} {
+		_, err := a.Manage(t.Context(), &rayleabot.EventContext{}, "query", map[string]any{"operation": "zzz.character", "account_ref": "account", "role_ref": "role", "input": input})
+		if PublicError(err).Code != "plugin.game_input_invalid" {
+			t.Fatalf("%v: %v", input, err)
+		}
+	}
+}
