@@ -146,17 +146,17 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	for _, pool := range gachaLinkPools {
 		bases[pool[0]] = pool[1]
 	}
-	result, err := a.runSync(ctx, info.Ref, gachaLinkGap, func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
+	info, err = a.runSync(ctx, info, gachaLinkGap, func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
 		data, err := a.gachaLinkPage(ctx, link, pool, bases[pool], endID, page)
 		if err != nil {
 			return gacha.RemotePage{}, err
 		}
 		return gacha.ParsePage(uid, link.region, pool, endID, data)
-	})
+	}, nil)
 	if err != nil {
 		return true, event.SendText(friendlyError(syncError(err)))
 	}
-	return true, event.SendText(a.gachaReply(before, result))
+	return true, event.SendText(a.gachaReply(before, *info.Result))
 }
 
 // gachaReply is ZZZ-Plugin's reply after the records were read: the channels

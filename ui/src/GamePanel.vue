@@ -13,7 +13,7 @@ import GroupSettings from './GroupSettings.vue'
 import GameSignin from './GameSignin.vue'
 import { exportArchiveFile, parseImport, type Archive, type GachaRecord } from './uigf'
 import { driveSync, type SyncInfo } from './sync'
-import GachaBackground from './GachaBackground.vue'
+import GachaTasks from './GachaTasks.vue'
 import MonthlyHistory from './MonthlyHistory.vue'
 import MonthlyCollection from './MonthlyCollection.vue'
 import CommunityPanel from './CommunityPanel.vue'
@@ -291,7 +291,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
           <p v-if="syncInfo" class="hint" role="status">{{ syncInfo.state === 'running' ? (busy ? '正在同步' : '同步已暂停，可继续或取消') : (syncInfo.state === 'completed' ? '已完成' : '已取消') }} · 已读取 {{ syncInfo.pages }} 页，{{ syncInfo.fetched }} 条记录</p>
           <p class="hint">上方即时同步需要保持页面打开；需要离开页面时，可使用下方后台同步。</p>
         </section>
-        <GachaBackground :choices="roleOptions" :invoke="invoke" />
+        <GachaTasks :choices="roleOptions" :invoke="invoke" />
         <details class="import-panel"><summary>导入记录</summary><p class="hint">支持 <a href="https://uigf.org/en/standards/uigf.html" target="_blank" rel="noreferrer">UIGF</a> v4 和本插件导出的完整档案。不接收抽卡链接。</p><div class="import-fields"><label>选择 JSON 文件<input ref="importFile" type="file" accept=".json,application/json" :disabled="busy" @change="readImport"></label></div>
           <form v-if="imported.length" class="import-fields" @submit.prevent="importArchive"><label>文件中的账号<select v-model="importIndex" :disabled="busy"><option v-for="(archive, index) in imported" :key="`${archive.uid}:${index}`" :value="index">{{ archive.uid }} · {{ archive.list.length }} 条 · UTC{{ archive.timezone >= 0 ? '+' : '' }}{{ archive.timezone }}</option></select></label><label>游戏区服<select v-model="importRegion" :disabled="busy"><option v-for="region in regions" :key="region.id" :value="region.id">{{ region.name }}</option></select></label><button class="primary" type="submit" :disabled="busy">{{ busy ? '正在导入…' : '导入所选账号' }}</button></form>
         </details>
@@ -302,6 +302,6 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
       </template>
     </template>
     <footer class="hint"><a href="./source.zip" download>本版本对应源码</a></footer>
-    <dialog ref="removeDialog" aria-labelledby="remove-title" @cancel="busy && $event.preventDefault()"><h2 id="remove-title">移除抽卡档案 {{ removeCandidate?.uid }}</h2><p>将删除本插件保存的此区服记录，进行中的同步不会再写入。建议先导出保留副本。</p><p v-if="error" role="alert" class="danger-text">{{ error }}</p><div class="actions"><button autofocus :disabled="busy" @click="removeDialog?.close()">取消</button><button class="destructive" :disabled="busy" @click="removeArchive">移除档案</button></div></dialog>
+    <dialog ref="removeDialog" aria-labelledby="remove-title" @cancel="busy && $event.preventDefault()"><h2 id="remove-title">移除抽卡档案 {{ removeCandidate?.uid }}</h2><p>将删除本插件保存的此区服记录，并取消对应的后台同步。建议先导出保留副本。</p><p v-if="error" role="alert" class="danger-text">{{ error }}</p><div class="actions"><button autofocus :disabled="busy" @click="removeDialog?.close()">取消</button><button class="destructive" :disabled="busy" @click="removeArchive">移除档案</button></div></dialog>
   </main>
 </template>

@@ -22,13 +22,15 @@ type gachaRead struct {
 // "u" with a mainland role whose exclusive channel holds records records and
 // whose other channels are empty: roles, list and each zzz.gacha page, which
 // only an event already in the background may ask for, without a
-// delegation. A page takes took of the fake clock.
+// delegation. A page takes took of the fake clock; during, when set, runs
+// as the nth page is asked for.
 type gachaAccounts struct {
 	t       *testing.T
 	clock   *fakeClock
 	records int
 	took    time.Duration
 	reads   []gachaRead
+	during  func(n int)
 }
 
 func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
@@ -47,6 +49,9 @@ func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
 		page, _ := input["page"].(float64)
 		read := gachaRead{at: s.clock.Now(), pool: asText(input["gacha_type"]), end: asText(input["end_id"]), page: int(page), parent: call.Parent}
 		s.reads = append(s.reads, read)
+		if s.during != nil {
+			s.during(len(s.reads))
+		}
 		_ = s.clock.Sleep(context.Background(), s.took)
 		list := []any{}
 		if read.pool == "2001" {
@@ -113,33 +118,81 @@ func TestGachaRefreshReadsEveryPageInOneDetachedEvent(t *testing.T) {
 	}
 }
 
-// The management page's 后台同步: the action answers the page with the
-// started sync as it moves to the background, then reads every page and
-// tells the account's owner in private chat.
+// listedSyncs are the background syncs gacha.task.list returns.
+func listedSyncs(t *testing.T, host *sdkHost) []BackgroundSync {
+	t.Helper()
+	end, _ := host.manage("gacha.task.list", map[string]any{})
+	var listed struct {
+		Items []BackgroundSync `json:"items"`
+	}
+	if end["type"] != "result" || decodeObject(end["data"], &listed) != nil {
+		t.Fatalf("gacha.task.list ended with %v", end)
+	}
+	return listed.Items
+}
+
+// The management page's 后台同步: the action answers the page with the listed
+// sync as it moves to the background, then reads every page, lists the
+// result and tells the account's owner in private chat.
 func TestBackgroundSyncAnswersThePageAndFinishesInTheBackground(t *testing.T) {
 	a, _, accounts, host := syncHost(t)
-	end, _ := host.manage("gacha.sync.background", map[string]any{"account_ref": "account", "role_ref": "role", "notify": true, "confirm": true})
-	if end["type"] != "result" || !slices.Equal(host.detached, []string{"manage-1"}) || asObject(host.delivered["manage-1"]["sync"])["state"] != "running" {
+	end, _ := host.manage("gacha.task.start", map[string]any{"account_ref": "account", "role_ref": "role", "notify": true, "confirm": true})
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"manage-1"}) || asObject(host.delivered["manage-1"]["task"])["state"] != "running" {
 		t.Fatalf("the action ended with %v, delivered %v", end, host.delivered)
 	}
 	checkSyncReads(t, a, accounts, "manage-1")
 	if len(host.sent) != 1 || host.sent[0].TargetType != "private" || host.sent[0].TargetID != "u" || sentText(host.sent[0].Message) != "抽卡后台同步完成\n绳匠 · 10000001\n新增 45 条，档案共 45 条。" {
 		t.Fatalf("notified %v", host.sent)
 	}
+	if items := listedSyncs(t, host); len(items) != 1 || items[0].State != "completed" || items[0].LastCode != "sync_completed" || items[0].Progress.Pages != 8 || items[0].Progress.Result == nil || items[0].Progress.Result.Added != 45 || items[0].FinishedMS == 0 {
+		t.Fatalf("listed %+v", items)
+	}
+}
+
+// While a background sync reads, the page lists its progress, cannot start
+// another of the role and may cancel it: the sync stops before its next page
+// and keeps the archive as it was.
+func TestBackgroundSyncListsProgressAndCanBeCanceled(t *testing.T) {
+	a, _, accounts, host := syncHost(t)
+	input := map[string]any{"account_ref": "account", "role_ref": "role", "confirm": true}
+	var running []BackgroundSync
+	var again, canceled map[string]any
+	accounts.during = func(n int) {
+		if n == 3 {
+			running = listedSyncs(t, host)
+			again, _ = host.manage("gacha.task.start", input)
+			canceled, _ = host.manage("gacha.task.cancel", map[string]any{"ref": running[0].Ref})
+		}
+	}
+	if end, _ := host.manage("gacha.task.start", input); end["type"] != "result" {
+		t.Fatalf("the action ended with %v", end)
+	}
+	if len(running) != 1 || running[0].State != "running" || running[0].Progress.Pages != 2 || again["code"] != "plugin.game_sync_task_running" || canceled["type"] != "result" {
+		t.Fatalf("listed %+v, second start %v, cancel %v", running, again, canceled)
+	}
+	if items := listedSyncs(t, host); len(accounts.reads) != 3 || len(items) != 1 || items[0].State != "canceled" || items[0].LastCode != "sync_canceled" {
+		t.Fatalf("after %d pages listed %+v", len(accounts.reads), items)
+	}
+	if _, err := a.Gacha.Read("10000001", "prod_gf_cn"); err == nil {
+		t.Fatal("a canceled sync wrote the archive")
+	}
+	if end, _ := host.manage("gacha.task.cancel", map[string]any{"ref": running[0].Ref}); end["code"] != "plugin.game_sync_task_missing" {
+		t.Fatalf("canceling a finished sync ended with %v", end)
+	}
 }
 
 // When the host holds as many background events of the plugin as it allows,
-// the page is told so and nothing is read; later the sync runs.
+// the page is told so, nothing is read or listed; later the sync runs.
 func TestBackgroundSyncRefusedDetachFailsThePage(t *testing.T) {
 	a, _, accounts, host := syncHost(t)
 	host.refuse = true
 	input := map[string]any{"account_ref": "account", "role_ref": "role", "confirm": true}
-	if end, _ := host.manage("gacha.sync.background", input); end["type"] != "error" || end["code"] != "plugin.game_background_busy" || end["message"] != busyReply || len(accounts.reads) != 0 {
+	if end, _ := host.manage("gacha.task.start", input); end["type"] != "error" || end["code"] != "plugin.game_background_busy" || end["message"] != busyReply || len(accounts.reads) != 0 || len(listedSyncs(t, host)) != 0 {
 		t.Fatalf("the refused action ended with %v after %d reads", end, len(accounts.reads))
 	}
 	host.refuse = false
-	if end, _ := host.manage("gacha.sync.background", input); end["type"] != "result" || len(host.sent) != 0 {
+	if end, _ := host.manage("gacha.task.start", input); end["type"] != "result" || len(host.sent) != 0 {
 		t.Fatalf("the later action ended with %v, sent %v", end, host.sent)
 	}
-	checkSyncReads(t, a, accounts, "manage-2")
+	checkSyncReads(t, a, accounts, "manage-3")
 }

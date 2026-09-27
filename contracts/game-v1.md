@@ -26,7 +26,9 @@
 
 ### 后台抽卡同步
 
-`gacha.sync.background` 接收 `account_ref`、`role_ref`、`full`（默认 false，只读新增记录）、`notify`（默认 false）和 `confirm=true`。插件经账号服务的 `roles` 校验当前调用者与角色，开始同步后以 `{"sync": <同步进度>}` 完成该管理动作的投递并转入后台（`event.detach`），在同一事件中以管理页的来源经账号插件逐页读取，不使用委托，也不创建调度任务。宿主拒绝转入后台（插件已占满允许的后台事件数）时返回 `plugin.game_background_busy`，不读取。开启 `notify` 时，结束后经账号所属机器人私聊账号所属用户：完成时说明角色、新增与档案总条数，未完成时说明原因；该机器人不在线时不发送。
+`gacha.task.start` 接收 `account_ref`、`role_ref`、`full`（默认 false，只读新增记录）、`notify`（默认 false）和 `confirm=true`。插件经账号服务的 `roles` 校验当前调用者与角色，开始同步后以 `{task}` 完成该管理动作的投递并转入后台（`event.detach`），在同一事件中以管理页的来源经账号插件逐页读取，不使用委托，也不创建调度任务。同一角色同时只有一个后台同步，重复开始返回 `plugin.game_sync_task_running`；宿主拒绝转入后台（插件已占满允许的后台事件数）时返回 `plugin.game_background_busy`，不开始同步。
+
+`gacha.task.list` 返回本插件进程最近的后台同步（最多 16 项，新的在前），每项为 `{ref, role, owner, full, notify, state, last_code, started_ms, finished_ms, progress}`：`state` 为 `running/completed/failed/canceled`，`last_code` 为 `sync_running`、`sync_completed`、`sync_completed.notification_failed`、`sync_canceled`、`archive_removed`、`sync_timeout` 或读取失败的稳定错误码，`progress` 为同步器进度，完成时含 `result`。`gacha.task.cancel` 接收 `ref`，正在进行的同步在下一页之前停止，原档案不变；没有这项正在进行的同步时返回 `plugin.game_sync_task_missing`。删除抽卡档案取消该档案正在进行的后台同步。列表只在内存中，插件停止或重载时后台同步随事件结束，不再恢复。默认不发送完成通知；开启通知时，完成后经账号所属的机器人私聊账号所属聊天用户。
 
 账号插件按原样转发官方抽卡分页，只删除凭据字段。插件逐页校验记录：每页最多 20 条，UID 与所选角色一致，游标递减，池类型与请求一致，时间与 ID 格式正确；池类型转为档案池 1/2/3/5/102/103，记录时区取官方 `region_time_zone`（相对 UTC+8），缺失时按区服确定。
 

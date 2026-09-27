@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
@@ -72,22 +73,26 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 }
 
 // runSync reads a started sync to the end, page after page with gap between
-// two of them, and then forgets it.
-func (a *App) runSync(ctx context.Context, ref string, gap time.Duration, fetch gacha.FetchPage) (gacha.ImportResult, error) {
-	defer a.Syncs.Forget(ref)
-	for sequence := 0; ; {
-		info, err := a.Syncs.Step(ctx, a.Gacha, ref, sequence, fetch)
+// two of them, and then forgets it. proceed, when set, is asked before each
+// page with the progress so far and stops the sync by returning false.
+func (a *App) runSync(ctx context.Context, info gacha.SyncInfo, gap time.Duration, fetch gacha.FetchPage, proceed func(gacha.SyncInfo) bool) (gacha.SyncInfo, error) {
+	defer a.Syncs.Forget(info.Ref)
+	for info.State == "running" {
+		if info.Pages > 0 {
+			if err := a.sleep(ctx, gap); err != nil {
+				return info, err
+			}
+		}
+		if proceed != nil && !proceed(info) {
+			return info, nil
+		}
+		next, err := a.Syncs.Step(ctx, a.Gacha, info.Ref, info.Sequence, fetch)
 		if err != nil {
-			return gacha.ImportResult{}, err
+			return info, err
 		}
-		if info.State == "completed" {
-			return *info.Result, nil
-		}
-		sequence = info.Sequence
-		if err := a.sleep(ctx, gap); err != nil {
-			return gacha.ImportResult{}, err
-		}
+		info = next
 	}
+	return info, nil
 }
 
 // syncPageGap is the least time between two pages an account sync reads,
@@ -142,68 +147,234 @@ func (a *App) gachaRefresh(ctx context.Context, event *rayleabot.EventContext, a
 	if err != nil {
 		return event.SendText(friendlyError(syncError(err)))
 	}
-	result, err := a.runSync(ctx, info.Ref, syncPageGap, a.accountPages(client, choice, role))
+	info, err = a.runSync(ctx, info, syncPageGap, a.accountPages(client, choice, role), nil)
 	if err != nil {
 		return event.SendText(friendlyError(syncError(err)))
 	}
-	return event.SendText(a.gachaReply(before, result))
+	return event.SendText(a.gachaReply(before, *info.Result))
 }
 
-// backgroundSync is the management page's 后台同步 of a role. Once the sync
-// has started, the action moves to the background, answering the page with
-// the sync, and reads every channel page after page as 更新抽卡记录 does;
-// the page may close meanwhile. With notify, the account's owner is told in
-// private chat how it ended.
-func (a *App) backgroundSync(ctx context.Context, event *rayleabot.EventContext, input map[string]any) error {
+// A background sync is a sync the management page starts and leaves: the
+// management action moves to the background with the page's answer and
+// reads every channel in that one event, calling the account plugin as the
+// page's user did. The page lists the latest ones and may cancel one that
+// runs.
+
+// backgroundSyncsKept is how many background syncs the page can list.
+const backgroundSyncsKept = 16
+
+// BackgroundSync is a background sync as the page lists it: the role it
+// reads, the chat user told of its result, its state (running, completed,
+// failed or canceled), the code of its last outcome and its progress.
+type BackgroundSync struct {
+	Ref        string         `json:"ref"`
+	Role       Role           `json:"role"`
+	Owner      Subject        `json:"owner"`
+	Full       bool           `json:"full"`
+	Notify     bool           `json:"notify"`
+	State      string         `json:"state"`
+	LastCode   string         `json:"last_code"`
+	StartedMS  int64          `json:"started_ms"`
+	FinishedMS int64          `json:"finished_ms,omitempty"`
+	Progress   gacha.SyncInfo `json:"progress"`
+}
+
+// backgroundSyncs are the latest background syncs of this process, newest
+// first. They live in memory only: a sync ends with the event running it.
+type backgroundSyncs struct {
+	mu    sync.Mutex
+	items []BackgroundSync
+}
+
+// errSyncRunning refuses a second background sync of a role.
+var errSyncRunning = gameError("sync_task_running", "此角色正在后台同步，请查看进度。")
+
+// running reports whether a sync of role is running.
+func (s *backgroundSyncs) running(role Role) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.runningLocked(role)
+}
+
+func (s *backgroundSyncs) runningLocked(role Role) bool {
+	return slices.ContainsFunc(s.items, func(item BackgroundSync) bool {
+		return item.State == "running" && item.Role.UID == role.UID && item.Role.Region == role.Region
+	})
+}
+
+// begin lists a starting sync, unless one of the same role is running, and
+// drops the oldest finished syncs past backgroundSyncsKept.
+func (s *backgroundSyncs) begin(item BackgroundSync) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.runningLocked(item.Role) {
+		return false
+	}
+	s.items = append([]BackgroundSync{item}, s.items...)
+	for i := len(s.items) - 1; i >= 0 && len(s.items) > backgroundSyncsKept; i-- {
+		if s.items[i].State != "running" {
+			s.items = slices.Delete(s.items, i, i+1)
+		}
+	}
+	return true
+}
+
+// update records a running sync's progress; false once it no longer runs.
+func (s *backgroundSyncs) update(ref string, progress gacha.SyncInfo) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := slices.IndexFunc(s.items, func(item BackgroundSync) bool { return item.Ref == ref })
+	if i < 0 || s.items[i].State != "running" {
+		return false
+	}
+	s.items[i].Progress = progress
+	return true
+}
+
+// finish records how a sync ended: its final progress and, unless the page
+// or an archive removal canceled it meanwhile, its state and code. It
+// returns the sync as listed.
+func (s *backgroundSyncs) finish(ref string, progress gacha.SyncInfo, state, code string) BackgroundSync {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := slices.IndexFunc(s.items, func(item BackgroundSync) bool { return item.Ref == ref })
+	if i < 0 {
+		return BackgroundSync{}
+	}
+	item := &s.items[i]
+	if item.State == "running" {
+		item.State, item.LastCode, item.FinishedMS = state, code, time.Now().UnixMilli()
+	}
+	item.Progress = progress
+	return *item
+}
+
+// drop removes a sync that never started.
+func (s *backgroundSyncs) drop(ref string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.items = slices.DeleteFunc(s.items, func(item BackgroundSync) bool { return item.Ref == ref })
+}
+
+func (s *backgroundSyncs) list() []BackgroundSync {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.items)
+}
+
+// cancel marks the running syncs match picks as canceled with code, each to
+// stop before its next page; false when none matched.
+func (s *backgroundSyncs) cancel(match func(BackgroundSync) bool, code string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	canceled := false
+	for i := range s.items {
+		if item := &s.items[i]; item.State == "running" && match(*item) {
+			item.State, item.LastCode, item.FinishedMS = "canceled", code, time.Now().UnixMilli()
+			canceled = true
+		}
+	}
+	return canceled
+}
+
+// cancelArchiveSyncs cancels the background syncs of an archive being
+// removed; a page merged meanwhile finds the archive changed.
+func (a *App) cancelArchiveSyncs(uid, region string) {
+	a.BackgroundSyncs.cancel(func(item BackgroundSync) bool { return item.Role.UID == uid && item.Role.Region == region }, "archive_removed")
+}
+
+func (a *App) backgroundSyncAction(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
+	switch action {
+	case "gacha.task.list":
+		return map[string]any{"items": a.BackgroundSyncs.list()}, nil
+	case "gacha.task.cancel":
+		ref := asText(input["ref"])
+		if !a.BackgroundSyncs.cancel(func(item BackgroundSync) bool { return item.Ref == ref }, "sync_canceled") {
+			return nil, gameError("sync_task_missing", "没有正在进行的这项后台同步。")
+		}
+		return map[string]any{"canceled": true}, nil
+	case "gacha.task.start":
+		return a.startBackgroundSync(ctx, event, input)
+	}
+	return nil, gameError("operation_denied", "操作不存在。")
+}
+
+// startBackgroundSync checks the role, starts its sync and moves the
+// management action to the background with the listed sync, then reads the
+// pages one after another, syncPageGap apart, until the sync completes,
+// fails, the page cancels it or the background deadline passes. A completed
+// sync tells the account's chat user when asked.
+func (a *App) startBackgroundSync(ctx context.Context, event *rayleabot.EventContext, input map[string]any) (map[string]any, error) {
 	var q struct {
 		Selection
 		Full   bool `json:"full"`
 		Notify bool `json:"notify"`
 	}
 	if input["confirm"] != true || decodeObject(input, &q) != nil {
-		return manageFailure(event, gameError("input_invalid", "请确认开始后台同步。"))
+		return nil, gameError("input_invalid", "请确认开始后台同步。")
 	}
 	client := a.accountClient(event)
 	account, role, err := client.Authorize(ctx, q.Selection)
 	if err != nil {
-		return manageFailure(event, err)
+		return nil, err
 	}
 	if !syncRegionAllowed(role.Region) {
-		return manageFailure(event, gameError("region_unsupported", "此区服暂未适配官方同步。"))
+		return nil, gameError("region_unsupported", "此区服暂未适配官方同步。")
+	}
+	if a.BackgroundSyncs.running(role) {
+		return nil, errSyncRunning
 	}
 	info, err := a.Syncs.Start(a.Gacha, gacha.SyncChoice{AccountRef: q.AccountRef, RoleRef: q.RoleRef}, role.UID, role.Region, q.Full)
 	if err != nil {
-		return manageFailure(event, syncError(err))
+		return nil, syncError(err)
 	}
-	if _, err := event.Detach(ctx, map[string]any{"sync": info}); err != nil {
+	item := BackgroundSync{Ref: info.Ref, Role: role, Owner: account.Owner, Full: q.Full, Notify: q.Notify, State: "running", LastCode: "sync_running", StartedMS: time.Now().UnixMilli(), Progress: info}
+	if !a.BackgroundSyncs.begin(item) {
 		a.Syncs.Forget(info.Ref)
-		return manageFailure(event, detachFailure(err))
+		return nil, errSyncRunning
 	}
-	result, err := a.runSync(ctx, info.Ref, syncPageGap, a.accountPages(client, q.Selection, role))
+	if _, err := event.Detach(ctx, map[string]any{"task": item}); err != nil {
+		a.BackgroundSyncs.drop(item.Ref)
+		a.Syncs.Forget(info.Ref)
+		return nil, detachFailure(err)
+	}
+	item, err = a.readBackgroundSync(ctx, event, item, info, a.accountPages(client, q.Selection, role))
 	if err != nil {
-		err = syncError(err)
+		return nil, err
 	}
-	if q.Notify {
-		text := fmt.Sprintf("抽卡后台同步完成\n%s · %s\n新增 %d 条，档案共 %d 条。", role.Nickname, role.UID, result.Added, result.Total)
-		if err != nil {
-			text = fmt.Sprintf("抽卡后台同步未完成\n%s · %s\n%s", role.Nickname, role.UID, friendlyError(err))
-		}
-		notifyOwner(ctx, event, account.Owner, text)
-	}
-	if err != nil {
-		failure := PublicError(err)
-		return event.Fail(failure.Code, failure.Message)
-	}
-	return event.Result(map[string]any{"added": result.Added, "total": result.Total})
+	return map[string]any{"task": item}, nil
 }
 
-// notifyOwner tells an account's owner text in private chat, through the
-// owner's bot while it is online.
-func notifyOwner(ctx context.Context, event *rayleabot.EventContext, owner Subject, text string) {
+// readBackgroundSync reads a listed sync to the end and lists how it ended.
+func (a *App) readBackgroundSync(ctx context.Context, event *rayleabot.EventContext, item BackgroundSync, info gacha.SyncInfo, fetch gacha.FetchPage) (BackgroundSync, error) {
+	info, err := a.runSync(ctx, info, syncPageGap, fetch, func(progress gacha.SyncInfo) bool {
+		return a.BackgroundSyncs.update(item.Ref, progress)
+	})
+	state, code := "completed", "sync_completed"
+	switch {
+	case ctx.Err() != nil:
+		state, code = "failed", "sync_timeout"
+	case err != nil:
+		err = syncError(err)
+		state, code = "failed", PublicError(err).Code
+	case info.State != "completed":
+		// Canceled: the listed sync already says so.
+	case item.Notify && a.notifySync(ctx, event, item, *info.Result) != nil:
+		code = "sync_completed.notification_failed"
+	}
+	return a.BackgroundSyncs.finish(item.Ref, info, state, code), err
+}
+
+// notifySync tells the account's chat user, through the bot the account
+// belongs to, what a completed background sync added.
+func (a *App) notifySync(ctx context.Context, event *rayleabot.EventContext, item BackgroundSync, result gacha.ImportResult) error {
+	owner := item.Owner
 	if !slices.ContainsFunc(event.Bots, func(bot rayleabot.Bot) bool {
 		return bot.ID == owner.BotID && bot.SourceProtocol == owner.SourceProtocol && bot.SourceAdapter == owner.SourceAdapter
 	}) {
-		return
+		return gameError("bot_missing", "所属机器人暂不可用。")
 	}
-	_, _ = event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: owner.SourceProtocol, SourceAdapter: owner.SourceAdapter, TargetType: "private", TargetID: owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+	text := fmt.Sprintf("抽卡后台同步完成\n%s · %s\n新增 %d 条，档案共 %d 条。", item.Role.Nickname, item.Role.UID, result.Added, result.Total)
+	_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: owner.SourceProtocol, SourceAdapter: owner.SourceAdapter, TargetType: "private", TargetID: owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+	return err
 }

@@ -126,6 +126,8 @@ type App struct {
 	Gacha         *gacha.Store
 	Transfers     gacha.Transfers
 	Syncs         gacha.Syncs
+	// BackgroundSyncs are the latest syncs the management page started.
+	BackgroundSyncs backgroundSyncs
 	// fileImports are the senders 导入记录 is waiting on for a file.
 	fileImports fileImports
 	// LinkHTTP reads the official signal search (nil uses a default client).
@@ -276,9 +278,6 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return event.Fail("plugin.game_source_invalid", "管理动作来源无效。")
 		}
 		action, input := asText(event.Event.Payload["action"]), asObject(event.Event.Payload["payload"])
-		if action == "gacha.sync.background" {
-			return a.backgroundSync(ctx, event, input)
-		}
 		result, err := a.Manage(ctx, event, action, input)
 		if err != nil {
 			return manageFailure(event, err)
@@ -717,6 +716,9 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 		if strings.HasPrefix(action, "gacha.sync.") {
 			return a.manageSync(ctx, event, action, input)
 		}
+		if strings.HasPrefix(action, "gacha.task.") {
+			return a.backgroundSyncAction(ctx, event, action, input)
+		}
 		if strings.HasPrefix(action, "gacha.") {
 			return a.manageGacha(action, input)
 		}
@@ -766,6 +768,7 @@ func (a *App) manageGacha(action string, input map[string]any) (map[string]any, 
 		}
 		return versionDraws(a.bannerGame(), archive), nil
 	case "gacha.remove":
+		a.cancelArchiveSyncs(uid, region)
 		err := a.Gacha.Remove(uid, region)
 		return map[string]any{"removed": err == nil}, err
 	case "gacha.import.start":
