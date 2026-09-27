@@ -38,15 +38,18 @@ func discComment(score float64) string {
 	return "MAX"
 }
 
-// Training draws 练度统计 the way ZZZ-Plugin's proficiency page does: the
-// player card, S-rank agents, the S-rank W-Engine rate, high-Mindscape agents
-// and SSS-or-better discs, then every agent by ZZZ-Plugin's proficiency score
+// Training draws 练度统计 the way ZZZ-Plugin's proficiency page does, from
+// the panels kept for the UID as upstream reads its saved panels: the player
+// card, S-rank agents, the S-rank W-Engine rate, high-Mindscape agents and
+// SSS-or-better discs, then every agent by ZZZ-Plugin's proficiency score
 // with Mindscape, level, attribute, portrait, the six skill levels, the
-// W-Engine and the disc grade. Upstream reads its saved panels; this reads
-// every agent's details directly.
+// W-Engine and the disc grade.
 func Training(context app.ImageContext, result app.QueryResult) (app.Image, bool) {
-	list, _ := result.Data["avatar_list"].([]any)
-	if len(list) == 0 || context.Query == nil {
+	if context.SavedPanels == nil {
+		return app.Image{}, false
+	}
+	panels := context.SavedPanels(result.Role.UID)
+	if len(panels) == 0 {
 		return app.Image{}, false
 	}
 	resources := newRecordResources(context, commonArtwork, trainingArtwork)
@@ -59,22 +62,6 @@ func Training(context app.ImageContext, result app.QueryResult) (app.Image, bool
 		resources.List = append(resources.List, resource)
 		return id
 	}
-	panels := []app.CharacterPanel{}
-	// The detail query takes at most 50 agents at a time.
-	for start := 0; start < len(list); start += 50 {
-		ids := []any{}
-		for _, raw := range list[start:min(start+50, len(list))] {
-			agent, _ := raw.(map[string]any)
-			ids = append(ids, app.Text(agent["id"]))
-		}
-		if detail, err := context.Query("zzz.character", map[string]any{"id_list": ids}); err == nil {
-			panels = append(panels, app.NormalizePanels(detail, context.Catalog)...)
-		}
-	}
-	if len(panels) == 0 {
-		return app.Image{}, false
-	}
-
 	type row struct {
 		score float64
 		data  map[string]any

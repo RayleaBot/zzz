@@ -531,10 +531,17 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			err = listErr
 			break
 		}
-		choice, _, chooseErr := Choose(listed, a.Game.ID, uid)
+		choice, role, chooseErr := Choose(listed, a.Game.ID, uid)
 		if chooseErr != nil {
 			err = chooseErr
 			break
+		}
+		// 练度统计 draws the panels kept for the UID, as upstream's
+		// proficiency; without them it asks for 更新面板 first.
+		if operation.Name == a.Game.ID+".training" {
+			if saved, readErr := a.Profiles.Read(role.UID); readErr == nil && len(saved.Panels) == 0 {
+				return event.SendText(a.panelReply("training_empty", nil))
+			}
 		}
 		// A routed command's text reply reads as the query that ran; its image
 		// is the command's own.

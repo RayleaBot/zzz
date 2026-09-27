@@ -44,6 +44,9 @@ type ImageContext struct {
 	// many characters' equipment scores, as 练度统计. It is nil when the game
 	// has no scoring.
 	Score func(CharacterPanel) (CharacterPanel, error)
+	// SavedPanels reads the panels kept for a UID, as 练度统计 reads
+	// upstream's saved panels.
+	SavedPanels func(uid string) []CharacterPanel
 
 	ctx context.Context
 }
@@ -230,6 +233,14 @@ func (a *App) imageContext(ctx context.Context) ImageContext {
 	context := ImageContext{Game: a.Game, Catalog: a.Catalog, Artwork: a.Artwork, Now: time.Now(), ctx: ctx}
 	if a.Game.Calc != nil {
 		context.Score = func(panel CharacterPanel) (CharacterPanel, error) { return a.scorePanel(ctx, panel) }
+	}
+	context.SavedPanels = func(uid string) []CharacterPanel {
+		saved, _ := a.Profiles.Read(uid)
+		panels := []CharacterPanel{}
+		for _, item := range saved.Sorted(a.Catalog, nil) {
+			panels = append(panels, item.panel())
+		}
+		return panels
 	}
 	return context
 }

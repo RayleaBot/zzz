@@ -25,8 +25,8 @@ import (
 // between two refreshes of a UID is the panel_refresh_interval setting.
 type PanelSettings struct {
 	// Replies are upstream's replies by key: failed, unreachable, empty,
-	// none, slow, account_start, account_failed, cooldown, list_empty and
-	// missing, and running for a refresh still reading. {prefix}, {uid},
+	// none, slow, account_start, account_failed, cooldown, list_empty,
+	// training_empty and missing, and running for a refresh still reading. {prefix}, {uid},
 	// {name}, {service}, {status}, {seconds} and {error} are filled in.
 	Replies map[string]string `json:"replies"`
 }
