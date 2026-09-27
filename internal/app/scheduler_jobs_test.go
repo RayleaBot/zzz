@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -77,5 +78,124 @@ func TestReminderTriggerStopsWhenItsEventRunsOut(t *testing.T) {
 	}
 	if len(accounts.executed) != 1 || accounts.executed[0] != "zzz.challenge" || len(host.sent) != 0 {
 		t.Fatalf("the trigger went on after its time: %v, sent %v", accounts.executed, host.sent)
+	}
+}
+
+// createdJob is a job created as a user or the management page creates it:
+// its task ID and how its task is removed, a management action or, when
+// action is empty, a chat command.
+type createdJob struct {
+	ref, action, command string
+}
+
+// createJobs creates a job of each kind: through the management page the
+// stamina and challenge reminders, sign-in, monthly collection, community
+// and cloud game tasks and a background sync, and in chat 开启挑战提醒 and a
+// group push.
+func createJobs(t *testing.T, host *sdkHost) []createdJob {
+	t.Helper()
+	role := func(input map[string]any) map[string]any {
+		input["account_ref"], input["role_ref"], input["days"], input["confirm"] = "account", "role", 30, true
+		return input
+	}
+	jobs := []createdJob{}
+	created := func(action, command string, end map[string]any) {
+		t.Helper()
+		for ref := range host.jobs {
+			if !slices.ContainsFunc(jobs, func(job createdJob) bool { return job.ref == ref }) {
+				if host.jobs[ref]["task_id"] != ref {
+					t.Fatalf("%s has payload %v", ref, host.jobs[ref])
+				}
+				jobs = append(jobs, createdJob{ref: ref, action: action, command: command})
+				return
+			}
+		}
+		t.Fatalf("no job was created: %v", end)
+	}
+	for _, job := range []struct {
+		action, remove string
+		input          map[string]any
+	}{
+		{"reminder.create", "reminder.remove", role(map[string]any{"threshold": 80})},
+		{"challenge.reminder.create", "challenge.reminder.remove", role(map[string]any{"kind": "deadly", "metric": "star", "threshold": 6, "hour": 20})},
+		{"signin.task.create", "signin.task.remove", role(map[string]any{"hour": 0})},
+		{"monthly.task.create", "monthly.task.remove", role(map[string]any{"hour": 0})},
+		{"community.task.create", "community.task.remove", role(map[string]any{"once": true, "read": true})},
+		{"cloudgame.task.create", "cloudgame.task.remove", role(map[string]any{"once": true})},
+		{"gacha.task.create", "gacha.task.remove", role(map[string]any{"kind": "once", "hour": 8})},
+	} {
+		end, _ := host.manage(job.action, job.input)
+		created(job.remove, "", end)
+	}
+	end, _ := host.message("%开启挑战提醒", "开启挑战提醒")
+	created("", "关闭挑战提醒", end)
+	end, _ = host.groupMessage("%开启公告推送", "开启公告推送")
+	created("content.subscription.remove", "", end)
+	return jobs
+}
+
+// deletedIn is whether an event's actions deleted the job ref.
+func deletedIn(actions []hostAction, ref string) bool {
+	return slices.ContainsFunc(actions, func(action hostAction) bool {
+		return action.Name == "scheduler.delete" && action.Data["task_id"] == ref
+	})
+}
+
+// Removing a task, from the management page or in chat, deletes its job in
+// the same event.
+func TestRemovingATaskDeletesItsJob(t *testing.T) {
+	a := pluginApp(t)
+	host := newSDKHost(t, a, (&taskAccounts{t: t}).answer)
+	jobs := createJobs(t, host)
+	if len(jobs) != 9 {
+		t.Fatalf("created %d jobs", len(jobs))
+	}
+	for _, job := range jobs {
+		var end map[string]any
+		var actions []hostAction
+		if job.action != "" {
+			end, actions = host.manage(job.action, map[string]any{"ref": job.ref, "confirm": true})
+		} else {
+			end, actions = host.message("%"+job.command, job.command)
+		}
+		if end["type"] == "error" || !deletedIn(actions, job.ref) {
+			t.Fatalf("removing %s ended with %v, actions %v", job.ref, end, actions)
+		}
+		if _, kept := host.jobs[job.ref]; kept {
+			t.Fatalf("%s kept its job", job.ref)
+		}
+	}
+}
+
+// A trigger whose task is no longer stored deletes its own job and asks the
+// account for nothing; that of a job whose payload has no task ID deletes
+// nothing, since a delete without an ID would stop the plugin.
+func TestATriggerWhoseTaskIsGoneDeletesItsJob(t *testing.T) {
+	a := pluginApp(t)
+	accounts := &taskAccounts{t: t}
+	host := newSDKHost(t, a, accounts.answer)
+	jobs := createJobs(t, host)
+	if err := a.Reminders.edit("", func(items *[]Reminder, _ int) error { *items = nil; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SyncTasks.edit("", func(items *[]SyncTask, _ int) error { *items = nil; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Subscriptions.edit("", func(items *[]ContentSubscription, _ int) error { *items = nil; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, job := range jobs {
+		end, actions := host.trigger(job.ref)
+		if end["type"] != "result" || !deletedIn(actions, job.ref) {
+			t.Fatalf("the trigger of %s ended with %v, actions %v", job.ref, end, actions)
+		}
+	}
+	host.jobs["game.reminder.OLD"] = map[string]any{"kind": "stamina_reminder"}
+	if end, actions := host.trigger("game.reminder.OLD"); end["type"] != "result" || len(actions) != 0 {
+		t.Fatalf("the trigger without a task ID ended with %v, actions %v", end, actions)
+	}
+	delete(host.jobs, "game.reminder.OLD")
+	if len(host.jobs) != 0 || len(accounts.executed) != 0 || len(host.sent) != 0 {
+		t.Fatalf("jobs %v, requests %v, sent %v", host.jobs, accounts.executed, host.sent)
 	}
 }

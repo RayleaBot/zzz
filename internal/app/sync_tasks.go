@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"slices"
 	"time"
 
@@ -47,6 +48,7 @@ func (a *App) syncTaskAction(ctx context.Context, event *rayleabot.EventContext,
 		if err != nil {
 			return map[string]any{"removed": false, "delegation_revoked": false}, err
 		}
+		_, _ = event.Actions().SchedulerDelete(ctx, t.Ref)
 		a.Syncs.Forget(t.Progress.Ref)
 		client := AccountsClient{Caller: event.Actions(), Provider: t.Provider, Game: a.Game.ID}
 		revoked := client.call(ctx, "delegation.revoke", map[string]any{"account_ref": t.AccountRef, "delegation_ref": t.DelegationRef}, nil) == nil
@@ -207,6 +209,11 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: task.Owner.SourceProtocol, SourceAdapter: task.Owner.SourceAdapter, TargetType: targetType, TargetID: targetID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
 		return err
 	}, SyncTaskPace{Stop: start.Add(chatTaskBudget), Now: a.now, Wait: a.sleep})
+	if errors.Is(err, errTaskMissing) {
+		// The task was removed; so is its job.
+		_, _ = event.Actions().SchedulerDelete(ctx, triggerTask(event))
+		return event.Result(map[string]any{"checked": false})
+	}
 	if err != nil {
 		e := PublicError(err)
 		return event.Fail(e.Code, e.Message)

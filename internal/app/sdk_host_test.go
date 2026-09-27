@@ -160,17 +160,29 @@ func (h *sdkHost) answer(action string, data map[string]any, scheduled bool) (ma
 	return nil, ""
 }
 
-// message sends a private chat message of user "u" with the host's parsed
-// command, if any.
-func (h *sdkHost) message(text, command string, args ...string) (map[string]any, []hostAction) {
+// chat sends a chat message of user "u", a group administrator in a group,
+// into target with the host's parsed command, if any.
+func (h *sdkHost) chat(target map[string]any, text, command string, args ...string) (map[string]any, []hostAction) {
 	h.t.Helper()
 	h.next++
 	id := fmt.Sprintf("chat-%d", h.next)
-	event := map[string]any{"event_id": id, "event_type": "message.private", "source_protocol": "onebot11", "source_adapter": "a", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u"}, "target": map[string]any{"type": "private", "id": "u"}, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}}
+	event := map[string]any{"event_id": id, "event_type": "message." + asText(target["type"]), "source_protocol": "onebot11", "source_adapter": "a", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u", "role": "admin"}, "target": target, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}}
 	if command != "" {
 		event["payload"] = map[string]any{"command": command, "args": args}
 	}
 	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": event})
+}
+
+// message sends a private chat message of user "u".
+func (h *sdkHost) message(text, command string, args ...string) (map[string]any, []hostAction) {
+	h.t.Helper()
+	return h.chat(map[string]any{"type": "private", "id": "u"}, text, command, args...)
+}
+
+// groupMessage sends a message of user "u" in group "g".
+func (h *sdkHost) groupMessage(text, command string, args ...string) (map[string]any, []hostAction) {
+	h.t.Helper()
+	return h.chat(map[string]any{"type": "group", "id": "g"}, text, command, args...)
 }
 
 // manage runs an action of the management page.

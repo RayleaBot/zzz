@@ -631,7 +631,7 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 	case "guides.schema", "guides.settings", "guides.configure":
 		return a.GuideSettings.Manage(action, input)
 	case "content.subscription.list", "content.subscription.remove":
-		return a.subscriptionManage(action, input)
+		return a.subscriptionManage(ctx, event, action, input)
 	case "codes.query":
 		return a.Content.codes(ctx)
 	case "redeem.run":

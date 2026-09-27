@@ -26,6 +26,10 @@ func (t SyncTask) taskRef() string { return t.Ref }
 // while it ran; its results are not written back.
 var errTaskChanged = errors.New("task changed during its trigger")
 
+// errTaskMissing is a trigger's claim of a task that is not stored, whose
+// job is left over.
+var errTaskMissing = errors.New("scheduled task is not stored")
+
 // taskFiles keeps each scheduled task in its own file under Directory. A
 // trigger claims its task, makes its network requests without the store's
 // lock, and writes back only that task's file, and only while nobody else
@@ -142,7 +146,7 @@ func sameTask[T any](a, b T) bool {
 }
 
 // claim reads a task for a trigger, unless another trigger of it is still
-// running.
+// running; errTaskMissing when the task is not stored.
 func (s *taskFiles[T]) claim(ref string) (T, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -153,8 +157,11 @@ func (s *taskFiles[T]) claim(ref string) (T, bool, error) {
 	if _, running := s.claimed[ref]; running {
 		return task, false, nil
 	}
-	if err := localdata.Read(s.file(ref), &task); err != nil || task.taskRef() != ref {
+	if err := localdata.Read(s.file(ref), &task); err != nil {
 		return task, false, err
+	}
+	if ref == "" || task.taskRef() != ref {
+		return task, false, errTaskMissing
 	}
 	if s.claimed == nil {
 		s.claimed = map[string]T{}

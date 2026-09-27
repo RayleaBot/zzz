@@ -169,6 +169,7 @@ func (a *App) removeDelegatedTask(ctx context.Context, event *rayleabot.EventCon
 	if err != nil {
 		return map[string]any{"removed": false, "delegation_revoked": false}, err
 	}
+	_, _ = event.Actions().SchedulerDelete(ctx, task.Ref)
 	client.Provider = task.Provider
 	revoked := true
 	for _, ref := range []string{task.DelegationRef, task.DeadlyDelegationRef} {
@@ -337,6 +338,14 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: task.Owner.SourceProtocol, SourceAdapter: task.Owner.SourceAdapter, TargetType: "private", TargetID: task.Owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
 		return err
 	}, a.Game)
+	if errors.Is(err, errTaskMissing) {
+		// The task was removed; so is its job. A job whose payload has no
+		// task ID cannot be named and stays.
+		if ref := triggerTask(event); ref != "" {
+			_, _ = event.Actions().SchedulerDelete(ctx, ref)
+		}
+		return event.Result(map[string]any{"checked": false})
+	}
 	if err != nil {
 		failure := PublicError(err)
 		return event.Fail(failure.Code, failure.Message)

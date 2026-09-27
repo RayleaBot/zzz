@@ -227,7 +227,7 @@ func (a *App) checkPushes(ctx context.Context, event *rayleabot.EventContext, re
 	return nil
 }
 
-func (a *App) subscriptionManage(action string, input map[string]any) (map[string]any, error) {
+func (a *App) subscriptionManage(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
 	if action == "content.subscription.list" {
 		items, err := a.Subscriptions.List()
 		return map[string]any{"items": items}, err
@@ -235,13 +235,17 @@ func (a *App) subscriptionManage(action string, input map[string]any) (map[strin
 	if action != "content.subscription.remove" || input["confirm"] != true {
 		return nil, gameError("input_invalid", "请确认移除此推送。")
 	}
-	err := a.Subscriptions.edit(asText(input["ref"]), func(items *[]ContentSubscription, i int) error {
+	ref := asText(input["ref"])
+	err := a.Subscriptions.edit(ref, func(items *[]ContentSubscription, i int) error {
 		if i < 0 {
 			return gameError("subscription_missing", "推送已不存在。")
 		}
 		*items = slices.Delete(*items, i, i+1)
 		return nil
 	})
+	if err == nil {
+		_, _ = event.Actions().SchedulerDelete(ctx, ref)
+	}
 	return map[string]any{"removed": err == nil}, err
 }
 
