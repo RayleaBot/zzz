@@ -32,15 +32,12 @@ var errTaskMissing = errors.New("scheduled task is not stored")
 // taskFiles keeps each scheduled task in its own file under Directory. A
 // trigger claims its task, makes its network requests without the store's
 // lock, and writes back only that task's file, and only while nobody else
-// changed it. Legacy is the single file earlier versions kept every task
-// in, moved into Directory on first use.
+// changed it.
 type taskFiles[T storedTask] struct {
 	mu        sync.Mutex
 	Directory string
-	Legacy    string
 	// claimed holds each running trigger's last written copy of its task.
-	claimed  map[string]T
-	migrated bool
+	claimed map[string]T
 }
 
 func (s *taskFiles[T]) file(ref string) string {
@@ -48,34 +45,7 @@ func (s *taskFiles[T]) file(ref string) string {
 	return filepath.Join(s.Directory, hex.EncodeToString(sum[:16])+".json")
 }
 
-// migrate moves the legacy file's tasks into their own files and keeps the
-// old file renamed beside them.
-func (s *taskFiles[T]) migrate() error {
-	if s.migrated || s.Legacy == "" {
-		return nil
-	}
-	items := []T{}
-	if err := localdata.Read(s.Legacy, &items); err != nil {
-		return err
-	}
-	for _, task := range items {
-		if err := localdata.Write(s.file(task.taskRef()), task); err != nil {
-			return err
-		}
-	}
-	if len(items) > 0 {
-		if err := os.Rename(s.Legacy, s.Legacy+".migrated"); err != nil {
-			return err
-		}
-	}
-	s.migrated = true
-	return nil
-}
-
 func (s *taskFiles[T]) read() ([]T, error) {
-	if err := s.migrate(); err != nil {
-		return nil, err
-	}
 	entries, err := os.ReadDir(s.Directory)
 	if errors.Is(err, os.ErrNotExist) {
 		return []T{}, nil
@@ -150,9 +120,6 @@ func (s *taskFiles[T]) claim(ref string) (T, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var task T
-	if err := s.migrate(); err != nil {
-		return task, false, err
-	}
 	if _, running := s.claimed[ref]; running {
 		return task, false, nil
 	}
@@ -200,5 +167,5 @@ type ReminderStore struct {
 }
 
 func reminderStore(directory string) *ReminderStore {
-	return &ReminderStore{taskFiles[Reminder]{Directory: filepath.Join(directory, "reminders"), Legacy: filepath.Join(directory, "reminders.json")}}
+	return &ReminderStore{taskFiles[Reminder]{Directory: filepath.Join(directory, "reminders")}}
 }

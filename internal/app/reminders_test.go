@@ -2,7 +2,6 @@ package app
 
 import (
 	"errors"
-	"os"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
 )
 
 func TestReminderPersistsAdmissionAndThresholdRearming(t *testing.T) {
@@ -98,21 +96,18 @@ func seedReminders(s *ReminderStore, tasks []Reminder) error {
 	})
 }
 
-func TestReminderStoreMigratesTheLegacyFileAndKeepsTasksApart(t *testing.T) {
+// A trigger holding its task does not block edits of others, and a task
+// removed meanwhile is not written back.
+func TestReminderStoreKeepsTasksApart(t *testing.T) {
 	directory := t.TempDir()
 	store := reminderStore(directory)
-	if err := localdata.Write(store.Legacy, []Reminder{{Ref: "a", Enabled: true}, {Ref: "b"}}); err != nil {
+	if err := seedReminders(store, []Reminder{{Ref: "a", Enabled: true}, {Ref: "b"}}); err != nil {
 		t.Fatal(err)
 	}
 	items, err := store.List()
 	if err != nil || len(items) != 2 || items[0].Ref != "a" {
 		t.Fatal(items, err)
 	}
-	if _, err = os.Stat(store.Legacy + ".migrated"); err != nil {
-		t.Fatal("the legacy file was not kept", err)
-	}
-	// A trigger holding its task does not block edits of others, and a task
-	// removed meanwhile is not written back.
 	claimed, ok, err := store.claim("a")
 	if err != nil || !ok {
 		t.Fatal(ok, err)

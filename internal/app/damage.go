@@ -96,11 +96,6 @@ func (a *App) damageCommand(ctx context.Context, event *rayleabot.EventContext, 
 		return event.SendText(friendlyError(err))
 	}
 	name := args[0]
-	// A panel kept before the official entry was saved with it cannot be
-	// calculated until it is updated.
-	if panel.Official == nil {
-		return event.SendText(a.panelReply("missing", map[string]string{"uid": uid, "name": name}))
-	}
 	skill := ""
 	if match := damageSkill.FindStringSubmatch(event.Event.Command()); match != nil {
 		skill = match[1]

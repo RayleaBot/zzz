@@ -12,8 +12,7 @@ func TestCustomAliasesOverrideBuiltinNames(t *testing.T) {
 		t.Fatal(err)
 	}
 	a := App{Catalog: catalog}
-	// A policy saved by an earlier version no longer changes the outcome.
-	event := &rayleabot.EventContext{Config: map[string]any{"custom_aliases": map[string]string{"小甲": "2"}, "alias_policy": "prefer_builtin"}}
+	event := &rayleabot.EventContext{Config: map[string]any{"custom_aliases": map[string]string{"小甲": "2"}}}
 	if got, ok := catalog.Resolve("小甲", "", a.aliasMap(event)); !ok || got.ID != "2" {
 		t.Fatal(got)
 	}
