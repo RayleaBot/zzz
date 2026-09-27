@@ -116,90 +116,19 @@ type ArtworkGroup struct {
 // know the file names.
 type ArtworkGroupsBuilder func(ImageContext) []ArtworkGroup
 
-// artworkTask prefixes the scheduled task that finishes 下载全部资源;
-// artworkRef is the task, one at a time as upstream's.
-const (
-	artworkTask = "game.artwork."
-	artworkRef  = artworkTask + "all"
-)
-
-// artworkJob is 下载全部资源 as a chat task: every file by its group and
-// index, how far it got and the counts by group, which mu guards.
-type artworkJob struct {
-	groups          []ArtworkGroup
-	items           [][2]int
-	mu              sync.Mutex
-	next            int
-	success, failed []int
-}
-
-// step fetches files, several at a time, until all are done or stop passes,
-// and answers the counts once all are. A batch its event ran out on is
-// fetched again by the next trigger, the files it got from the cache.
-func (j *artworkJob) step(ctx context.Context, a *App, _ taskHost, stop time.Time) ([]rayleabot.Segment, bool) {
-	for j.next < len(j.items) && a.now().Before(stop) && ctx.Err() == nil {
-		batch := j.items[j.next:min(j.next+16, len(j.items))]
-		results := make([]bool, len(batch))
-		var group sync.WaitGroup
-		slots := make(chan struct{}, 8)
-		for index, item := range batch {
-			group.Add(1)
-			slots <- struct{}{}
-			go func() {
-				defer func() { <-slots; group.Done() }()
-				_, results[index] = a.Artwork.Fetch(ctx, j.groups[item[0]].Source, j.groups[item[0]].Files[item[1]])
-			}()
-		}
-		group.Wait()
-		if ctx.Err() != nil {
-			break
-		}
-		j.mu.Lock()
-		for index, item := range batch {
-			if results[index] {
-				j.success[item[0]]++
-			} else {
-				j.failed[item[0]]++
-			}
-		}
-		j.next += len(batch)
-		j.mu.Unlock()
-	}
-	if j.next < len(j.items) {
-		return nil, false
-	}
-	return j.fail(a, nil), true
-}
-
-// fail answers the counts so far, as the finished download does.
-func (j *artworkJob) fail(*App, error) []rayleabot.Segment {
-	return []rayleabot.Segment{rayleabot.Text(j.summary())}
-}
-
-// summary is upstream's closing reply.
-func (j *artworkJob) summary() string {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	lines := []string{"资源下载完成（成功包含已下载资源）"}
-	for index, group := range j.groups {
-		lines = append(lines, fmt.Sprintf("%s：总数%d，成功%d，失败%d", group.Label, len(group.Files), j.success[index], j.failed[index]))
-	}
-	return strings.Join(append(lines, "注：下载失败可能缘于该资源尚处于内测中"), "\n")
-}
-
 // artworkAll is 下载全部资源: the repositories are updated as 素材更新 does,
 // and every file the templates may read from the on-demand sources is
 // fetched, as ZZZ-Plugin fetches every agent, W-Engine, drive disc and
-// Bangboo picture. What does not finish within the event continues as a chat
-// task, which answers in the same chat.
+// Bangboo picture. The command's event moves to the background and answers
+// the counts once every file is fetched; one download runs at a time, as
+// upstream's.
 func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) error {
-	start := a.now()
-	ctx, cancel := a.eventWork(ctx, start)
-	defer cancel()
-	job := &artworkJob{}
-	task := a.beginChatTask(event, artworkRef, a.Game.Name+"下载全部资源", "artwork_all", 2*time.Hour, job)
-	if task == nil {
+	if !a.flows.begin("artwork") {
 		return event.SendText("下载任务正在进行中，请稍后再试")
+	}
+	defer a.flows.end("artwork")
+	if detached, err := detachChat(ctx, event); !detached {
+		return err
 	}
 	started := []string{}
 	for _, source := range a.Artwork.Sources {
@@ -214,26 +143,59 @@ func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) err
 		text += "\n同时在后台更新：" + strings.Join(started, "、") + "，发送“" + a.Game.Prefix + "素材状态”查看进度。"
 	}
 	notice(ctx, event, text)
+	groups := []ArtworkGroup{}
 	if a.downloads != nil {
 		for _, group := range a.downloads(a.imageContext(ctx)) {
-			if len(group.Files) == 0 {
-				continue
+			if len(group.Files) > 0 {
+				groups = append(groups, group)
 			}
-			for file := range group.Files {
-				job.items = append(job.items, [2]int{len(job.groups), file})
-			}
-			job.groups = append(job.groups, group)
 		}
 	}
-	job.success, job.failed = make([]int, len(job.groups)), make([]int, len(job.groups))
-	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, start.Add(chatTaskBudget))
-	switch {
-	case err != nil:
-		return event.SendText("资源较多，本次未能全部下载，请稍后再试。")
-	case !done:
-		return event.Result(map[string]any{"handled": true})
+	success, failed := a.fetchArtwork(ctx, groups)
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	return event.Send(event.Event.Target.Type, event.Event.Target.ID, reply...)
+	return event.SendText(artworkSummary(groups, success, failed))
+}
+
+// fetchArtwork fetches every file of groups, eight at a time, and counts by
+// group the files fetched or already cached and those that failed.
+func (a *App) fetchArtwork(ctx context.Context, groups []ArtworkGroup) (success, failed []int) {
+	success, failed = make([]int, len(groups)), make([]int, len(groups))
+	var mu sync.Mutex
+	var fetching sync.WaitGroup
+	slots := make(chan struct{}, 8)
+	for index, group := range groups {
+		for _, file := range group.Files {
+			if ctx.Err() != nil {
+				break
+			}
+			slots <- struct{}{}
+			fetching.Go(func() {
+				defer func() { <-slots }()
+				_, ok := a.Artwork.Fetch(ctx, group.Source, file)
+				mu.Lock()
+				defer mu.Unlock()
+				if ok {
+					success[index]++
+				} else {
+					failed[index]++
+				}
+			})
+		}
+	}
+	fetching.Wait()
+	return success, failed
+}
+
+// artworkSummary is upstream's closing reply: each kind's total, fetched and
+// failed files.
+func artworkSummary(groups []ArtworkGroup, success, failed []int) string {
+	lines := []string{"资源下载完成（成功包含已下载资源）"}
+	for index, group := range groups {
+		lines = append(lines, fmt.Sprintf("%s：总数%d，成功%d，失败%d", group.Label, len(group.Files), success[index], failed[index]))
+	}
+	return strings.Join(append(lines, "注：下载失败可能缘于该资源尚处于内测中"), "\n")
 }
 
 // artworkDeleteAll is 删除全部资源: the caches of the sources fetched on

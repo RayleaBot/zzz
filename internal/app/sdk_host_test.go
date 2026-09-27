@@ -9,6 +9,7 @@ import (
 	"io"
 	"maps"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,8 +33,10 @@ type sdkHost struct {
 	jobs    map[string]map[string]any
 	created []map[string]any
 	deleted []string
-	// sent are the message.send actions, not counting terminal replies.
-	sent []rayleabot.MessageSendRequest
+	// sent are the message.send actions, not counting terminal replies;
+	// onSend, when set, runs as each arrives, before it is answered.
+	sent   []rayleabot.MessageSendRequest
+	onSend func(rayleabot.MessageSendRequest)
 	// types are the event types by request ID; triggers mark scheduler
 	// triggers.
 	types    map[string]string
@@ -54,6 +57,33 @@ type hostCall struct {
 	// trigger and Detached an event already in the background.
 	Parent              string
 	Scheduled, Detached bool
+}
+
+// fakeClock is a clock tests move by hand; sleeping moves it on. Events the
+// SDK runs read it from goroutines of their own, so it is locked.
+type fakeClock struct {
+	mu sync.Mutex
+	at time.Time
+}
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.at
+}
+
+func (c *fakeClock) Sleep(ctx context.Context, d time.Duration) error {
+	c.mu.Lock()
+	c.at = c.at.Add(max(d, 0))
+	c.mu.Unlock()
+	return ctx.Err()
+}
+
+// set moves the clock to at.
+func (c *fakeClock) set(at time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.at = at
 }
 
 // hostAction is an action the plugin asked for during one event.
@@ -191,6 +221,9 @@ func (h *sdkHost) answer(action, parent string, data map[string]any) (map[string
 			h.t.Fatal("invalid message.send")
 		}
 		h.sent = append(h.sent, request)
+		if h.onSend != nil {
+			h.onSend(request)
+		}
 		return map[string]any{"message_id": fmt.Sprintf("sent-%d", len(h.sent)), "delivery_kind": "send"}, ""
 	case "render.image":
 		return nil, "platform.render_unavailable"

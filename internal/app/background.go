@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"sync"
+	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
@@ -60,4 +61,27 @@ func (f *flows) end(key string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	delete(f.running, key)
+}
+
+// clock is what flows wait between their requests by; tests set their own.
+type clock interface {
+	Sleep(context.Context, time.Duration) error
+}
+
+// sleep waits for d or until ctx ends.
+func (a *App) sleep(ctx context.Context, d time.Duration) error {
+	if a.clock != nil {
+		return a.clock.Sleep(ctx, d)
+	}
+	if d <= 0 {
+		return ctx.Err()
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }

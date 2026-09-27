@@ -128,11 +128,8 @@ type App struct {
 	Syncs         gacha.Syncs
 	// fileImports are the senders 导入记录 is waiting on for a file.
 	fileImports fileImports
-	// ChatTasks is chat work that continues past its event, as gacha links
-	// whose records are still being fetched; LinkHTTP reads the official
-	// signal search (nil uses a default client).
-	ChatTasks chatTasks
-	LinkHTTP  *http.Client
+	// LinkHTTP reads the official signal search (nil uses a default client).
+	LinkHTTP *http.Client
 	// flows are the long flows running now.
 	flows        flows
 	Showcase     ShowcaseClient
@@ -269,12 +266,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	if event.Event.EventType == "scheduler.trigger" {
 		// A trigger is dispatched by the task ID the host gives it; one whose
 		// task is not stored deletes its job.
-		task := event.Event.TaskID()
-		switch {
-		case strings.HasPrefix(task, "game.content."):
+		if strings.HasPrefix(event.Event.TaskID(), "game.content.") {
 			return a.runContentSubscription(ctx, event)
-		case strings.HasPrefix(task, artworkTask):
-			return a.runChatTask(ctx, event)
 		}
 		return a.runReminder(ctx, event)
 	}
