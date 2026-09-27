@@ -173,6 +173,14 @@ func (h *sdkHost) message(text, command string, args ...string) (map[string]any,
 	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": event})
 }
 
+// manage runs an action of the management page.
+func (h *sdkHost) manage(action string, input map[string]any) (map[string]any, []hostAction) {
+	h.t.Helper()
+	h.next++
+	id := fmt.Sprintf("manage-%d", h.next)
+	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": map[string]any{"event_id": id, "event_type": "management.action", "source_protocol": "management", "source_adapter": "management.ui", "timestamp": time.Now().Unix(), "payload": map[string]any{"action": action, "payload": input}}})
+}
+
 // trigger runs a job the plugin created as the host's scheduler does: the
 // event has no target, and its payload holds the job's payload (and its
 // action) but not the task ID.

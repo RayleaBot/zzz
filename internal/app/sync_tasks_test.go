@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -34,11 +35,15 @@ func syncPage(_ context.Context, _ SyncTask, pool, end string, page int) (gacha.
 	}
 	return p, nil
 }
+
+// onePage is a trigger that reads a single page.
+var onePage = SyncTaskPace{Now: time.Now, Wait: func(ctx context.Context, _ time.Duration) error { return ctx.Err() }}
+
 func tickOne(t *testing.T, s *SyncTaskStore, j *gacha.Syncs, a *gacha.Store, task SyncTask, now int64, fetch SyncTaskFetch, send SyncTaskSend) SyncTask {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
-	if err := s.Tick(ctx, task.Ref, now, j, a, fetch, send); err != nil {
+	if err := s.Tick(ctx, task.Ref, now, j, a, fetch, send, onePage); err != nil {
 		t.Fatal(err)
 	}
 	items, err := s.List()
@@ -85,7 +90,7 @@ func TestBackgroundSyncDeletionAndConcurrentAdmission(t *testing.T) {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 			defer cancel()
-			if err := s.Tick(ctx, task.Ref, now, j, a, syncPage, nil); err != nil {
+			if err := s.Tick(ctx, task.Ref, now, j, a, syncPage, nil, onePage); err != nil {
 				t.Error(err)
 			}
 		}()
@@ -219,5 +224,119 @@ func TestChatSyncAnswersInItsChatOnce(t *testing.T) {
 	}
 	if task.ReplyType != "" || task.Before != nil {
 		t.Fatal("reply target kept", task)
+	}
+}
+
+// gachaRead is one zzz.gacha page a background sync asked for.
+type gachaRead struct {
+	at        time.Time
+	pool, end string
+	page      int
+}
+
+// gachaAccounts answers the account plugin's service for one account of user
+// "u" with a mainland role whose exclusive channel holds records records and
+// whose other channels are empty: roles, list, delegation.create, which
+// grants "d1", and each zzz.gacha page, which only a trigger may ask for,
+// with the delegation. A page takes took of the fake clock.
+type gachaAccounts struct {
+	t       *testing.T
+	clock   *fakeClock
+	records int
+	took    time.Duration
+	reads   []gachaRead
+}
+
+func (s *gachaAccounts) answer(request rayleabot.ServiceCallRequest, scheduled bool) (map[string]any, string) {
+	role := map[string]any{"ref": "role", "game": "zzz", "uid": "10000001", "region": "prod_gf_cn", "nickname": "绳匠", "level": 50}
+	switch request.Method {
+	case "roles":
+		return map[string]any{"account_ref": "account", "roles": []any{role}}, ""
+	case "list":
+		owner := map[string]any{"source_protocol": "onebot11", "source_adapter": "a", "bot_id": "bot", "actor_id": "u"}
+		return map[string]any{"items": []any{map[string]any{"ref": "account", "owner": owner, "roles": []any{role}, "status": "valid"}}, "default_roles": map[string]any{}, "uid_bindings": map[string]any{}}, ""
+	case "delegation.create":
+		return map[string]any{"delegation": map[string]any{"ref": "d1", "expires_at_ms": s.clock.Now().Add(7 * 24 * time.Hour).UnixMilli()}}, ""
+	case "execute":
+		input := asObject(request.Params["input"])
+		if !scheduled || request.Params["delegation_ref"] != "d1" || request.Params["operation"] != "zzz.gacha" {
+			s.t.Errorf("%v was requested outside its job", request.Params)
+		}
+		page, _ := input["page"].(float64)
+		read := gachaRead{at: s.clock.Now(), pool: asText(input["gacha_type"]), end: asText(input["end_id"]), page: int(page)}
+		s.reads = append(s.reads, read)
+		_ = s.clock.Sleep(context.Background(), s.took)
+		list := []any{}
+		if read.pool == "2001" {
+			first := 1
+			if end, _ := strconv.Atoi(read.end); end != 0 {
+				first = 5000 - end + 1
+			}
+			for n := first; n <= s.records && len(list) < 20; n++ {
+				at := time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC).Add(-time.Duration(n) * time.Minute)
+				list = append(list, map[string]any{"uid": "10000001", "gacha_id": "0", "gacha_type": "2", "item_id": "1191", "count": "1", "time": at.Format("2006-01-02 15:04:05"), "name": "艾莲", "item_type": "代理人", "rank_type": "4", "id": strconv.Itoa(5000 - n)})
+			}
+		}
+		return map[string]any{"operation": "zzz.gacha", "role": role, "data": map[string]any{"list": list, "region": "prod_gf_cn", "region_time_zone": 0}}, ""
+	}
+	s.t.Errorf("unexpected %s", request.Method)
+	return nil, "plugin.method_not_found"
+}
+
+// A background sync run through the SDK as the host runs it: each trigger
+// reads page after page, a second apart, and stops when its event's time
+// runs out, without counting the page it was cut off in as a failure; the
+// next trigger, even one that comes a little early, reads that page again
+// and continues until the sync completes.
+func TestBackgroundSyncTriggersStopInTimeAndContinue(t *testing.T) {
+	a := pluginApp(t)
+	start := time.Date(2026, 9, 20, 9, 0, 0, 0, time.UTC)
+	clock := &fakeClock{at: start}
+	a.clock = clock
+	accounts := &gachaAccounts{t: t, clock: clock, records: 45, took: 30 * time.Second}
+	host := newSDKHost(t, a, accounts.answer)
+	if end, _ := host.manage("gacha.task.create", map[string]any{"account_ref": "account", "role_ref": "role", "kind": "once", "hour": 8, "days": 7, "confirm": true}); end["type"] != "result" {
+		t.Fatalf("the task was not created: %v", end)
+	}
+	ref := host.job("game.sync.")
+	task := func() SyncTask {
+		items, err := a.SyncTasks.List()
+		if err != nil || len(items) != 1 {
+			t.Fatal(items, err)
+		}
+		return items[0]
+	}
+	// Pages of 30 seconds: the trigger reads one, and the second is still
+	// open when the event's time runs out.
+	clock.set(start.Add(time.Minute))
+	if end, _ := host.trigger(ref); end["type"] != "result" {
+		t.Fatalf("the trigger ended with %v", end)
+	}
+	if got := task(); len(accounts.reads) != 2 || got.Progress.Pages != 1 || got.State != "running" || got.Failures != 0 || got.LastCode != "sync_running" {
+		t.Fatalf("after %d reads the task is %+v", len(accounts.reads), got)
+	}
+	cut := accounts.reads[1]
+	// The next trigger comes half a second early and reads the rest.
+	accounts.took = 0
+	clock.set(start.Add(2*time.Minute - 500*time.Millisecond))
+	if end, _ := host.trigger(ref); end["type"] != "result" {
+		t.Fatalf("the next trigger ended with %v", end)
+	}
+	if len(accounts.reads) < 3 {
+		t.Fatalf("the next trigger read nothing: %+v", task())
+	}
+	if again := accounts.reads[2]; again.pool != cut.pool || again.end != cut.end || again.page != cut.page {
+		t.Fatalf("the next trigger asked for %+v, not the cut-off %+v", again, cut)
+	}
+	for i := 3; i < len(accounts.reads); i++ {
+		if gap := accounts.reads[i].at.Sub(accounts.reads[i-1].at); gap < time.Second {
+			t.Fatalf("pages %d and %d are %v apart", i-1, i, gap)
+		}
+	}
+	if got := task(); got.State != "completed" || len(accounts.reads) != 9 {
+		t.Fatalf("after %d reads the task is %+v", len(accounts.reads), got)
+	}
+	if archive, err := a.Gacha.Read("10000001", "prod_gf_cn"); err != nil || len(archive.Records) != 45 {
+		t.Fatalf("kept %d records, %v", len(archive.Records), err)
 	}
 }

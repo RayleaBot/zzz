@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"path/filepath"
 	"sync"
 	"time"
@@ -93,22 +92,42 @@ func syncTaskFailure(task *SyncTask, err error, now int64) {
 type SyncTaskFetch func(context.Context, SyncTask, string, string, int) (gacha.RemotePage, error)
 type SyncTaskSend func(context.Context, SyncTask, string) error
 
-// Tick runs one trigger of a task: it advances the sync for pages until the
-// event deadline nears and writes the task once at the end. Only the current
+// SyncTaskPace is how a trigger pages: it starts pages until Stop by Now and
+// waits between two of them with Wait, which ends early when ctx does.
+type SyncTaskPace struct {
+	Stop time.Time
+	Now  func() time.Time
+	Wait func(context.Context, time.Duration) error
+}
+
+const (
+	// syncTaskGap is the least time between two pages, which keeps the reads
+	// under 米游社's rate limits; the account plugin admits a gacha
+	// delegation's reads a second apart.
+	syncTaskGap = time.Second
+	// syncTaskRecheck is when a running sync is next checked: less than the
+	// minute between triggers, so the next trigger continues it even when it
+	// comes a little early.
+	syncTaskRecheck = 30 * time.Second
+)
+
+// Tick runs one trigger of a task: it advances the sync page after page,
+// syncTaskGap apart, until pace stops it or ctx ends, and writes the task
+// once at the end; the next trigger continues from there. Only the current
 // scheduler event may supply fetch; it is never retained.
-func (s *SyncTaskStore) Tick(ctx context.Context, ref string, now int64, jobs *gacha.Syncs, archive *gacha.Store, fetch SyncTaskFetch, send SyncTaskSend) error {
+func (s *SyncTaskStore) Tick(ctx context.Context, ref string, now int64, jobs *gacha.Syncs, archive *gacha.Store, fetch SyncTaskFetch, send SyncTaskSend, pace SyncTaskPace) error {
 	claimed, ok, err := s.claim(ref)
 	if err != nil || !ok {
 		return err
 	}
 	defer s.release(ref)
-	if err = s.run(ctx, &claimed, now, jobs, archive, fetch, send); errors.Is(err, errTaskChanged) {
+	if err = s.run(ctx, &claimed, now, jobs, archive, fetch, send, pace); errors.Is(err, errTaskChanged) {
 		return nil
 	}
 	return err
 }
 
-func (s *SyncTaskStore) run(ctx context.Context, task *SyncTask, now int64, jobs *gacha.Syncs, archive *gacha.Store, fetch SyncTaskFetch, send SyncTaskSend) error {
+func (s *SyncTaskStore) run(ctx context.Context, task *SyncTask, now int64, jobs *gacha.Syncs, archive *gacha.Store, fetch SyncTaskFetch, send SyncTaskSend, pace SyncTaskPace) error {
 	if task.State != "running" && task.State != "waiting" || task.NextCheckMS > now {
 		return nil
 	}
@@ -135,7 +154,7 @@ func (s *SyncTaskStore) run(ctx context.Context, task *SyncTask, now int64, jobs
 		task.Restarts = 0
 		task.State = "running"
 	}
-	task.NextCheckMS = now + 60000
+	task.NextCheckMS = now + syncTaskRecheck.Milliseconds()
 	task.LastCheckedMS = now
 	s.steps.RLock()
 	defer s.steps.RUnlock()
@@ -152,24 +171,17 @@ func (s *SyncTaskStore) run(ctx context.Context, task *SyncTask, now int64, jobs
 		}
 	}
 	task.Progress = info
-	// Pull pages back to back, 300 to 500 ms apart as upstream does, until
-	// the event deadline is near; the next tick continues from there.
 	for page := 0; task.Progress.State == "running"; page++ {
-		if page > 0 {
-			if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 1500*time.Millisecond {
-				break
-			}
-			timer := time.NewTimer(time.Duration(300+rand.IntN(201)) * time.Millisecond)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return s.save(*task)
-			case <-timer.C:
-			}
+		if page > 0 && (pace.Wait(ctx, syncTaskGap) != nil || !pace.Now().Before(pace.Stop)) {
+			break
 		}
 		info, err = jobs.Step(ctx, archive, task.Progress.Ref, task.Progress.Sequence, func(ctx context.Context, pool, end string, page int) (gacha.RemotePage, error) {
 			return fetch(ctx, *task, pool, end, page)
 		})
+		if err != nil && ctx.Err() != nil {
+			// The page the event ran out on is asked for again next time.
+			break
+		}
 		if err != nil {
 			syncTaskFailure(task, err, now)
 			if task.State != "running" {
