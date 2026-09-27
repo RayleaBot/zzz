@@ -247,7 +247,8 @@ type gachaAccounts struct {
 	reads   []gachaRead
 }
 
-func (s *gachaAccounts) answer(request rayleabot.ServiceCallRequest, scheduled bool) (map[string]any, string) {
+func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
+	request, scheduled := call.ServiceCallRequest, call.Scheduled
 	role := map[string]any{"ref": "role", "game": "zzz", "uid": "10000001", "region": "prod_gf_cn", "nickname": "绳匠", "level": 50}
 	switch request.Method {
 	case "roles":

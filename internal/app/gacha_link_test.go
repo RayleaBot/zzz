@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/plugin-zzz/internal/gacha"
 )
 
@@ -103,7 +102,7 @@ func TestGachaLinkFinishesOnTheHostsTriggers(t *testing.T) {
 		clock.set(clock.Now().Add(10 * time.Second))
 		return signalHistory{}.RoundTrip(r)
 	})}
-	host := newSDKHost(t, a, func(rayleabot.ServiceCallRequest, bool) (map[string]any, string) {
+	host := newSDKHost(t, a, func(hostCall) (map[string]any, string) {
 		t.Error("a link asked the account service")
 		return nil, "plugin.service_unavailable"
 	})

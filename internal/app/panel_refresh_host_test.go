@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
 // accountsService answers the account plugin's service for a role with the
@@ -22,7 +20,8 @@ type accountsService struct {
 	fail   func(id string, scheduled bool) string
 }
 
-func (s *accountsService) answer(request rayleabot.ServiceCallRequest, scheduled bool) (map[string]any, string) {
+func (s *accountsService) answer(call hostCall) (map[string]any, string) {
+	request, scheduled := call.ServiceCallRequest, call.Scheduled
 	if request.TargetPluginID != "raylea.mihoyo-accounts" || request.Service != "accounts" || request.ServiceVersion != 1 {
 		s.t.Errorf("call %+v", request)
 		return nil, "plugin.service_not_found"

@@ -74,7 +74,7 @@ func TestDownloadAllFinishesOnTheHostsTriggers(t *testing.T) {
 	a.downloads = func(ImageContext) []ArtworkGroup {
 		return []ArtworkGroup{{Label: "代理人", Source: "mirror", Files: files}}
 	}
-	host := newSDKHost(t, a, func(rayleabot.ServiceCallRequest, bool) (map[string]any, string) {
+	host := newSDKHost(t, a, func(hostCall) (map[string]any, string) {
 		t.Error("下载全部资源 asked the account service")
 		return nil, "plugin.service_unavailable"
 	})
