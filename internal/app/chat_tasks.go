@@ -251,8 +251,9 @@ func (a *App) runChatTask(ctx context.Context, event *rayleabot.EventContext) er
 	return event.Result(map[string]any{"handled": true})
 }
 
-// eventWork bounds the chat task work of an event that started at start: it
-// ends, the actions it asked for included, chatTaskLimit after start.
+// eventWork bounds the work of an event that started at start, a chat
+// task's or a scheduler trigger's: it ends, the actions it asked for
+// included, chatTaskLimit after start.
 func (a *App) eventWork(ctx context.Context, start time.Time) (context.Context, context.CancelFunc) {
 	if a.clock != nil {
 		return a.clock.Until(ctx, start.Add(chatTaskLimit))

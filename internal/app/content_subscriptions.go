@@ -317,6 +317,8 @@ func (a *App) runContentSubscription(ctx context.Context, event *rayleabot.Event
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
+	ctx, cancel := a.eventWork(ctx, a.now())
+	defer cancel()
 	ref := triggerTask(event)
 	items, err := a.Subscriptions.List()
 	if err != nil {

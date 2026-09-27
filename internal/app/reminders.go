@@ -270,6 +270,8 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
+	ctx, cancel := a.eventWork(ctx, a.now())
+	defer cancel()
 	err := a.Reminders.Tick(triggerTask(event), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
 		client := AccountsClient{Caller: event.Actions(), Provider: task.Provider, Game: a.Game.ID}
 		var result QueryResult
