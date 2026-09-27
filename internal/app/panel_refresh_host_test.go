@@ -1,40 +1,48 @@
 package app
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
 )
 
+// characterRead is one zzz.character request of a refresh: when, of which
+// character and in which event.
+type characterRead struct {
+	at     time.Time
+	id     string
+	parent string
+}
+
 // accountsService answers the account plugin's service for a role with the
-// characters ids: list, the character list, each character's details and
-// delegation.create, which grants "d1". A trigger's reads must carry the
-// delegation and a chat event's must not. fail, when set, answers a read
-// with a failure code.
+// characters ids: list, the character list and each character's details.
+// The reads must come from a chat event already in the background, without
+// a delegation. during, when set, runs as the nth read arrives, and fail
+// answers a read with a failure code.
 type accountsService struct {
 	t      *testing.T
 	clock  *fakeClock
 	ids    []string
 	reads  []characterRead
-	grants []map[string]any
-	fail   func(id string, scheduled bool) string
+	during func(n int)
+	fail   func(id string) string
 }
 
 func (s *accountsService) answer(call hostCall) (map[string]any, string) {
-	request, scheduled := call.ServiceCallRequest, call.Scheduled
-	if request.TargetPluginID != "raylea.mihoyo-accounts" || request.Service != "accounts" || request.ServiceVersion != 1 {
-		s.t.Errorf("call %+v", request)
+	if call.TargetPluginID != "raylea.mihoyo-accounts" || call.Service != "accounts" || call.ServiceVersion != 1 {
+		s.t.Errorf("call %+v", call)
 		return nil, "plugin.service_not_found"
 	}
 	role := map[string]any{"ref": "role", "game": "zzz", "uid": "10000001", "nickname": "绳匠", "level": 50}
-	params := request.Params
-	switch request.Method {
+	params := call.Params
+	switch call.Method {
 	case "list":
 		return map[string]any{"items": []any{map[string]any{"ref": "account", "roles": []any{role}, "status": "valid"}}, "default_roles": map[string]any{}, "uid_bindings": map[string]any{}}, ""
-	case "delegation.create":
-		s.grants = append(s.grants, params)
-		return map[string]any{"delegation": map[string]any{"ref": "d1"}}, ""
 	case "execute":
+		if call.Scheduled || !call.Detached || params["delegation_ref"] != nil {
+			s.t.Errorf("%v read by %s, detached %v", params, call.Parent, call.Detached)
+		}
 		switch params["operation"] {
 		case "zzz.characters":
 			list := []any{}
@@ -48,158 +56,119 @@ func (s *accountsService) answer(call hostCall) (map[string]any, string) {
 				s.t.Errorf("read %v", params["input"])
 				return nil, "plugin.account_input_invalid"
 			}
-			id, delegation := asText(list[0]), asText(params["delegation_ref"])
-			if scheduled != (delegation == "d1") {
-				s.t.Errorf("read of %s with delegation %q, scheduled %v", id, delegation, scheduled)
+			id := asText(list[0])
+			s.reads = append(s.reads, characterRead{at: s.clock.Now(), id: id, parent: call.Parent})
+			if s.during != nil {
+				s.during(len(s.reads))
 			}
-			s.reads = append(s.reads, characterRead{at: s.clock.Now(), id: id, delegation: delegation})
 			if s.fail != nil {
-				if code := s.fail(id, scheduled); code != "" {
+				if code := s.fail(id); code != "" {
 					return nil, code
 				}
 			}
 			return map[string]any{"operation": "zzz.character", "role": role, "data": map[string]any{"avatar_list": []any{map[string]any{"id": id, "level": 60}}}}, ""
 		}
 	}
-	s.t.Errorf("unexpected %s %v", request.Method, params["operation"])
+	s.t.Errorf("unexpected %s %v", call.Method, params["operation"])
 	return nil, "plugin.method_not_found"
 }
 
-// refreshOnHost sends 更新面板 for a role with n characters through the SDK
-// and checks that the event read what it could and handed the rest to a
-// scheduler job, whose ID it returns.
-func refreshOnHost(t *testing.T, n int) (*App, *fakeClock, *accountsService, *sdkHost, string) {
+// refreshHost runs the plugin through the SDK for a role with n characters,
+// on a fake clock.
+func refreshHost(t *testing.T, n int) (*App, *accountsService, *sdkHost) {
 	t.Helper()
 	a := pluginApp(t)
 	clock := &fakeClock{at: time.Unix(1_800_000_000, 0)}
 	a.clock = clock
 	accounts := &accountsService{t: t, clock: clock, ids: characterIDs(n)}
-	host := newSDKHost(t, a, accounts.answer)
-	end, _ := host.message("%更新面板", "更新面板")
-	if end["type"] != "result" || len(host.sent) != 1 || sentText(host.sent[0].Message) != "正在更新面板列表，请稍候..." {
-		t.Fatalf("the command ended with %v after %d messages", end, len(host.sent))
-	}
-	// The event reads until 40 seconds after the command: at 0, 3 … 39 s.
-	if len(accounts.reads) != 14 || len(accounts.grants) != 1 {
-		t.Fatalf("the event read %d characters with %d grants", len(accounts.reads), len(accounts.grants))
-	}
-	return a, clock, accounts, host, host.job(panelTask)
+	return a, accounts, newSDKHost(t, a, accounts.answer)
 }
 
-// triggerUntilDone runs the job each minute after start, as the host's
-// scheduler does, until the plugin deletes it.
-func triggerUntilDone(t *testing.T, clock *fakeClock, host *sdkHost, ref string, start time.Time, limit int) {
-	t.Helper()
-	for minute := 1; len(host.deleted) == 0; minute++ {
-		if minute > limit {
-			t.Fatalf("%d triggers of %s did not finish it", limit, ref)
-		}
-		clock.set(start.Add(time.Duration(minute) * time.Minute))
-		end, _ := host.trigger(ref)
-		if end["type"] != "result" {
-			t.Fatalf("trigger %d ended with %v", minute, end)
-		}
-	}
+// actionAt is the position of the first action named name, or -1.
+func actionAt(actions []hostAction, name string) int {
+	return slices.IndexFunc(actions, func(action hostAction) bool { return action.Name == name })
 }
 
-// 更新面板 of a role with 40 characters, run through the SDK as the host
-// runs it: the host's per-minute triggers of the job carry the job's payload
-// but not its task ID, and they read the remaining characters, one a request
-// spaced as upstream, until the panels are kept and the list is answered in
-// the chat the command came from.
-func TestPanelRefreshFinishesOnTheHostsTriggers(t *testing.T) {
-	a, clock, accounts, host, ref := refreshOnHost(t, 40)
-	triggerUntilDone(t, clock, host, ref, time.Unix(1_800_000_000, 0), 5)
+// 更新面板 of a role with 40 characters, run through the SDK as the host runs
+// it: the command's event moves to the background, says that it is updating
+// and reads every character in a request of its own, spaced as upstream,
+// then keeps the panels and answers 面板列表 in the chat. Meanwhile the chat
+// is free, and another 更新面板 of the UID answers that one is running.
+func TestPanelRefreshReadsEveryCharacterInOneDetachedEvent(t *testing.T) {
+	a, accounts, host := refreshHost(t, 40)
+	var again map[string]any
+	accounts.during = func(n int) {
+		if n == 20 {
+			again, _ = host.message("%更新面板", "更新面板")
+		}
+	}
+	end, actions := host.message("%更新面板", "更新面板")
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"chat-1"}) {
+		t.Fatalf("the command ended with %v, detached %v", end, host.detached)
+	}
+	if detached, noticed := actionAt(actions, "event.detach"), actionAt(actions, "message.send"); detached < 0 || noticed < detached {
+		t.Fatalf("actions %v", actions)
+	}
+	if terminalText(again) != "面板列表正在更新中，请稍后再试" {
+		t.Fatalf("the second 更新面板 ended with %v", again)
+	}
 	if len(accounts.reads) != 40 {
 		t.Fatalf("read %d of 40 characters", len(accounts.reads))
 	}
 	for i, read := range accounts.reads {
-		if read.id != accounts.ids[i] || i > 0 && read.at.Sub(accounts.reads[i-1].at) < 3*time.Second {
-			t.Fatalf("read %d is %s at %v", i, read.id, read.at)
+		if read.id != accounts.ids[i] || read.parent != "chat-1" || i > 0 && read.at.Sub(accounts.reads[i-1].at) != 3*time.Second {
+			t.Fatalf("read %d is %+v", i, read)
 		}
 	}
-	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.jobs) != 0 || len(host.sent) != 2 {
-		t.Fatalf("deleted %v, jobs %v, %d messages", host.deleted, host.jobs, len(host.sent))
+	if len(host.sent) != 2 || sentText(host.sent[0].Message) != "正在更新面板列表，请稍候..." || len(host.created) != 0 {
+		t.Fatalf("sent %v, created %v", host.sent, host.created)
 	}
-	if sent := host.sent[1]; sent.SourceProtocol != "onebot11" || sent.SourceAdapter != "a" || sent.TargetType != "private" || sent.TargetID != "u" || !strings.Contains(sentText(sent.Message), "面板列表") {
+	if sent := host.sent[1]; sent.TargetType != "private" || sent.TargetID != "u" || !strings.Contains(sentText(sent.Message), "面板列表") {
 		t.Fatalf("answered %+v", sent)
 	}
-	if saved, err := a.Profiles.Read("10000001"); err != nil || len(saved.Panels) != 40 || saved.Nickname != "绳匠" {
+	if saved, err := a.Profiles.Read("10000001"); err != nil || len(saved.Panels) != 40 || saved.Nickname != "绳匠" || saved.RefreshedAtMS == 0 {
 		t.Fatalf("kept %d panels, %v", len(saved.Panels), err)
 	}
 }
 
-// countReads is how often the character id was asked for.
-func countReads(s *accountsService, id string) int {
-	count := 0
-	for _, read := range s.reads {
-		if read.id == id {
-			count++
+// As upstream, a failed read ends the refresh with its failure and keeps
+// nothing, and the UID can be refreshed again.
+func TestPanelRefreshFailureAnswersAndKeepsNothing(t *testing.T) {
+	a, accounts, host := refreshHost(t, 20)
+	accounts.fail = func(id string) string {
+		if id == accounts.ids[15] {
+			return "plugin.game_upstream_rejected"
 		}
+		return ""
 	}
-	return count
-}
-
-// A trigger whose read is still open when the trigger runs out of time (the
-// account service answers only once the host has timed the event out) ends
-// its event in time and leaves the task to the next trigger, which asks for
-// that character again and finishes the refresh.
-func TestPanelRefreshRecoversFromATriggerThatRanOutOfTime(t *testing.T) {
-	a, clock, accounts, host, ref := refreshOnHost(t, 20)
-	start := time.Unix(1_800_000_000, 0)
-	stuck := accounts.ids[16]
-	accounts.fail = func(id string, scheduled bool) string {
-		if id != stuck || countReads(accounts, id) > 1 {
-			return ""
-		}
-		clock.set(clock.Now().Add(time.Minute))
-		return "plugin.event_timeout"
+	if end, _ := host.message("%更新面板", "更新面板"); end["type"] != "result" {
+		t.Fatalf("the command ended with %v", end)
 	}
-	clock.set(start.Add(time.Minute))
-	if end, _ := host.trigger(ref); end["type"] != "result" {
-		t.Fatalf("the trigger ended with %v", end)
+	if len(accounts.reads) != 16 || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "面板列表更新失败") {
+		t.Fatalf("%d reads, answered %v", len(accounts.reads), host.sent)
 	}
-	if len(accounts.reads) != 17 || len(host.sent) != 1 || len(host.deleted) != 0 {
-		t.Fatalf("after the trigger ran out: %d reads, %d messages, deleted %v", len(accounts.reads), len(host.sent), host.deleted)
+	if saved, _ := a.Profiles.Read("10000001"); len(saved.Panels) != 0 {
+		t.Fatal("a failed refresh kept panels")
 	}
-	clock.set(start.Add(3 * time.Minute))
-	if end, _ := host.trigger(ref); end["type"] != "result" {
-		t.Fatalf("the next trigger ended with %v", end)
-	}
-	if len(accounts.reads) != 21 || accounts.reads[17].id != stuck || countReads(accounts, stuck) != 2 {
-		t.Fatalf("read %d times, %v", len(accounts.reads), accounts.reads)
-	}
-	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 || !strings.Contains(sentText(host.sent[1].Message), "面板列表") {
-		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
+	accounts.fail = nil
+	if host.message("%更新面板", "更新面板"); len(host.sent) != 4 || sentText(host.sent[2].Message) != "正在更新面板列表，请稍候..." {
+		t.Fatalf("the UID could not be refreshed again: %v", host.sent)
 	}
 	if saved, _ := a.Profiles.Read("10000001"); len(saved.Panels) != 20 {
 		t.Fatalf("kept %d panels", len(saved.Panels))
 	}
 }
 
-// A read a trigger fails ends the refresh as upstream does: the failure is
-// answered in the chat, the job is removed and nothing is kept, and the role
-// can be refreshed again.
-func TestPanelRefreshFailedInATriggerAnswersAndEnds(t *testing.T) {
-	a, clock, accounts, host, ref := refreshOnHost(t, 20)
-	accounts.fail = func(id string, scheduled bool) string {
-		if id == accounts.ids[15] {
-			return "plugin.game_upstream_rejected"
-		}
-		return ""
+// When the host holds as many background events of the plugin as it
+// allows, 更新面板 says so and reads nothing; later it runs.
+func TestPanelRefreshRefusedDetachAnswersBusy(t *testing.T) {
+	_, accounts, host := refreshHost(t, 3)
+	host.refuse = true
+	if end, _ := host.message("%更新面板", "更新面板"); terminalText(end) != busyReply || len(accounts.reads) != 0 || len(host.sent) != 0 {
+		t.Fatalf("the refused command ended with %v after %d reads, sent %v", end, len(accounts.reads), host.sent)
 	}
-	clock.set(time.Unix(1_800_000_000, 0).Add(time.Minute))
-	if end, _ := host.trigger(ref); end["type"] != "result" {
-		t.Fatalf("the trigger ended with %v", end)
-	}
-	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "面板列表更新失败") {
-		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
-	}
-	if saved, _ := a.Profiles.Read("10000001"); len(saved.Panels) != 0 {
-		t.Fatal("a failed refresh kept panels")
-	}
-	accounts.fail = nil
-	if host.message("%更新面板", "更新面板"); len(host.sent) != 3 || sentText(host.sent[2].Message) != "正在更新面板列表，请稍候..." {
-		t.Fatalf("the role could not be refreshed again: %v", host.sent)
+	host.refuse = false
+	if host.message("%更新面板", "更新面板"); len(accounts.reads) != 3 || len(host.sent) != 2 {
+		t.Fatalf("the later command read %d characters, sent %v", len(accounts.reads), host.sent)
 	}
 }

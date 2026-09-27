@@ -131,8 +131,10 @@ type App struct {
 	// ChatTasks is chat work that continues past its event, as gacha links
 	// whose records are still being fetched; LinkHTTP reads the official
 	// signal search (nil uses a default client).
-	ChatTasks    chatTasks
-	LinkHTTP     *http.Client
+	ChatTasks chatTasks
+	LinkHTTP  *http.Client
+	// flows are the long flows running now.
+	flows        flows
 	SyncTasks    *SyncTaskStore
 	Showcase     ShowcaseClient
 	Profiles     *PanelStore
@@ -274,7 +276,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return a.runContentSubscription(ctx, event)
 		case strings.HasPrefix(task, "game.sync."):
 			return a.runSyncTask(ctx, event)
-		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, panelTask), strings.HasPrefix(task, artworkTask):
+		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, artworkTask):
 			return a.runChatTask(ctx, event)
 		}
 		return a.runReminder(ctx, event)
@@ -887,12 +889,4 @@ func renderView(ctx context.Context, host imageRenderer, images bool, view View)
 		}
 	}
 	return rayleabot.Segment{}, false
-}
-
-// viewReply is a view as the segments of a reply, as sendView sends it.
-func viewReply(ctx context.Context, host imageRenderer, images bool, view View) []rayleabot.Segment {
-	if image, ok := renderView(ctx, host, images, view); ok {
-		return []rayleabot.Segment{image}
-	}
-	return []rayleabot.Segment{rayleabot.Text(view.Text())}
 }

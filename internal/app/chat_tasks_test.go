@@ -217,3 +217,19 @@ func TestChatTaskReplyTheEventCouldNotSendWaitsForTheNextTrigger(t *testing.T) {
 		t.Fatal("the kept reply was not answered once", host.sent, host.deleted, work.steps)
 	}
 }
+
+// triggerUntilDone runs the job each minute after start, as the host's
+// scheduler does, until the plugin deletes it.
+func triggerUntilDone(t *testing.T, clock *fakeClock, host *sdkHost, ref string, start time.Time, limit int) {
+	t.Helper()
+	for minute := 1; len(host.deleted) == 0; minute++ {
+		if minute > limit {
+			t.Fatalf("%d triggers of %s did not finish it", limit, ref)
+		}
+		clock.set(start.Add(time.Duration(minute) * time.Minute))
+		end, _ := host.trigger(ref)
+		if end["type"] != "result" {
+			t.Fatalf("trigger %d ended with %v", minute, end)
+		}
+	}
+}

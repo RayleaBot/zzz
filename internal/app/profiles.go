@@ -324,7 +324,6 @@ func (a *App) uidEmptyReply() string {
 // from the account, as ZZZ-Plugin does unless the word names the showcase
 // (展柜), and other UIDs from the showcase.
 func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	start := a.now()
 	uid := ""
 	if len(args) > 0 {
 		uid = args[0]
@@ -353,7 +352,7 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 		return event.SendText(a.panelReply("cooldown", map[string]string{"seconds": strconv.Itoa(config.PanelInterval)}))
 	}
 	if account {
-		return a.refreshAccountPanels(ctx, event, owner, start)
+		return a.refreshAccountPanels(ctx, event, owner)
 	}
 	saved, panels, err := a.refreshShowcase(ctx, event, owner.UID)
 	if err != nil {
