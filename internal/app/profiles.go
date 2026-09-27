@@ -26,8 +26,8 @@ import (
 type PanelSettings struct {
 	// Replies are upstream's replies by key: failed, unreachable, empty,
 	// none, slow, account_start, account_failed, cooldown, list_empty and
-	// missing. {prefix}, {uid}, {name}, {service}, {status}, {seconds} and
-	// {error} are filled in.
+	// missing, and running for a refresh still reading. {prefix}, {uid},
+	// {name}, {service}, {status}, {seconds} and {error} are filled in.
 	Replies map[string]string `json:"replies"`
 }
 
@@ -270,30 +270,6 @@ func (a *App) refreshShowcase(ctx context.Context, event *rayleabot.EventContext
 	return saved, profile.Panels, err
 }
 
-// accountPanels reads every character of the user's own UID from the
-// account's official data, fifty characters a request.
-func (a *App) accountPanels(ctx context.Context, client AccountsClient, choice Selection) ([]CharacterPanel, error) {
-	listed, err := client.Execute(ctx, choice, a.Game.ID+".characters", map[string]any{})
-	if err != nil {
-		return nil, err
-	}
-	ids := []any{}
-	for _, raw := range asList(listed.Data["avatar_list"]) {
-		if id := asText(asObject(raw)["id"]); id != "" {
-			ids = append(ids, id)
-		}
-	}
-	panels := []CharacterPanel{}
-	for batch := range slices.Chunk(ids, 50) {
-		result, err := client.Execute(ctx, choice, a.Game.ID+".character", map[string]any{"id_list": batch})
-		if err != nil {
-			return nil, err
-		}
-		panels = append(panels, NormalizePanels(result, a.Catalog)...)
-	}
-	return panels, nil
-}
-
 // characterPanel is the panel 面板, 评分 and 伤害 read: the kept one, else
 // the account's official one when the UID is the user's own. name is the
 // character as the command wrote it, for upstream's reply when there is none.
@@ -348,6 +324,7 @@ func (a *App) uidEmptyReply() string {
 // from the account, as ZZZ-Plugin does unless the word names the showcase
 // (展柜), and other UIDs from the showcase.
 func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
+	start := a.now()
 	uid := ""
 	if len(args) > 0 {
 		uid = args[0]
@@ -364,7 +341,7 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 		if len(saved.Panels) == 0 {
 			return event.SendText(a.panelReply("list_empty", map[string]string{"uid": owner.UID}))
 		}
-		return a.sendPanelList(ctx, event, saved, nil, saved.Service)
+		return a.sendView(ctx, event, a.panelListView(ctx, saved, nil, saved.Service))
 	}
 	account := owner.Owned && !strings.Contains(event.Event.Command(), "展柜")
 	saved, err := a.Profiles.Read(owner.UID)
@@ -375,41 +352,25 @@ func (a *App) panelCommand(ctx context.Context, event *rayleabot.EventContext, c
 	if wait := time.Duration(config.PanelInterval)*time.Second - time.Since(time.UnixMilli(saved.RefreshedAtMS)); config.PanelInterval > 0 && wait > 0 {
 		return event.SendText(a.panelReply("cooldown", map[string]string{"seconds": strconv.Itoa(config.PanelInterval)}))
 	}
-	var panels []CharacterPanel
-	service := a.showcase.Name
 	if account {
-		service = "米游社"
-		notice(ctx, event, a.panelReply("account_start", nil))
-		panels, err = a.accountPanels(ctx, a.accountClient(event), owner.Choice)
-		if err != nil {
-			if text := a.panelReply("account_failed", map[string]string{"error": friendlyError(err)}); text != "" {
-				return event.SendText(text)
-			}
-			return event.SendText(friendlyError(err))
-		}
-		saved, err = a.Profiles.Keep(owner.UID, panels, service, &ShowcaseProfile{Nickname: owner.Role.Nickname, Level: owner.Role.Level})
-	} else {
-		saved, panels, err = a.refreshShowcase(ctx, event, owner.UID)
-		if err != nil {
-			return event.SendText(a.showcaseReply(err, owner.UID))
-		}
+		return a.refreshAccountPanels(ctx, event, owner, start)
 	}
+	saved, panels, err := a.refreshShowcase(ctx, event, owner.UID)
 	if err != nil {
-		return event.SendText(friendlyError(err))
+		return event.SendText(a.showcaseReply(err, owner.UID))
 	}
 	if len(panels) == 0 {
-		return event.SendText(a.panelReply("none", map[string]string{"uid": owner.UID, "service": service}))
+		return event.SendText(a.panelReply("none", map[string]string{"uid": owner.UID, "service": a.showcase.Name}))
 	}
 	updated := map[string]bool{}
 	for _, panel := range panels {
 		updated[panel.ID] = true
 	}
-	return a.sendPanelList(ctx, event, saved, updated, service)
+	return a.sendView(ctx, event, a.panelListView(ctx, saved, updated, a.showcase.Name))
 }
 
-// sendPanelList answers with 面板列表, marking the characters a refresh
-// updated.
-func (a *App) sendPanelList(ctx context.Context, event *rayleabot.EventContext, saved SavedProfiles, updated map[string]bool, service string) error {
+// panelListView is 面板列表, marking the characters a refresh updated.
+func (a *App) panelListView(ctx context.Context, saved SavedProfiles, updated map[string]bool, service string) View {
 	list := saved.Sorted(a.Catalog, updated)
 	view := View{Title: a.Game.Name + "面板列表", Subtitle: "UID " + saved.UID, Rows: []Row{}, Note: "当前更新服务：" + service}
 	if saved.RefreshedAtMS > 0 && updated == nil {
@@ -428,5 +389,5 @@ func (a *App) sendPanelList(ctx context.Context, event *rayleabot.EventContext, 
 			view.Image = &drawn
 		}
 	}
-	return a.sendView(ctx, event, view)
+	return view
 }

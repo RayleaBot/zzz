@@ -22,6 +22,8 @@ const chatTaskBudget = 40 * time.Second
 
 // taskHost is what a chat task asks of the host: an event's actions.
 type taskHost interface {
+	ServiceCaller
+	imageRenderer
 	SchedulerCreate(context.Context, rayleabot.SchedulerCreateRequest) (rayleabot.ActionResult, error)
 	SchedulerDelete(context.Context, string) (rayleabot.ActionResult, error)
 	MessageSend(context.Context, rayleabot.MessageSendRequest) (rayleabot.ActionResult, error)
@@ -32,6 +34,12 @@ type chatWork interface {
 	// step works until stop and returns the reply once the work is done;
 	// done is false while work remains.
 	step(ctx context.Context, a *App, host taskHost, stop time.Time) (reply []rayleabot.Segment, done bool)
+}
+
+// chatHandover is work that prepares, within its chat event, to continue on
+// its scheduled task.
+type chatHandover interface {
+	handover(ctx context.Context, a *App, host taskHost, ref string) error
 }
 
 // chatTask is a chat task: its scheduled task's ID, log label and payload
@@ -119,7 +127,13 @@ func (a *App) stepChatTask(ctx context.Context, host taskHost, task *chatTask, s
 		a.ChatTasks.end(task.ref)
 		return reply, true, nil
 	}
-	if _, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: map[string]any{"kind": task.kind}}); err != nil {
+	if prepare, ok := task.work.(chatHandover); ok {
+		err = prepare.handover(ctx, a, host, task.ref)
+	}
+	if err == nil {
+		_, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: map[string]any{"kind": task.kind}})
+	}
+	if err != nil {
 		a.ChatTasks.end(task.ref)
 		return nil, false, err
 	}
@@ -163,9 +177,10 @@ func (a *App) runChatTask(ctx context.Context, event *rayleabot.EventContext) er
 	return event.Result(map[string]any{"handled": true})
 }
 
-// clock is the time chat tasks count by; tests set their own.
+// clock is the time chat tasks count and wait by; tests set their own.
 type clock interface {
 	Now() time.Time
+	Sleep(context.Context, time.Duration) error
 }
 
 func (a *App) now() time.Time {
@@ -173,4 +188,22 @@ func (a *App) now() time.Time {
 		return a.clock.Now()
 	}
 	return time.Now()
+}
+
+// sleep waits for d or until ctx ends.
+func (a *App) sleep(ctx context.Context, d time.Duration) error {
+	if a.clock != nil {
+		return a.clock.Sleep(ctx, d)
+	}
+	if d <= 0 {
+		return ctx.Err()
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }

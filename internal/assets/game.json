@@ -122,6 +122,7 @@
       "none": "面板列表为空，请确保已于游戏中展示角色",
       "account_start": "正在更新面板列表，请稍候...",
       "account_failed": "面板列表更新失败，请稍后再试或尝试{prefix}更新展柜面板：\n{error}",
+      "running": "面板列表正在更新中，请稍后再试",
       "list_empty": "UID:{uid}无本地面板数据，请先{prefix}更新面板 或 {prefix}更新展柜面板",
       "missing": "暂无角色{name}面板数据，请先{prefix}更新面板"
     }

@@ -46,6 +46,7 @@
     "challenge_deadly_stars": 6,
     "group_rank_enabled": true,
     "panel_refresh_interval": 60,
+    "panel_role_interval": 3000,
     "device_download_url": "https://ghproxy.mihomo.me/https://raw.githubusercontent.com/forchannot/get_device_info/main/app/build/outputs/apk/debug/app-debug.apk"
   },
   "commands": [

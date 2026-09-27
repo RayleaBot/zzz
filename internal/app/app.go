@@ -104,6 +104,9 @@ type Settings struct {
 	// PanelInterval is ZZZ-Plugin's panel.interval: the seconds between two
 	// refreshes of a UID's panels.
 	PanelInterval int `json:"panel_refresh_interval"`
+	// PanelRoleInterval is ZZZ-Plugin's panel.roleInterval: the milliseconds
+	// 更新面板 waits between two characters' details.
+	PanelRoleInterval int `json:"panel_role_interval"`
 	// DeviceURL is ZZZ-Plugin's config.url: the download of the device
 	// information tool 绑定设备帮助 links.
 	DeviceURL string `json:"device_download_url"`
@@ -202,7 +205,7 @@ func New(assets Assets, directory string) (*App, error) {
 	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
-	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60, DeviceURL: defaultDeviceURL}
+	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60, PanelRoleInterval: 3000, DeviceURL: defaultDeviceURL}
 	_ = decodeObject(event.Config, &value)
 	return value
 }
@@ -223,6 +226,13 @@ func decodeObject(value any, target any) error {
 	}
 	return json.Unmarshal(raw, target)
 }
+
+// roleInterval is the wait between two characters' details; ZZZ-Plugin
+// waits at least 100 ms whatever the setting.
+func (s Settings) roleInterval() time.Duration {
+	return time.Duration(max(s.PanelRoleInterval, 100)) * time.Millisecond
+}
+
 func (a *App) accountClient(event *rayleabot.EventContext) AccountsClient {
 	return AccountsClient{Caller: event.Actions(), Provider: settings(event).AccountProvider, Game: a.Game.ID}
 }
@@ -263,7 +273,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), "game.sync.") {
 			return a.runSyncTask(ctx, event)
 		}
-		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), gachaLinkTask) {
+		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), gachaLinkTask) || strings.HasPrefix(asText(event.Event.Payload["task_id"]), panelTask) {
 			return a.runChatTask(ctx, event)
 		}
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), artworkTask) {
@@ -832,23 +842,46 @@ func friendlyError(err error) string {
 // the generic summary card, and with text when image replies are off or both
 // renders fail.
 func (a *App) sendView(ctx context.Context, event *rayleabot.EventContext, view View) error {
+	if image, ok := renderView(ctx, event.Actions(), settings(event).ImageReplies, view); ok {
+		return event.Send(event.Event.Target.Type, event.Event.Target.ID, image)
+	}
+	return event.SendText(view.Text())
+}
+
+type imageRenderer interface {
+	RenderImage(context.Context, rayleabot.RenderImageRequest) (rayleabot.ActionResult, error)
+}
+
+// renderView draws a view with its own template when it has one, then as the
+// generic summary card; ok is false when image replies are off or both
+// renders fail.
+func renderView(ctx context.Context, host imageRenderer, images bool, view View) (rayleabot.Segment, bool) {
+	if !images {
+		return rayleabot.Segment{}, false
+	}
 	text := view.Text()
-	if settings(event).ImageReplies {
-		requests := []rayleabot.RenderImageRequest{}
-		if view.Image != nil {
-			requests = append(requests, rayleabot.RenderImageRequest{Template: view.Image.Template, Output: "png", FallbackText: text, Data: view.Image.Data, Resources: view.Image.Resources})
-		}
-		data := map[string]any{}
-		_ = decodeObject(view, &data)
-		requests = append(requests, rayleabot.RenderImageRequest{Template: "summary", Output: "png", FallbackText: text, Data: data})
-		for _, request := range requests {
-			result, err := event.Actions().RenderImage(ctx, request)
-			if err == nil {
-				if path := asText(result["image_path"]); path != "" {
-					return event.Send(event.Event.Target.Type, event.Event.Target.ID, rayleabot.Image(path))
-				}
+	requests := []rayleabot.RenderImageRequest{}
+	if view.Image != nil {
+		requests = append(requests, rayleabot.RenderImageRequest{Template: view.Image.Template, Output: "png", FallbackText: text, Data: view.Image.Data, Resources: view.Image.Resources})
+	}
+	data := map[string]any{}
+	_ = decodeObject(view, &data)
+	requests = append(requests, rayleabot.RenderImageRequest{Template: "summary", Output: "png", FallbackText: text, Data: data})
+	for _, request := range requests {
+		result, err := host.RenderImage(ctx, request)
+		if err == nil {
+			if path := asText(result["image_path"]); path != "" {
+				return rayleabot.Image(path), true
 			}
 		}
 	}
-	return event.SendText(text)
+	return rayleabot.Segment{}, false
+}
+
+// viewReply is a view as the segments of a reply, as sendView sends it.
+func viewReply(ctx context.Context, host imageRenderer, images bool, view View) []rayleabot.Segment {
+	if image, ok := renderView(ctx, host, images, view); ok {
+		return []rayleabot.Segment{image}
+	}
+	return []rayleabot.Segment{rayleabot.Text(view.Text())}
 }

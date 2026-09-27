@@ -15,8 +15,13 @@ func syncOwner(event *rayleabot.EventContext) Subject {
 	return Subject{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, BotID: event.Bot.ID, ActorID: event.Event.Actor.ID}
 }
 func syncTaskID(game, provider string, choice Selection) string {
+	return roleTaskID("game.sync.", game, provider, choice)
+}
+
+// roleTaskID is the ID of a role's scheduled task of a kind, by its prefix.
+func roleTaskID(prefix, game, provider string, choice Selection) string {
 	sum := sha256.Sum256([]byte(provider + "\x00" + choice.AccountRef + "\x00" + choice.RoleRef))
-	return "game.sync." + game + "." + hex.EncodeToString(sum[:])
+	return prefix + game + "." + hex.EncodeToString(sum[:])
 }
 func (a *App) syncTaskAction(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
 	if action == "gacha.task.list" {

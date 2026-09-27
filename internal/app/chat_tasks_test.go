@@ -8,16 +8,33 @@ import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// fakeClock is a clock tests move by hand.
+// fakeClock is a clock tests move by hand; sleeping moves it on.
 type fakeClock struct{ at time.Time }
 
 func (c *fakeClock) Now() time.Time { return c.at }
 
-// fakeHost records the host actions chat tasks ask for.
+func (c *fakeClock) Sleep(ctx context.Context, d time.Duration) error {
+	if d > 0 {
+		c.at = c.at.Add(d)
+	}
+	return ctx.Err()
+}
+
+// fakeHost records the host actions chat tasks ask for and answers service
+// calls with call. It renders no images.
 type fakeHost struct {
+	call      func(rayleabot.ServiceCallRequest, any) error
 	scheduled []rayleabot.SchedulerCreateRequest
 	deleted   []string
 	sent      []rayleabot.MessageSendRequest
+}
+
+func (h *fakeHost) CallService(_ context.Context, request rayleabot.ServiceCallRequest, out any) error {
+	return h.call(request, out)
+}
+
+func (h *fakeHost) RenderImage(context.Context, rayleabot.RenderImageRequest) (rayleabot.ActionResult, error) {
+	return nil, gameError("render_unavailable", "synthetic")
 }
 
 func (h *fakeHost) SchedulerCreate(_ context.Context, request rayleabot.SchedulerCreateRequest) (rayleabot.ActionResult, error) {
