@@ -1,7 +1,7 @@
 package app
 
 import (
-	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -13,57 +13,49 @@ import (
 // taskAccounts answers the account plugin's service for one account of user
 // "u" with one mainland role and the cloud game configured: the role and
 // account checks, delegation.create and delegation.revoke, and the requests
-// of the jobs, which it records by operation and refuses. Only a trigger may
-// make a job's request, and with a delegation. took, when set, is how long a
-// request takes on the fake clock, answered as the host answers a call its
-// event outlived.
+// of the jobs, which it records by operation, with whether their event was
+// in the background, and refuses. Only a trigger may make a job's request,
+// and with a delegation.
 type taskAccounts struct {
 	t        *testing.T
-	clock    *fakeClock
-	took     time.Duration
 	executed []string
+	detached []bool
 	revoked  []string
 }
 
 func (s *taskAccounts) answer(call hostCall) (map[string]any, string) {
-	request, scheduled := call.ServiceCallRequest, call.Scheduled
 	role := map[string]any{"ref": "role", "game": "zzz", "uid": "10000001", "region": "prod_gf_cn", "nickname": "绳匠", "level": 50}
-	switch request.Method {
+	switch call.Method {
 	case "roles":
 		return map[string]any{"account_ref": "account", "roles": []any{role}}, ""
 	case "list":
 		owner := map[string]any{"source_protocol": "onebot11", "source_adapter": "a", "bot_id": "bot", "actor_id": "u"}
 		return map[string]any{"items": []any{map[string]any{"ref": "account", "owner": owner, "account_label": "账号", "roles": []any{role}, "status": "valid", "cloud_configured": []any{"zzz"}}}, "default_roles": map[string]any{}, "uid_bindings": map[string]any{}}, ""
 	case "delegation.create":
-		ref := "d-" + asText(request.Params["operation"])
+		ref := "d-" + asText(call.Params["operation"])
 		return map[string]any{"delegation": map[string]any{"ref": ref, "expires_at_ms": time.Now().Add(30 * 24 * time.Hour).UnixMilli()}}, ""
 	case "delegation.revoke":
-		s.revoked = append(s.revoked, asText(request.Params["delegation_ref"]))
+		s.revoked = append(s.revoked, asText(call.Params["delegation_ref"]))
 		return map[string]any{}, ""
 	case "execute":
-		operation := asText(request.Params["operation"])
-		if !scheduled || request.Params["delegation_ref"] != "d-"+operation {
+		operation := asText(call.Params["operation"])
+		if !call.Scheduled || call.Params["delegation_ref"] != "d-"+operation {
 			s.t.Errorf("%s was requested outside its job", operation)
 		}
 		s.executed = append(s.executed, operation)
-		if s.took > 0 {
-			_ = s.clock.Sleep(context.Background(), s.took)
-			return nil, "plugin.event_timeout"
-		}
+		s.detached = append(s.detached, call.Detached)
 		return nil, "plugin.upstream_unavailable"
 	}
-	s.t.Errorf("unexpected %s", request.Method)
+	s.t.Errorf("unexpected %s", call.Method)
 	return nil, "plugin.method_not_found"
 }
 
-// A reminder's trigger ends its work when its event's time runs out: the
-// 开启挑战提醒 pair whose 式舆防卫战 read outlives the event does not go on
-// to read 危局强袭战.
-func TestReminderTriggerStopsWhenItsEventRunsOut(t *testing.T) {
+// The 开启挑战提醒 pair reads 式舆防卫战 and 危局强袭战 one after the other,
+// each read allowed a call's whole time, so its trigger moves to the
+// background before reading.
+func TestChallengePairTriggerReadsInTheBackground(t *testing.T) {
 	a := pluginApp(t)
-	clock := &fakeClock{at: time.Now()}
-	a.clock = clock
-	accounts := &taskAccounts{t: t, clock: clock}
+	accounts := &taskAccounts{t: t}
 	host := newSDKHost(t, a, accounts.answer)
 	if end, _ := host.message("%开启挑战提醒", "开启挑战提醒"); !strings.HasPrefix(terminalText(end), "提醒功能已开启") {
 		t.Fatalf("开启挑战提醒 ended with %v", end)
@@ -73,12 +65,11 @@ func TestReminderTriggerStopsWhenItsEventRunsOut(t *testing.T) {
 		(*items)[i].NextCheckMS = 0
 		return nil
 	})
-	accounts.took = time.Minute
 	if end, _ := host.trigger(ref); end["type"] != "result" && end["type"] != "error" {
 		t.Fatalf("the trigger ended with %v", end)
 	}
-	if len(accounts.executed) != 1 || accounts.executed[0] != "zzz.challenge" || len(host.sent) != 0 {
-		t.Fatalf("the trigger went on after its time: %v, sent %v", accounts.executed, host.sent)
+	if !slices.Equal(host.detached, []string{"scheduler-2"}) || !slices.Equal(accounts.executed, []string{"zzz.challenge", "zzz.deadly"}) || !slices.Equal(accounts.detached, []bool{true, true}) {
+		t.Fatalf("detached %v, read %v %v", host.detached, accounts.executed, accounts.detached)
 	}
 }
 
@@ -242,5 +233,47 @@ func TestTriggersRunTheirTasks(t *testing.T) {
 	operations := []string{"zzz.note", "zzz.deadly", "zzz.sign", "zzz.monthly", "zzz.community_run", "zzz.cloud_sign", "zzz.challenge", ""}
 	for i, job := range jobs {
 		runJob(t, a, host, accounts, &news, job.ref, operations[i])
+	}
+	// Only the 开启挑战提醒 pair, which reads twice, runs in the background.
+	if len(host.detached) != 1 || accounts.executed[len(accounts.executed)-1] != "zzz.deadly" || !accounts.detached[len(accounts.detached)-1] {
+		t.Fatalf("detached %v, read %v %v", host.detached, accounts.executed, accounts.detached)
+	}
+}
+
+// A group push reads, draws and sends a new post in its trigger's event,
+// which moves to the background first; a trigger with nothing to push stays
+// in the foreground. 推送公告 checks every group in the background.
+func TestGroupPushSendsAPostInTheBackground(t *testing.T) {
+	a := pluginApp(t)
+	post := 1
+	a.Content = PublicContentClient{HTTP: httpDoer(func(r *http.Request) (*http.Response, error) {
+		id := fmt.Sprint(900 + post)
+		body := `{"retcode":0,"data":{"list":[]}}`
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/getNewsList") && r.URL.Query().Get("type") == "1":
+			body = fmt.Sprintf(`{"retcode":0,"data":{"list":[{"post":{"post_id":"%s","subject":"公告%d","created_at":"%d"}}]}}`, id, post, time.Now().Unix())
+		case strings.HasSuffix(r.URL.Path, "/getPostFull"):
+			body = fmt.Sprintf(`{"retcode":0,"data":{"post":{"post":{"post_id":"%s","subject":"公告%d","content":""},"user":{},"stat":{}}}}`, r.URL.Query().Get("post_id"), post)
+		}
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
+	})}
+	host := newSDKHost(t, a, (&taskAccounts{t: t}).answer)
+	host.groupMessage("%开启公告推送", "开启公告推送")
+	ref := host.job("game.content.")
+	end, _ := host.trigger(ref)
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2"}) || len(host.sent) != 1 || host.sent[0].TargetType != "group" || host.sent[0].TargetID != "g" || !strings.HasPrefix(sentText(host.sent[0].Message), "绝区零公告推送：公告1") {
+		t.Fatalf("the trigger ended with %v, detached %v, sent %v", end, host.detached, host.sent)
+	}
+	if host.trigger(ref); len(host.detached) != 1 || len(host.sent) != 1 {
+		t.Fatalf("a trigger without a new post detached %v, sent %v", host.detached, host.sent)
+	}
+	// A new post, once the news lists groups share for a minute are stale.
+	post = 2
+	a.pushLists.mu.Lock()
+	a.pushLists.at = time.Time{}
+	a.pushLists.mu.Unlock()
+	end, _ = host.message("%推送公告", "推送公告")
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2", "chat-4"}) || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "绝区零公告推送：公告2") {
+		t.Fatalf("推送公告 ended with %v, detached %v, sent %v", end, host.detached, host.sent)
 	}
 }

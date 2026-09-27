@@ -271,8 +271,6 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	ctx, cancel := a.eventWork(ctx, a.now())
-	defer cancel()
 	err := a.Reminders.Tick(event.Event.TaskID(), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
 		client := AccountsClient{Caller: event.Actions(), Provider: task.Provider, Game: a.Game.ID}
 		var result QueryResult
@@ -287,6 +285,10 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 			if !settings(event).ChallengeRemind {
 				return result, gameError("remind_disabled", challengeRemindOff)
 			}
+			// Each of the two reads may take a call's whole time, together
+			// longer than the event; a trigger the host keeps in the
+			// foreground reads them there.
+			_, _ = event.Detach(ctx, nil)
 			return a.queryChallengePair(ctx, client, task)
 		}
 		if task.Kind == "challenge" {

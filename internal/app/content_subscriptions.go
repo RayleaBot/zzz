@@ -154,6 +154,11 @@ func (a *App) pushGroup(ctx context.Context, event *rayleabot.EventContext, sub 
 			sub.Sent = map[string]int64{}
 		}
 		sub.Sent[post.id] = now.UnixMilli()
+		// Reading, drawing and sending the post may take longer than a
+		// trigger's event; one the host keeps in the foreground pushes there.
+		if !event.Detached() {
+			_, _ = event.Detach(ctx, nil)
+		}
 		name := "公告"
 		if post.kind == "info" {
 			name = "资讯"
@@ -253,7 +258,11 @@ func (a *App) subscriptionManage(ctx context.Context, event *rayleabot.EventCont
 // on or off for the group.
 func (a *App) subscriptionCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
 	if command == "content-push" {
+		// Every group's check may together take far longer than the event.
 		// As upstream, the pushes are the only answer.
+		if detached, err := detachChat(ctx, event); !detached {
+			return err
+		}
 		if err := a.checkPushes(ctx, event, ""); err != nil {
 			return event.SendText(friendlyError(err))
 		}
@@ -321,8 +330,6 @@ func (a *App) runContentSubscription(ctx context.Context, event *rayleabot.Event
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	ctx, cancel := a.eventWork(ctx, a.now())
-	defer cancel()
 	ref := event.Event.TaskID()
 	items, err := a.Subscriptions.List()
 	if err != nil {
