@@ -125,9 +125,10 @@ type App struct {
 	Syncs         gacha.Syncs
 	// fileImports are the senders 导入记录 is waiting on for a file.
 	fileImports fileImports
-	// LinkJobs are gacha links whose records are still being fetched;
-	// LinkHTTP reads the official signal search (nil uses a default client).
-	LinkJobs     gachaLinkJobs
+	// ChatTasks is chat work that continues past its event, as gacha links
+	// whose records are still being fetched; LinkHTTP reads the official
+	// signal search (nil uses a default client).
+	ChatTasks    chatTasks
 	LinkHTTP     *http.Client
 	SyncTasks    *SyncTaskStore
 	Showcase     ShowcaseClient
@@ -165,6 +166,8 @@ type App struct {
 	downloads      ArtworkGroupsBuilder
 	artworkJobs    artworkJobs
 	usageOnce      sync.Once
+	// clock is nil for the wall clock.
+	clock clock
 }
 
 func New(assets Assets, directory string) (*App, error) {
@@ -261,7 +264,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return a.runSyncTask(ctx, event)
 		}
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), gachaLinkTask) {
-			return a.runGachaLink(ctx, event)
+			return a.runChatTask(ctx, event)
 		}
 		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), artworkTask) {
 			return a.runArtworkJob(ctx, event)

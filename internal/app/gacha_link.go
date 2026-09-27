@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
@@ -23,8 +22,8 @@ import (
 // signal search history, and the UID comes from the records, so no account
 // is needed. As ZZZ-Plugin's default, links are not taken in groups. The
 // authkey is held in memory only while the records are fetched; a history
-// too long for one event is finished by a scheduled task, which is dropped
-// if the plugin restarts.
+// too long for one event is finished as a chat task, which is dropped if the
+// plugin restarts.
 
 const (
 	gachaLinkCN = "https://public-operation-common.mihoyo.com/common/gacha_record/api/getGachaLog"
@@ -50,31 +49,6 @@ type gachaLinkJob struct {
 	sync     string
 	sequence int
 	before   map[string]int
-	owner    Subject
-	target   rayleabot.Target
-	expires  time.Time
-}
-
-type gachaLinkJobs struct {
-	mu   sync.Mutex
-	jobs map[string]*gachaLinkJob
-}
-
-func (j *gachaLinkJobs) put(ref string, job *gachaLinkJob) {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	if j.jobs == nil {
-		j.jobs = map[string]*gachaLinkJob{}
-	}
-	j.jobs[ref] = job
-}
-
-func (j *gachaLinkJobs) take(ref string) *gachaLinkJob {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	job := j.jobs[ref]
-	delete(j.jobs, ref)
-	return job
 }
 
 // parseGachaLink reads authkey, region and game_biz from a signal search
@@ -171,26 +145,34 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	if uid == "" {
 		return true, event.SendText("未查询到uid，请检查链接是否正确")
 	}
-	job := &gachaLinkJob{link: link, uid: uid, before: gachaPoolCounts(a.archiveOrEmpty(uid, link.region)), owner: syncOwner(event), target: event.Event.Target, expires: time.Now().Add(15 * time.Minute)}
+	job := &gachaLinkJob{link: link, uid: uid, before: gachaPoolCounts(a.archiveOrEmpty(uid, link.region))}
 	info, err := a.Syncs.Start(a.Gacha, gacha.SyncChoice{Link: true}, uid, link.region, false)
 	if err != nil {
 		return true, event.SendText(friendlyError(syncError(err)))
 	}
 	job.sync = info.Ref
-	result, err := a.stepGachaLink(ctx, job, time.Now().Add(40*time.Second))
+	task := a.beginChatTask(event, gachaLinkTask+rand.Text(), a.Game.Name+"抽卡链接记录", "gacha_link", 15*time.Minute, job)
+	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, a.now().Add(chatTaskBudget))
 	switch {
 	case err != nil:
-		return true, event.SendText(friendlyError(syncError(err)))
-	case result == nil:
-		ref := gachaLinkTask + rand.Text()
-		a.LinkJobs.put(ref, job)
-		if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "* * * * *", LogLabel: a.Game.Name + "抽卡链接记录", Payload: map[string]any{"kind": "gacha_link"}}); err != nil {
-			a.LinkJobs.take(ref)
-			return true, event.SendText("记录较多，本次未能全部获取，请稍后重新发送链接。")
-		}
+		return true, event.SendText("记录较多，本次未能全部获取，请稍后重新发送链接。")
+	case !done:
 		return true, event.SendText("记录较多，将在后台继续获取，完成后在此回复。")
 	}
-	return true, a.sendGachaLinkResult(job, *result, a.sendHere(event))
+	return true, event.Send(event.Event.Target.Type, event.Event.Target.ID, reply...)
+}
+
+// step fetches the link's pages until stop and answers, once all are read,
+// with ZZZ-Plugin's reply or the failure.
+func (job *gachaLinkJob) step(ctx context.Context, a *App, _ taskHost, stop time.Time) ([]rayleabot.Segment, bool) {
+	result, err := a.stepGachaLink(ctx, job, stop)
+	switch {
+	case err != nil:
+		return []rayleabot.Segment{rayleabot.Text(friendlyError(syncError(err)))}, true
+	case result == nil:
+		return nil, false
+	}
+	return []rayleabot.Segment{rayleabot.Text(a.gachaLinkReply(job, *result))}, true
 }
 
 // stepGachaLink fetches pages until the sync completes or stop passes; the
@@ -227,51 +209,14 @@ func (a *App) stepGachaLink(ctx context.Context, job *gachaLinkJob, stop time.Ti
 	}
 }
 
-// runGachaLink continues a long history on its scheduled task and answers in
-// the chat the link was sent to.
-func (a *App) runGachaLink(ctx context.Context, event *rayleabot.EventContext) error {
-	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
-		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
-	}
-	ref := asText(event.Event.Payload["task_id"])
-	job := a.LinkJobs.take(ref)
-	if job == nil || time.Now().After(job.expires) {
-		_, _ = event.Actions().SchedulerDelete(ctx, ref)
-		return event.Result(map[string]any{"handled": true})
-	}
-	send := func(segments ...rayleabot.Segment) error {
-		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: job.owner.SourceProtocol, SourceAdapter: job.owner.SourceAdapter, TargetType: job.target.Type, TargetID: job.target.ID, Message: rayleabot.MessageOut{Segments: segments}})
-		return err
-	}
-	result, err := a.stepGachaLink(ctx, job, time.Now().Add(40*time.Second))
-	if err == nil && result == nil {
-		a.LinkJobs.put(ref, job)
-		return event.Result(map[string]any{"handled": true})
-	}
-	_, _ = event.Actions().SchedulerDelete(ctx, ref)
-	if err != nil {
-		_ = send(rayleabot.Text(friendlyError(syncError(err))))
-	} else {
-		_ = a.sendGachaLinkResult(job, *result, send)
-	}
-	return event.Result(map[string]any{"handled": true})
-}
-
-// sendHere sends into the chat of the event.
-func (a *App) sendHere(event *rayleabot.EventContext) func(...rayleabot.Segment) error {
-	return func(segments ...rayleabot.Segment) error {
-		return event.Send(event.Event.Target.Type, event.Event.Target.ID, segments...)
-	}
-}
-
-// sendGachaLinkResult is ZZZ-Plugin's reply after a link: the channels with
-// the records each gained and holds.
-func (a *App) sendGachaLinkResult(job *gachaLinkJob, result gacha.ImportResult, send func(...rayleabot.Segment) error) error {
+// gachaLinkReply is ZZZ-Plugin's reply after a link: the channels with the
+// records each gained and holds.
+func (a *App) gachaLinkReply(job *gachaLinkJob, result gacha.ImportResult) string {
 	archive, err := a.Gacha.Read(result.UID, result.Region)
 	if err != nil {
-		return send(rayleabot.Text(friendlyError(err)))
+		return friendlyError(err)
 	}
-	return send(rayleabot.Text(gachaLinkSummary(job.before, gachaPoolCounts(archive))))
+	return gachaLinkSummary(job.before, gachaPoolCounts(archive))
 }
 
 // gachaLinkSummary lists every channel with its new and total records.
