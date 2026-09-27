@@ -97,6 +97,7 @@ func TestShippedManifestsResolveUpstreamWording(t *testing.T) {
 			{"设置所有攻略显示个数5", "guide-forward-count", []string{"5"}},
 			{"艾莲攻略all", "guides", []string{"艾莲"}},
 			{"刷新面板间隔60", "setting-panel-interval", []string{"60"}},
+			{"刷新角色间隔3000", "setting-role-interval", []string{"3000"}},
 			{"月报", "monthly", nil},
 			{"菲林上月", "monthly", []string{"上月"}},
 			{"月报2025年3月", "monthly", []string{"2025年3月"}},

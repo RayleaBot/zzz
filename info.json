@@ -1114,6 +1114,17 @@
       }
     },
     {
+      "id": "setting-role-interval",
+      "name": "刷新角色间隔",
+      "description": "设置更新面板时两次读取角色详情的间隔（100–10000 毫秒）",
+      "usage": "#刷新角色间隔3000",
+      "permission": "super_admin",
+      "trigger": {
+        "type": "pattern",
+        "pattern": "^刷新角色间隔(?P<value>[0-9]*)$"
+      }
+    },
+    {
       "id": "select",
       "name": "绑定",
       "description": "绑定 UID：账号角色设为默认，其他 UID 无需 CK 直接绑定",
@@ -1585,6 +1596,7 @@
         "artwork-all",
         "artwork-delete",
         "setting-panel-interval",
+        "setting-role-interval",
         "alias-set",
         "alias-remove",
         "aliases"

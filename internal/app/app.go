@@ -340,6 +340,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		return a.artworkCommand(event, command, args)
 	case "setting-panel-interval":
 		return a.panelIntervalCommand(ctx, event, args)
+	case "setting-role-interval":
+		return a.roleIntervalCommand(ctx, event, args)
 	case "artwork-all":
 		return a.artworkAll(ctx, event)
 	case "artwork-delete":

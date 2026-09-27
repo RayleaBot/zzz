@@ -36,3 +36,23 @@ func (a *App) panelIntervalCommand(ctx context.Context, event *rayleabot.EventCo
 	}
 	return event.SendText(a.Game.Name + "刷新面板间隔已设置为: " + strconv.Itoa(value))
 }
+
+// roleIntervalCommand is ZZZ-Plugin's 刷新角色间隔: the milliseconds 更新面板
+// waits between two characters' details, 100–10000, kept in the plugin
+// settings.
+func (a *App) roleIntervalCommand(ctx context.Context, event *rayleabot.EventContext, args []string) error {
+	value, ok := numberArg(args, 1)
+	if !ok {
+		return event.Result(map[string]any{"handled": false})
+	}
+	if value < 100 {
+		return event.SendText("刷新角色间隔不能小于100毫秒")
+	}
+	if value > 10000 {
+		return event.SendText("刷新角色间隔不能大于10000毫秒")
+	}
+	if _, err := event.Actions().ConfigWrite(ctx, map[string]any{"panel_role_interval": value}); err != nil {
+		return event.SendText(friendlyError(err))
+	}
+	return event.SendText(a.Game.Name + "刷新角色间隔已设置为: " + strconv.Itoa(value) + "毫秒")
+}
