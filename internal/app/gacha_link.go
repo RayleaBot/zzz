@@ -126,6 +126,9 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	if err != nil {
 		return true, event.SendText(friendlyError(err))
 	}
+	start := a.now()
+	ctx, cancel := a.eventWork(ctx, start)
+	defer cancel()
 	notice(ctx, event, "抽卡链接解析成功，正在查询抽卡记录，可能耗费一段时间，请勿重复发送")
 	uid := ""
 	// The UID is that of the first record of any channel.
@@ -152,7 +155,7 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	}
 	job.sync = info.Ref
 	task := a.beginChatTask(event, gachaLinkTask+rand.Text(), a.Game.Name+"抽卡链接记录", "gacha_link", 15*time.Minute, job)
-	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, a.now().Add(chatTaskBudget))
+	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, start.Add(chatTaskBudget))
 	switch {
 	case err != nil:
 		return true, event.SendText("记录较多，本次未能全部获取，请稍后重新发送链接。")
@@ -168,15 +171,22 @@ func (job *gachaLinkJob) step(ctx context.Context, a *App, _ taskHost, stop time
 	result, err := a.stepGachaLink(ctx, job, stop)
 	switch {
 	case err != nil:
-		return []rayleabot.Segment{rayleabot.Text(friendlyError(syncError(err)))}, true
+		return job.fail(a, err), true
 	case result == nil:
 		return nil, false
 	}
 	return []rayleabot.Segment{rayleabot.Text(a.gachaLinkReply(job, *result))}, true
 }
 
+// fail cancels the link's sync and replies with the failure.
+func (job *gachaLinkJob) fail(a *App, err error) []rayleabot.Segment {
+	_ = a.Syncs.Cancel(job.sync)
+	return []rayleabot.Segment{rayleabot.Text(friendlyError(syncError(err)))}
+}
+
 // stepGachaLink fetches pages until the sync completes or stop passes; the
-// result is nil while pages remain.
+// result is nil while pages remain. A page open when ctx ends is fetched
+// again by the next trigger.
 func (a *App) stepGachaLink(ctx context.Context, job *gachaLinkJob, stop time.Time) (*gacha.ImportResult, error) {
 	bases := map[string]string{}
 	for _, pool := range gachaLinkPools {
@@ -190,21 +200,18 @@ func (a *App) stepGachaLink(ctx context.Context, job *gachaLinkJob, stop time.Ti
 			}
 			return gacha.ParsePage(job.uid, job.link.region, pool, endID, data)
 		})
-		if err != nil {
-			_ = a.Syncs.Cancel(job.sync)
+		switch {
+		case err != nil && ctx.Err() != nil:
+			return nil, nil
+		case err != nil:
 			return nil, err
 		}
 		job.sequence = info.Sequence
 		if info.State == "completed" {
 			return info.Result, nil
 		}
-		if time.Now().After(stop) {
+		if !a.now().Before(stop) || a.sleep(ctx, 300*time.Millisecond) != nil {
 			return nil, nil
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(300 * time.Millisecond):
 		}
 	}
 }

@@ -129,3 +129,78 @@ func TestPanelRefreshFinishesOnTheHostsTriggers(t *testing.T) {
 		t.Fatalf("kept %d panels, %v", len(saved.Panels), err)
 	}
 }
+
+// countReads is how often the character id was asked for.
+func countReads(s *accountsService, id string) int {
+	count := 0
+	for _, read := range s.reads {
+		if read.id == id {
+			count++
+		}
+	}
+	return count
+}
+
+// A trigger whose read is still open when the trigger runs out of time (the
+// account service answers only once the host has timed the event out) ends
+// its event in time and leaves the task to the next trigger, which asks for
+// that character again and finishes the refresh.
+func TestPanelRefreshRecoversFromATriggerThatRanOutOfTime(t *testing.T) {
+	a, clock, accounts, host, ref := refreshOnHost(t, 20)
+	start := time.Unix(1_800_000_000, 0)
+	stuck := accounts.ids[16]
+	accounts.fail = func(id string, scheduled bool) string {
+		if id != stuck || countReads(accounts, id) > 1 {
+			return ""
+		}
+		clock.set(clock.Now().Add(time.Minute))
+		return "plugin.event_timeout"
+	}
+	clock.set(start.Add(time.Minute))
+	if end, _ := host.trigger(ref); end["type"] != "result" {
+		t.Fatalf("the trigger ended with %v", end)
+	}
+	if len(accounts.reads) != 17 || len(host.sent) != 1 || len(host.deleted) != 0 {
+		t.Fatalf("after the trigger ran out: %d reads, %d messages, deleted %v", len(accounts.reads), len(host.sent), host.deleted)
+	}
+	clock.set(start.Add(3 * time.Minute))
+	if end, _ := host.trigger(ref); end["type"] != "result" {
+		t.Fatalf("the next trigger ended with %v", end)
+	}
+	if len(accounts.reads) != 21 || accounts.reads[17].id != stuck || countReads(accounts, stuck) != 2 {
+		t.Fatalf("read %d times, %v", len(accounts.reads), accounts.reads)
+	}
+	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 || !strings.Contains(sentText(host.sent[1].Message), "面板列表") {
+		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
+	}
+	if saved, _ := a.Profiles.Read("10000001"); len(saved.Panels) != 20 {
+		t.Fatalf("kept %d panels", len(saved.Panels))
+	}
+}
+
+// A read a trigger fails ends the refresh as upstream does: the failure is
+// answered in the chat, the job is removed and nothing is kept, and the role
+// can be refreshed again.
+func TestPanelRefreshFailedInATriggerAnswersAndEnds(t *testing.T) {
+	a, clock, accounts, host, ref := refreshOnHost(t, 20)
+	accounts.fail = func(id string, scheduled bool) string {
+		if id == accounts.ids[15] {
+			return "plugin.game_upstream_rejected"
+		}
+		return ""
+	}
+	clock.set(time.Unix(1_800_000_000, 0).Add(time.Minute))
+	if end, _ := host.trigger(ref); end["type"] != "result" {
+		t.Fatalf("the trigger ended with %v", end)
+	}
+	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 || !strings.HasPrefix(sentText(host.sent[1].Message), "面板列表更新失败") {
+		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
+	}
+	if saved, _ := a.Profiles.Read("10000001"); len(saved.Panels) != 0 {
+		t.Fatal("a failed refresh kept panels")
+	}
+	accounts.fail = nil
+	if host.message("%更新面板", "更新面板"); len(host.sent) != 3 || sentText(host.sent[2].Message) != "正在更新面板列表，请稍候..." {
+		t.Fatalf("the role could not be refreshed again: %v", host.sent)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/plugin-zzz/internal/gacha"
 )
 
@@ -81,5 +82,41 @@ func TestGachaLinkFetchesTheWholeSignalHistory(t *testing.T) {
 	}
 	if _, err := a.gachaLinkPage(context.Background(), gachaLink{key: "expired-key", region: "prod_gf_cn", biz: "nap_cn"}, "2001", "2", "0", 1); err == nil || friendlyError(err) != "未查询到uid，请检查链接是否正确" {
 		t.Fatal(err)
+	}
+}
+
+// roundTripFunc answers a client's requests with a function.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// A link whose history takes longer than its event, run through the SDK as
+// the host runs it: the triggers of its job carry the job's payload but not
+// its task ID, fetch the rest and answer in the private chat the link came
+// from.
+func TestGachaLinkFinishesOnTheHostsTriggers(t *testing.T) {
+	a := pluginApp(t)
+	clock := &fakeClock{at: time.Unix(1_800_000_000, 0)}
+	a.clock = clock
+	// Each page takes ten seconds, so an event reads four.
+	a.LinkHTTP = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		clock.set(clock.Now().Add(10 * time.Second))
+		return signalHistory{}.RoundTrip(r)
+	})}
+	host := newSDKHost(t, a, func(rayleabot.ServiceCallRequest, bool) (map[string]any, string) {
+		t.Error("a link asked the account service")
+		return nil, "plugin.service_unavailable"
+	})
+	end, _ := host.message("https://webstatic.mihoyo.com/nap/event/e20230424gacha/index.html?authkey_ver=1&authkey=abcdefghij&game_biz=nap_cn#/log", "")
+	if terminalText(end) != "记录较多，将在后台继续获取，完成后在此回复。" || len(host.sent) != 1 {
+		t.Fatalf("the link event ended with %v", end)
+	}
+	ref := host.job(gachaLinkTask)
+	triggerUntilDone(t, clock, host, ref, time.Unix(1_800_000_000, 0), 5)
+	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 {
+		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
+	}
+	if sent := host.sent[1]; sent.TargetType != "private" || sent.TargetID != "u" || !strings.Contains(sentText(sent.Message), "独家频段新增21条记录，一共21条记录") {
+		t.Fatalf("answered %+v", sent)
 	}
 }

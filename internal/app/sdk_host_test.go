@@ -161,12 +161,16 @@ func (h *sdkHost) answer(action string, data map[string]any, scheduled bool) (ma
 }
 
 // message sends a private chat message of user "u" with the host's parsed
-// command.
+// command, if any.
 func (h *sdkHost) message(text, command string, args ...string) (map[string]any, []hostAction) {
 	h.t.Helper()
 	h.next++
 	id := fmt.Sprintf("chat-%d", h.next)
-	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": map[string]any{"event_id": id, "event_type": "message.private", "source_protocol": "onebot11", "source_adapter": "a", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u"}, "target": map[string]any{"type": "private", "id": "u"}, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}, "payload": map[string]any{"command": command, "args": args}}})
+	event := map[string]any{"event_id": id, "event_type": "message.private", "source_protocol": "onebot11", "source_adapter": "a", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u"}, "target": map[string]any{"type": "private", "id": "u"}, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}}
+	if command != "" {
+		event["payload"] = map[string]any{"command": command, "args": args}
+	}
+	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": event})
 }
 
 // trigger runs a job the plugin created as the host's scheduler does: the
@@ -201,6 +205,13 @@ func (h *sdkHost) job(prefix string) string {
 		h.t.Fatalf("jobs %v", found)
 	}
 	return found[0]
+}
+
+// terminalText is the text of a message an event ended with.
+func terminalText(frame map[string]any) string {
+	var message rayleabot.MessageOut
+	_ = decodeObject(asObject(frame["data"])["message"], &message)
+	return sentText(message)
 }
 
 // sentText is the text of a message.
