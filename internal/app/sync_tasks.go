@@ -185,7 +185,7 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 	start := a.now()
 	ctx, cancel := a.eventWork(ctx, start)
 	defer cancel()
-	err := a.SyncTasks.Tick(ctx, triggerTask(event), start.UnixMilli(), &a.Syncs, a.Gacha, func(ctx context.Context, task SyncTask, pool, end string, page int) (gacha.RemotePage, error) {
+	err := a.SyncTasks.Tick(ctx, event.Event.TaskID(), start.UnixMilli(), &a.Syncs, a.Gacha, func(ctx context.Context, task SyncTask, pool, end string, page int) (gacha.RemotePage, error) {
 		client := AccountsClient{Caller: event.Actions(), Provider: task.Provider, Game: a.Game.ID}
 		var response QueryResult
 		err := client.call(ctx, "execute", map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "operation": a.Game.ID + ".gacha", "delegation_ref": task.DelegationRef, "input": map[string]any{"gacha_type": pool, "end_id": end, "page": page}}, &response)
@@ -211,7 +211,7 @@ func (a *App) runSyncTask(ctx context.Context, event *rayleabot.EventContext) er
 	}, SyncTaskPace{Stop: start.Add(chatTaskBudget), Now: a.now, Wait: a.sleep})
 	if errors.Is(err, errTaskMissing) {
 		// The task was removed; so is its job.
-		_, _ = event.Actions().SchedulerDelete(ctx, triggerTask(event))
+		_, _ = event.Actions().SchedulerDelete(ctx, event.Event.TaskID())
 		return event.Result(map[string]any{"checked": false})
 	}
 	if err != nil {

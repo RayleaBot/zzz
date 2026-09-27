@@ -323,7 +323,7 @@ func (a *App) runContentSubscription(ctx context.Context, event *rayleabot.Event
 	}
 	ctx, cancel := a.eventWork(ctx, a.now())
 	defer cancel()
-	ref := triggerTask(event)
+	ref := event.Event.TaskID()
 	items, err := a.Subscriptions.List()
 	if err != nil {
 		return event.Fail(PublicError(err).Code, PublicError(err).Message)

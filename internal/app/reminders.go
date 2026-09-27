@@ -273,7 +273,7 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 	}
 	ctx, cancel := a.eventWork(ctx, a.now())
 	defer cancel()
-	err := a.Reminders.Tick(triggerTask(event), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
+	err := a.Reminders.Tick(event.Event.TaskID(), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
 		client := AccountsClient{Caller: event.Actions(), Provider: task.Provider, Game: a.Game.ID}
 		var result QueryResult
 		params := map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "operation": a.Game.ID + ".note", "input": map[string]any{}, "delegation_ref": task.DelegationRef}
@@ -339,9 +339,10 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 		return err
 	}, a.Game)
 	if errors.Is(err, errTaskMissing) {
-		// The task was removed; so is its job. A job whose payload has no
-		// task ID cannot be named and stays.
-		if ref := triggerTask(event); ref != "" {
+		// The task was removed, or the job is left from a kind of task this
+		// plugin no longer runs; the job goes too. A delete without a task ID
+		// would stop the plugin.
+		if ref := event.Event.TaskID(); ref != "" {
 			_, _ = event.Actions().SchedulerDelete(ctx, ref)
 		}
 		return event.Result(map[string]any{"checked": false})

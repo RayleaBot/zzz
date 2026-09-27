@@ -177,7 +177,7 @@ func (a *App) stepChatTask(ctx context.Context, host taskHost, task *chatTask, s
 		err = prepare.handover(ctx, a, host, task.ref)
 	}
 	if err == nil {
-		_, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: taskPayload(task.kind, task.ref)})
+		_, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: map[string]any{"kind": task.kind}})
 	}
 	if err != nil {
 		a.ChatTasks.end(task)
@@ -247,7 +247,7 @@ func (a *App) runChatTask(ctx context.Context, event *rayleabot.EventContext) er
 	}
 	ctx, cancel := a.eventWork(ctx, a.now())
 	defer cancel()
-	a.continueChatTask(ctx, event.Actions(), triggerTask(event))
+	a.continueChatTask(ctx, event.Actions(), event.Event.TaskID())
 	return event.Result(map[string]any{"handled": true})
 }
 

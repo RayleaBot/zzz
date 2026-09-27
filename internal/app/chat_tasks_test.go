@@ -138,7 +138,7 @@ func TestChatTaskContinuesOnItsScheduledTask(t *testing.T) {
 	if _, done, err := a.stepChatTask(t.Context(), host, task, a.now()); done || err != nil {
 		t.Fatal("the event finished work that remains", done, err)
 	}
-	if len(host.scheduled) != 1 || host.scheduled[0].TaskID != "game.link.x" || host.scheduled[0].Cron != "* * * * *" || host.scheduled[0].Payload["kind"] != "gacha_link" || host.scheduled[0].Payload["task_id"] != "game.link.x" {
+	if len(host.scheduled) != 1 || host.scheduled[0].TaskID != "game.link.x" || host.scheduled[0].Cron != "* * * * *" || host.scheduled[0].Payload["kind"] != "gacha_link" {
 		t.Fatalf("scheduled = %+v", host.scheduled)
 	}
 	// A trigger while another event works on the task keeps its scheduled
