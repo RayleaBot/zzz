@@ -32,7 +32,7 @@ func characterHost(t *testing.T, clock *fakeClock, fail string) (*fakeHost, *[]c
 				t.Fatalf("read %v %v", request.Params["operation"], request.Params["input"])
 			}
 			id := asText(list[0])
-			*reads = append(*reads, characterRead{at: clock.at, id: id, delegation: asText(request.Params["delegation_ref"])})
+			*reads = append(*reads, characterRead{at: clock.Now(), id: id, delegation: asText(request.Params["delegation_ref"])})
 			if id == fail {
 				return gameError("upstream_rejected", "米游社拒绝了本次请求，请稍后重试。")
 			}
@@ -71,7 +71,7 @@ func TestPanelRefreshReadsOneCharacterAtATimeAndContinuesOnItsTask(t *testing.T)
 	a := pluginApp(t)
 	clock := &fakeClock{at: time.Unix(1_800_000_000, 0)}
 	a.clock = clock
-	start := clock.at
+	start := clock.Now()
 	host, reads, delegations := characterHost(t, clock, "")
 	ids := characterIDs(30)
 	refresh := &panelRefresh{uid: "10000001", choice: Selection{AccountRef: "account", RoleRef: "role"}, provider: "p", player: ShowcaseProfile{Nickname: "绳匠", Level: 50}, ids: ids, interval: 3 * time.Second}
@@ -98,7 +98,7 @@ func TestPanelRefreshReadsOneCharacterAtATimeAndContinuesOnItsTask(t *testing.T)
 		t.Fatalf("scheduled = %+v", host.scheduled)
 	}
 	// A trigger a second after the handover still waits the interval.
-	clock.at = start.Add(40 * time.Second)
+	clock.set(start.Add(40 * time.Second))
 	a.continueChatTask(t.Context(), host, ref)
 	if next := (*reads)[14]; next.at != start.Add(42*time.Second) || next.delegation != "d1" {
 		t.Fatalf("first task read %+v", next)
@@ -106,7 +106,7 @@ func TestPanelRefreshReadsOneCharacterAtATimeAndContinuesOnItsTask(t *testing.T)
 	if len(host.sent) != 0 || len(host.deleted) != 0 {
 		t.Fatal("the refresh ended early")
 	}
-	clock.at = start.Add(100 * time.Second)
+	clock.set(start.Add(100 * time.Second))
 	a.continueChatTask(t.Context(), host, ref)
 	if len(*reads) != len(ids) {
 		t.Fatalf("read %d of %d", len(*reads), len(ids))
@@ -142,7 +142,7 @@ func TestPanelRefreshFailureKeepsNothing(t *testing.T) {
 	a.clock = clock
 	host, reads, _ := characterHost(t, clock, "1021")
 	refresh := &panelRefresh{uid: "10000001", choice: Selection{AccountRef: "account", RoleRef: "role"}, provider: "p", ids: characterIDs(3), interval: 100 * time.Millisecond}
-	reply, done := refresh.step(t.Context(), a, host, clock.at.Add(chatTaskBudget))
+	reply, done := refresh.step(t.Context(), a, host, clock.Now().Add(chatTaskBudget))
 	if !done || len(*reads) != 2 || !strings.HasPrefix(asText(reply[0].Data["text"]), "面板列表更新失败") {
 		t.Fatalf("done %v after %d reads: %v", done, len(*reads), reply)
 	}

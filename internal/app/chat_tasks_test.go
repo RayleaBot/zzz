@@ -2,22 +2,40 @@ package app
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// fakeClock is a clock tests move by hand; sleeping moves it on.
-type fakeClock struct{ at time.Time }
+// fakeClock is a clock tests move by hand; sleeping moves it on. Events the
+// SDK runs read it from goroutines of their own, so it is locked.
+type fakeClock struct {
+	mu sync.Mutex
+	at time.Time
+}
 
-func (c *fakeClock) Now() time.Time { return c.at }
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.at
+}
 
 func (c *fakeClock) Sleep(ctx context.Context, d time.Duration) error {
+	c.mu.Lock()
 	if d > 0 {
 		c.at = c.at.Add(d)
 	}
+	c.mu.Unlock()
 	return ctx.Err()
+}
+
+// set moves the clock to at.
+func (c *fakeClock) set(at time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.at = at
 }
 
 // fakeHost records the host actions chat tasks ask for and answers service
@@ -98,7 +116,7 @@ func TestChatTaskContinuesOnItsScheduledTask(t *testing.T) {
 	a.continueChatTask(t.Context(), host, "game.link.gone")
 	a.beginChatTask(chatEvent(), "game.link.old", "记录", "gacha_link", time.Minute, &countdown{left: 2})
 	a.ChatTasks.release("game.link.old")
-	a.clock.(*fakeClock).at = a.now().Add(2 * time.Minute)
+	a.clock.(*fakeClock).set(a.now().Add(2 * time.Minute))
 	a.continueChatTask(t.Context(), host, "game.link.old")
 	if len(host.deleted) != 3 || host.deleted[1] != "game.link.gone" || host.deleted[2] != "game.link.old" || len(host.sent) != 1 || len(a.ChatTasks.tasks) != 0 {
 		t.Fatal("stale tasks were kept or answered", host.deleted, host.sent)

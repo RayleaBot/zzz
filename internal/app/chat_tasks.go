@@ -131,7 +131,7 @@ func (a *App) stepChatTask(ctx context.Context, host taskHost, task *chatTask, s
 		err = prepare.handover(ctx, a, host, task.ref)
 	}
 	if err == nil {
-		_, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: map[string]any{"kind": task.kind}})
+		_, err = host.SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.ref, Cron: "* * * * *", LogLabel: task.label, Payload: taskPayload(task.kind, task.ref)})
 	}
 	if err != nil {
 		a.ChatTasks.end(task.ref)
@@ -173,7 +173,7 @@ func (a *App) runChatTask(ctx context.Context, event *rayleabot.EventContext) er
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	a.continueChatTask(ctx, event.Actions(), asText(event.Event.Payload["task_id"]))
+	a.continueChatTask(ctx, event.Actions(), triggerTask(event))
 	return event.Result(map[string]any{"handled": true})
 }
 

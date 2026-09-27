@@ -258,6 +258,19 @@ func (a *App) routedQuery(operation Operation, query string) (string, Operation)
 	return query, operation
 }
 
+// taskPayload is the payload of a scheduler job of kind for task id. The host
+// sends a trigger with its job's payload but without the job's task ID, so
+// the payload carries it.
+func taskPayload(kind, id string) map[string]any {
+	return map[string]any{"kind": kind, "task_id": id}
+}
+
+// triggerTask is the task ID of a scheduler trigger, which its job's payload
+// carries.
+func triggerTask(event *rayleabot.EventContext) string {
+	return asText(asObject(event.Event.Payload["payload"])["task_id"])
+}
+
 func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	// Replies name commands with the first prefix the host gives this plugin;
 	// the list is fixed for the process session.
@@ -267,16 +280,15 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		}
 	})
 	if event.Event.EventType == "scheduler.trigger" {
-		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), "game.content.") {
+		task := triggerTask(event)
+		switch {
+		case strings.HasPrefix(task, "game.content."):
 			return a.runContentSubscription(ctx, event)
-		}
-		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), "game.sync.") {
+		case strings.HasPrefix(task, "game.sync."):
 			return a.runSyncTask(ctx, event)
-		}
-		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), gachaLinkTask) || strings.HasPrefix(asText(event.Event.Payload["task_id"]), panelTask) {
+		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, panelTask):
 			return a.runChatTask(ctx, event)
-		}
-		if strings.HasPrefix(asText(event.Event.Payload["task_id"]), artworkTask) {
+		case strings.HasPrefix(task, artworkTask):
 			return a.runArtworkJob(ctx, event)
 		}
 		return a.runReminder(ctx, event)

@@ -124,7 +124,7 @@ func (a *App) manageReminder(ctx context.Context, event *rayleabot.EventContext,
 		if err == nil {
 			task.DelegationRef = grant.Delegation.Ref
 			task.ExpiresAtMS = grant.Delegation.ExpiresAtMS
-			_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/10 * * * *", LogLabel: a.Game.Name + "体力提醒", Payload: map[string]any{"kind": "stamina_reminder"}})
+			_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/10 * * * *", LogLabel: a.Game.Name + "体力提醒", Payload: taskPayload("stamina_reminder", task.Ref)})
 		}
 		if err == nil {
 			task.Enabled = true
@@ -270,7 +270,7 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	err := a.Reminders.Tick(asText(event.Event.Payload["task_id"]), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
+	err := a.Reminders.Tick(triggerTask(event), time.Now().UnixMilli(), func(task Reminder) (QueryResult, error) {
 		client := AccountsClient{Caller: event.Actions(), Provider: task.Provider, Game: a.Game.ID}
 		var result QueryResult
 		params := map[string]any{"account_ref": task.AccountRef, "role_ref": task.RoleRef, "operation": a.Game.ID + ".note", "input": map[string]any{}, "delegation_ref": task.DelegationRef}

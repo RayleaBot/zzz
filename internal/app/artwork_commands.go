@@ -229,7 +229,8 @@ func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) err
 	a.artworkJobs.mu.Lock()
 	a.artworkJobs.job = job
 	a.artworkJobs.mu.Unlock()
-	if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: artworkTask + rand.Text(), Cron: "* * * * *", LogLabel: a.Game.Name + "下载全部资源", Payload: map[string]any{"kind": "artwork_all"}}); err != nil {
+	ref := artworkTask + rand.Text()
+	if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "* * * * *", LogLabel: a.Game.Name + "下载全部资源", Payload: taskPayload("artwork_all", ref)}); err != nil {
 		finish()
 		return event.SendText("资源较多，本次未能全部下载，请稍后再试。")
 	}
@@ -242,7 +243,7 @@ func (a *App) runArtworkJob(ctx context.Context, event *rayleabot.EventContext) 
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	ref := asText(event.Event.Payload["task_id"])
+	ref := triggerTask(event)
 	a.artworkJobs.mu.Lock()
 	job, running := a.artworkJobs.job, a.artworkJobs.running
 	a.artworkJobs.job = nil

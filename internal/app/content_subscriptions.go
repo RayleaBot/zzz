@@ -292,7 +292,7 @@ func (a *App) subscriptionCommand(ctx context.Context, event *rayleabot.EventCon
 		return event.SendText(friendlyError(err))
 	}
 	if created {
-		if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + "米游社推送", Payload: map[string]any{"kind": "public_content"}}); err != nil {
+		if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + "米游社推送", Payload: taskPayload("public_content", ref)}); err != nil {
 			_ = a.Subscriptions.edit(ref, func(items *[]ContentSubscription, i int) error {
 				if i >= 0 {
 					*items = slices.Delete(*items, i, i+1)
@@ -317,7 +317,7 @@ func (a *App) runContentSubscription(ctx context.Context, event *rayleabot.Event
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
-	ref := asText(event.Event.Payload["task_id"])
+	ref := triggerTask(event)
 	items, err := a.Subscriptions.List()
 	if err != nil {
 		return event.Fail(PublicError(err).Code, PublicError(err).Message)

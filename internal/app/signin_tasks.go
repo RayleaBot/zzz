@@ -94,7 +94,7 @@ func (a *App) signinTask(ctx context.Context, event *rayleabot.EventContext, act
 		if kind == "community" || kind == "cloudgame" {
 			cron = "* * * * *"
 		}
-		_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: cron, LogLabel: a.Game.Name + label, Payload: map[string]any{"kind": kind}})
+		_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: cron, LogLabel: a.Game.Name + label, Payload: taskPayload(kind, task.Ref)})
 	}
 	if err == nil {
 		task.Enabled = true
