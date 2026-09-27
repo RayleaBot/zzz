@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,8 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
 )
 
 func TestGachaLinkParsesZenlessLinksOnly(t *testing.T) {
@@ -61,44 +58,22 @@ func (signalHistory) RoundTrip(request *http.Request) (*http.Response, error) {
 	return recorder.Result(), nil
 }
 
-func TestGachaLinkFetchesTheWholeSignalHistory(t *testing.T) {
-	a := pluginApp(t)
-	a.LinkHTTP = &http.Client{Transport: signalHistory{}}
-	link := gachaLink{key: "abcdefghij", region: "prod_gf_cn", biz: "nap_cn"}
-	info, err := a.Syncs.Start(a.Gacha, gacha.SyncChoice{Link: true}, "10000001", link.region, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	job := &gachaLinkJob{link: link, uid: "10000001", sync: info.Ref, before: map[string]int{}}
-	result, err := a.stepGachaLink(context.Background(), job, time.Now().Add(time.Minute))
-	if err != nil || result == nil || result.Added != 22 {
-		t.Fatal(result, err)
-	}
-	archive, _ := a.Gacha.Read("10000001", link.region)
-	summary := gachaLinkSummary(job.before, gachaPoolCounts(archive))
-	if !strings.Contains(summary, "抽卡记录更新成功，共6个卡池\n") || !strings.Contains(summary, "独家频段新增21条记录，一共21条记录") || !strings.Contains(summary, "邦布频段新增1条记录，一共1条记录") {
-		t.Fatal(summary)
-	}
-	if _, err := a.gachaLinkPage(context.Background(), gachaLink{key: "expired-key", region: "prod_gf_cn", biz: "nap_cn"}, "2001", "2", "0", 1); err == nil || friendlyError(err) != "未查询到uid，请检查链接是否正确" {
-		t.Fatal(err)
-	}
-}
-
 // roundTripFunc answers a client's requests with a function.
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-// A link whose history takes longer than its event, run through the SDK as
-// the host runs it: the triggers of its job carry the job's payload but not
-// its task ID, fetch the rest and answer in the private chat the link came
-// from.
-func TestGachaLinkFinishesOnTheHostsTriggers(t *testing.T) {
+// A link sent in private chat, run through the SDK as the host runs it: its
+// event moves to the background, says that the link was read and fetches
+// every page of the signal search, ten seconds a page, far beyond the
+// event's time, then answers ZZZ-Plugin's report of the channels.
+func TestGachaLinkReadsTheWholeHistoryInOneDetachedEvent(t *testing.T) {
 	a := pluginApp(t)
 	clock := &fakeClock{at: time.Unix(1_800_000_000, 0)}
 	a.clock = clock
-	// Each page takes ten seconds, so an event reads four.
+	pages := 0
 	a.LinkHTTP = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		pages++
 		clock.set(clock.Now().Add(10 * time.Second))
 		return signalHistory{}.RoundTrip(r)
 	})}
@@ -106,16 +81,24 @@ func TestGachaLinkFinishesOnTheHostsTriggers(t *testing.T) {
 		t.Error("a link asked the account service")
 		return nil, "plugin.service_unavailable"
 	})
-	end, _ := host.message("https://webstatic.mihoyo.com/nap/event/e20230424gacha/index.html?authkey_ver=1&authkey=abcdefghij&game_biz=nap_cn#/log", "")
-	if terminalText(end) != "记录较多，将在后台继续获取，完成后在此回复。" || len(host.sent) != 1 {
-		t.Fatalf("the link event ended with %v", end)
+	link := "https://webstatic.mihoyo.com/nap/event/e20230424gacha/index.html?authkey_ver=1&authkey=abcdefghij&game_biz=nap_cn#/log"
+	end, actions := host.message(link, "")
+	if end["type"] != "result" || len(host.detached) != 1 || actionAt(actions, "event.detach") > actionAt(actions, "message.send") || len(host.created) != 0 {
+		t.Fatalf("the link event ended with %v, actions %v", end, actions)
 	}
-	ref := host.job(gachaLinkTask)
-	triggerUntilDone(t, clock, host, ref, time.Unix(1_800_000_000, 0), 5)
-	if len(host.deleted) != 1 || host.deleted[0] != ref || len(host.sent) != 2 {
-		t.Fatalf("deleted %v, answered %v", host.deleted, host.sent)
+	if clock.Now().Sub(time.Unix(1_800_000_000, 0)) <= hostEventTimeout || len(host.sent) != 2 || sentText(host.sent[0].Message) != "抽卡链接解析成功，正在查询抽卡记录，可能耗费一段时间，请勿重复发送" {
+		t.Fatalf("%d pages until %v, sent %v", pages, clock.Now(), host.sent)
 	}
-	if sent := host.sent[1]; sent.TargetType != "private" || sent.TargetID != "u" || !strings.Contains(sentText(sent.Message), "独家频段新增21条记录，一共21条记录") {
-		t.Fatalf("answered %+v", sent)
+	summary := sentText(host.sent[1].Message)
+	if host.sent[1].TargetType != "private" || host.sent[1].TargetID != "u" || !strings.HasPrefix(summary, "抽卡记录更新成功，共6个卡池") || !strings.Contains(summary, "独家频段新增21条记录，一共21条记录") || !strings.Contains(summary, "邦布频段新增1条记录，一共1条记录") {
+		t.Fatalf("answered %+v", host.sent[1])
+	}
+	if archive, err := a.Gacha.Read("10000001", "prod_gf_cn"); err != nil || len(archive.Records) != 22 {
+		t.Fatalf("kept %d records, %v", len(archive.Records), err)
+	}
+	// A link whose authkey the official service refuses finds no UID.
+	host.message(strings.Replace(link, "abcdefghij", "expired-key", 1), "")
+	if len(host.sent) != 4 || sentText(host.sent[3].Message) != "未查询到uid，请检查链接是否正确" {
+		t.Fatalf("an expired link answered %v", host.sent[2:])
 	}
 }

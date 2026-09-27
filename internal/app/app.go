@@ -276,7 +276,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 			return a.runContentSubscription(ctx, event)
 		case strings.HasPrefix(task, "game.sync."):
 			return a.runSyncTask(ctx, event)
-		case strings.HasPrefix(task, gachaLinkTask), strings.HasPrefix(task, artworkTask):
+		case strings.HasPrefix(task, artworkTask):
 			return a.runChatTask(ctx, event)
 		}
 		return a.runReminder(ctx, event)

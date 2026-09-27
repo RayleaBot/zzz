@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"io"
@@ -21,15 +20,14 @@ import (
 // gachaLog reads it: its authkey fetches the records from the official
 // signal search history, and the UID comes from the records, so no account
 // is needed. As ZZZ-Plugin's default, links are not taken in groups. The
-// authkey is held in memory only while the records are fetched; a history
-// too long for one event is finished as a chat task, which is dropped if the
-// plugin restarts.
+// message's event moves to the background and fetches the whole history;
+// the authkey is held in memory only meanwhile.
 
 const (
 	gachaLinkCN = "https://public-operation-common.mihoyo.com/common/gacha_record/api/getGachaLog"
 	gachaLinkOS = "https://public-operation-common-sg.hoyoverse.com/common/gacha_record/api/getGachaLog"
-	// gachaLinkTask prefixes the scheduled tasks that finish long histories.
-	gachaLinkTask = "game.link."
+	// gachaLinkGap is the wait between two pages of a link.
+	gachaLinkGap = 300 * time.Millisecond
 	// gachaLinkGroup is ZZZ-Plugin's reply to a link in a group.
 	gachaLinkGroup = "当前群聊未开启链接刷新抽卡记录功能，请私聊发送"
 )
@@ -40,15 +38,6 @@ var gachaLinkPools = [][3]string{{"3001", "3", "音擎频段"}, {"13001", "103",
 
 type gachaLink struct {
 	key, region, biz string
-}
-
-// gachaLinkJob is a link whose records are still being fetched.
-type gachaLinkJob struct {
-	link     gachaLink
-	uid      string
-	sync     string
-	sequence int
-	before   map[string]int
 }
 
 // parseGachaLink reads authkey, region and game_biz from a signal search
@@ -126,9 +115,9 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	if err != nil {
 		return true, event.SendText(friendlyError(err))
 	}
-	start := a.now()
-	ctx, cancel := a.eventWork(ctx, start)
-	defer cancel()
+	if detached, err := detachChat(ctx, event); !detached {
+		return true, err
+	}
 	notice(ctx, event, "抽卡链接解析成功，正在查询抽卡记录，可能耗费一段时间，请勿重复发送")
 	uid := ""
 	// The UID is that of the first record of any channel.
@@ -148,82 +137,36 @@ func (a *App) gachaLinkMessage(ctx context.Context, event *rayleabot.EventContex
 	if uid == "" {
 		return true, event.SendText("未查询到uid，请检查链接是否正确")
 	}
-	job := &gachaLinkJob{link: link, uid: uid, before: gachaPoolCounts(a.archiveOrEmpty(uid, link.region))}
+	before := gachaPoolCounts(a.archiveOrEmpty(uid, link.region))
 	info, err := a.Syncs.Start(a.Gacha, gacha.SyncChoice{Link: true}, uid, link.region, false)
 	if err != nil {
 		return true, event.SendText(friendlyError(syncError(err)))
 	}
-	job.sync = info.Ref
-	task := a.beginChatTask(event, gachaLinkTask+rand.Text(), a.Game.Name+"抽卡链接记录", "gacha_link", 15*time.Minute, job)
-	reply, done, err := a.stepChatTask(ctx, event.Actions(), task, start.Add(chatTaskBudget))
-	switch {
-	case err != nil:
-		return true, event.SendText("记录较多，本次未能全部获取，请稍后重新发送链接。")
-	case !done:
-		return true, event.SendText("记录较多，将在后台继续获取，完成后在此回复。")
-	}
-	return true, event.Send(event.Event.Target.Type, event.Event.Target.ID, reply...)
-}
-
-// step fetches the link's pages until stop and answers, once all are read,
-// with ZZZ-Plugin's reply or the failure.
-func (job *gachaLinkJob) step(ctx context.Context, a *App, _ taskHost, stop time.Time) ([]rayleabot.Segment, bool) {
-	result, err := a.stepGachaLink(ctx, job, stop)
-	switch {
-	case err != nil:
-		return job.fail(a, err), true
-	case result == nil:
-		return nil, false
-	}
-	return []rayleabot.Segment{rayleabot.Text(a.gachaLinkReply(job, *result))}, true
-}
-
-// fail cancels the link's sync and replies with the failure.
-func (job *gachaLinkJob) fail(a *App, err error) []rayleabot.Segment {
-	_ = a.Syncs.Cancel(job.sync)
-	return []rayleabot.Segment{rayleabot.Text(friendlyError(syncError(err)))}
-}
-
-// stepGachaLink fetches pages until the sync completes or stop passes; the
-// result is nil while pages remain. A page open when ctx ends is fetched
-// again by the next trigger.
-func (a *App) stepGachaLink(ctx context.Context, job *gachaLinkJob, stop time.Time) (*gacha.ImportResult, error) {
 	bases := map[string]string{}
 	for _, pool := range gachaLinkPools {
 		bases[pool[0]] = pool[1]
 	}
-	for {
-		info, err := a.Syncs.Step(ctx, a.Gacha, job.sync, job.sequence, func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
-			data, err := a.gachaLinkPage(ctx, job.link, pool, bases[pool], endID, page)
-			if err != nil {
-				return gacha.RemotePage{}, err
-			}
-			return gacha.ParsePage(job.uid, job.link.region, pool, endID, data)
-		})
-		switch {
-		case err != nil && ctx.Err() != nil:
-			return nil, nil
-		case err != nil:
-			return nil, err
+	result, err := a.runSync(ctx, info.Ref, gachaLinkGap, func(ctx context.Context, pool, endID string, page int) (gacha.RemotePage, error) {
+		data, err := a.gachaLinkPage(ctx, link, pool, bases[pool], endID, page)
+		if err != nil {
+			return gacha.RemotePage{}, err
 		}
-		job.sequence = info.Sequence
-		if info.State == "completed" {
-			return info.Result, nil
-		}
-		if !a.now().Before(stop) || a.sleep(ctx, 300*time.Millisecond) != nil {
-			return nil, nil
-		}
+		return gacha.ParsePage(uid, link.region, pool, endID, data)
+	})
+	if err != nil {
+		return true, event.SendText(friendlyError(syncError(err)))
 	}
+	return true, event.SendText(a.gachaReply(before, result))
 }
 
-// gachaLinkReply is ZZZ-Plugin's reply after a link: the channels with the
-// records each gained and holds.
-func (a *App) gachaLinkReply(job *gachaLinkJob, result gacha.ImportResult) string {
+// gachaReply is ZZZ-Plugin's reply after the records were read: the channels
+// with the records each gained and holds.
+func (a *App) gachaReply(before map[string]int, result gacha.ImportResult) string {
 	archive, err := a.Gacha.Read(result.UID, result.Region)
 	if err != nil {
 		return friendlyError(err)
 	}
-	return gachaLinkSummary(job.before, gachaPoolCounts(archive))
+	return gachaLinkSummary(before, gachaPoolCounts(archive))
 }
 
 // gachaLinkSummary lists every channel with its new and total records.

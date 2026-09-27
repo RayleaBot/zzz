@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/plugin-zzz/internal/gacha"
@@ -65,5 +66,24 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 		return map[string]any{"canceled": err == nil}, err
 	default:
 		return nil, gameError("operation_denied", "操作不存在。")
+	}
+}
+
+// runSync reads a started sync to the end, page after page with gap between
+// two of them, and then forgets it.
+func (a *App) runSync(ctx context.Context, ref string, gap time.Duration, fetch gacha.FetchPage) (gacha.ImportResult, error) {
+	defer a.Syncs.Forget(ref)
+	for sequence := 0; ; {
+		info, err := a.Syncs.Step(ctx, a.Gacha, ref, sequence, fetch)
+		if err != nil {
+			return gacha.ImportResult{}, err
+		}
+		if info.State == "completed" {
+			return *info.Result, nil
+		}
+		sequence = info.Sequence
+		if err := a.sleep(ctx, gap); err != nil {
+			return gacha.ImportResult{}, err
+		}
 	}
 }
