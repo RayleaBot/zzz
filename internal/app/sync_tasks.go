@@ -151,7 +151,7 @@ func (a *App) syncTaskAction(ctx context.Context, event *rayleabot.EventContext,
 	if err == nil {
 		task.DelegationRef = grant.Delegation.Ref
 		task.ExpiresAtMS = grant.Delegation.ExpiresAtMS
-		_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "* * * * *", LogLabel: a.Game.Name + "抽卡后台同步", Payload: taskPayload("gacha_sync", task.Ref)})
+		_, err = event.Actions().SchedulerCreate(ctx, a.syncJob(task))
 	}
 	if err == nil {
 		task.State = "waiting"

@@ -175,11 +175,7 @@ func (a *App) createChallengeReminder(ctx context.Context, client AccountsClient
 		}
 	}
 	if err == nil {
-		label := kind.Label
-		if q.Pair {
-			label = "式舆/危局"
-		}
-		err = schedule(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + label + "挑战提醒", Payload: taskPayload("challenge_reminder", task.Ref)})
+		err = schedule(ctx, a.reminderJob(task))
 	}
 	if err == nil {
 		task.Enabled = true

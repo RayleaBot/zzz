@@ -168,6 +168,7 @@ type App struct {
 	banners        BannerSource
 	downloads      ArtworkGroupsBuilder
 	usageOnce      sync.Once
+	legacyJobs     legacyJobs
 	// clock is nil for the wall clock.
 	clock clock
 }
@@ -281,6 +282,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	if event.Event.EventType == "scheduler.trigger" {
 		task := triggerTask(event)
 		switch {
+		case task == "":
+			return a.runLegacyTrigger(ctx, event)
 		case strings.HasPrefix(task, "game.content."):
 			return a.runContentSubscription(ctx, event)
 		case strings.HasPrefix(task, "game.sync."):

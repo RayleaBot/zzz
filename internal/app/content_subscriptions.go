@@ -296,7 +296,7 @@ func (a *App) subscriptionCommand(ctx context.Context, event *rayleabot.EventCon
 		return event.SendText(friendlyError(err))
 	}
 	if created {
-		if _, err := event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + "米游社推送", Payload: taskPayload("public_content", ref)}); err != nil {
+		if _, err := event.Actions().SchedulerCreate(ctx, a.contentJob(ref)); err != nil {
 			_ = a.Subscriptions.edit(ref, func(items *[]ContentSubscription, i int) error {
 				if i >= 0 {
 					*items = slices.Delete(*items, i, i+1)

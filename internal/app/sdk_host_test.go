@@ -25,9 +25,11 @@ type sdkHost struct {
 	// service answers plugin.call: a result, or a failure code. scheduled
 	// marks a call of a scheduler trigger.
 	service func(request rayleabot.ServiceCallRequest, scheduled bool) (map[string]any, string)
-	// jobs are the payloads of the scheduler jobs by task ID; deleted are
-	// the task IDs scheduler.delete removed.
+	// jobs are the payloads of the scheduler jobs by task ID; created are
+	// the scheduler.create requests and deleted the task IDs
+	// scheduler.delete removed.
 	jobs    map[string]map[string]any
+	created []map[string]any
 	deleted []string
 	// sent are the message.send actions, not counting terminal replies.
 	sent []rayleabot.MessageSendRequest
@@ -133,6 +135,7 @@ func (h *sdkHost) answer(action string, data map[string]any, scheduled bool) (ma
 		return h.service(request, scheduled)
 	case "scheduler.create":
 		h.jobs[asText(data["task_id"])] = maps.Clone(asObject(data["payload"]))
+		h.created = append(h.created, data)
 		return map[string]any{"task_id": data["task_id"]}, ""
 	case "scheduler.delete":
 		id := asText(data["task_id"])

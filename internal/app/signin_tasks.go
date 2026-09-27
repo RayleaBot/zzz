@@ -12,16 +12,17 @@ import (
 )
 
 func (a *App) signinTask(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
-	kind, root, operation, label, taskPrefix := "signin", "signin.task.", a.Game.ID+".sign", "每日签到", "game.sign."
+	kind, root, operation, taskPrefix := "signin", "signin.task.", a.Game.ID+".sign", "game.sign."
 	if strings.HasPrefix(action, "monthly.task.") {
-		kind, root, operation, label, taskPrefix = "monthly", "monthly.task.", a.Game.ID+".monthly", "每日月报收集", "game.monthly."
+		kind, root, operation, taskPrefix = "monthly", "monthly.task.", a.Game.ID+".monthly", "game.monthly."
 	}
 	if strings.HasPrefix(action, "community.task.") {
-		kind, root, operation, label, taskPrefix = "community", "community.task.", a.Game.ID+".community_run", "米游社任务", "game.community."
+		kind, root, operation, taskPrefix = "community", "community.task.", a.Game.ID+".community_run", "game.community."
 	}
 	if strings.HasPrefix(action, "cloudgame.task.") {
-		kind, root, operation, label, taskPrefix = "cloudgame", "cloudgame.task.", a.Game.ID+".cloud_sign", "云游戏签到", "game.cloudgame."
+		kind, root, operation, taskPrefix = "cloudgame", "cloudgame.task.", a.Game.ID+".cloud_sign", "game.cloudgame."
 	}
+	label := timedTaskLabels[kind]
 	if action == root+"list" {
 		items, err := a.Reminders.List()
 		items = slices.DeleteFunc(items, func(task Reminder) bool { return task.Kind != kind })
@@ -90,11 +91,7 @@ func (a *App) signinTask(ctx context.Context, event *rayleabot.EventContext, act
 	if err == nil {
 		task.DelegationRef = grant.Delegation.Ref
 		task.ExpiresAtMS = grant.Delegation.ExpiresAtMS
-		cron := "*/10 * * * *"
-		if kind == "community" || kind == "cloudgame" {
-			cron = "* * * * *"
-		}
-		_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: cron, LogLabel: a.Game.Name + label, Payload: taskPayload(kind, task.Ref)})
+		_, err = event.Actions().SchedulerCreate(ctx, a.reminderJob(task))
 	}
 	if err == nil {
 		task.Enabled = true

@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -197,5 +199,81 @@ func TestATriggerWhoseTaskIsGoneDeletesItsJob(t *testing.T) {
 	delete(host.jobs, "game.reminder.OLD")
 	if len(host.jobs) != 0 || len(accounts.executed) != 0 || len(host.sent) != 0 {
 		t.Fatalf("jobs %v, requests %v, sent %v", host.jobs, accounts.executed, host.sent)
+	}
+}
+
+// runJob triggers a job once its task is due and checks that the task ran:
+// it asked the account for operation or, for a push, read the news.
+func runJob(t *testing.T, a *App, host *sdkHost, accounts *taskAccounts, news *int, ref, operation string) {
+	t.Helper()
+	_ = a.Reminders.edit(ref, func(items *[]Reminder, i int) error {
+		if i >= 0 {
+			(*items)[i].NextCheckMS = 0
+		}
+		return nil
+	})
+	executed, read := len(accounts.executed), *news
+	if end, _ := host.trigger(ref); end["type"] != "result" && end["type"] != "error" {
+		t.Fatalf("the trigger of %s ended with %v", ref, end)
+	}
+	if operation == "" {
+		if *news != read+1 {
+			t.Fatalf("the trigger of %s read the news %d times", ref, *news-read)
+		}
+		return
+	}
+	if len(accounts.executed) == executed || accounts.executed[executed] != operation {
+		t.Fatalf("the trigger of %s requested %v", ref, accounts.executed[executed:])
+	}
+}
+
+// Jobs an earlier version created have no task ID in their payloads. The
+// first of their triggers creates every stored task's job again with the
+// same schedule, after which each job runs its task; a job without a stored
+// task, as an earlier 更新面板's, does nothing and is not created again.
+func TestJobsWithoutTaskIDsAreCreatedAgain(t *testing.T) {
+	a := pluginApp(t)
+	news := 0
+	a.Content = PublicContentClient{HTTP: httpDoer(func(r *http.Request) (*http.Response, error) {
+		if !strings.HasSuffix(r.URL.Path, "/getNewsList") {
+			t.Errorf("content request %s", r.URL)
+		}
+		news++
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"retcode":0,"data":{"list":[]}}`))}, nil
+	})}
+	accounts := &taskAccounts{t: t}
+	host := newSDKHost(t, a, accounts.answer)
+	jobs := createJobs(t, host)
+	first := map[string]map[string]any{}
+	for _, created := range host.created {
+		first[asText(created["task_id"])] = created
+	}
+	for _, job := range jobs {
+		host.jobs[job.ref] = map[string]any{"kind": host.jobs[job.ref]["kind"]}
+	}
+	host.jobs["game.panel.zzz.OLD"] = map[string]any{"kind": "panel_refresh"}
+	before := len(host.created)
+	for range 2 {
+		if end, _ := host.trigger("game.panel.zzz.OLD"); end["type"] != "result" {
+			t.Fatalf("the old job's trigger ended with %v", end)
+		}
+	}
+	again := host.created[before:]
+	if len(again) != len(jobs) {
+		t.Fatalf("created %d jobs again for %d tasks", len(again), len(jobs))
+	}
+	for _, created := range again {
+		ref := asText(created["task_id"])
+		old := first[ref]
+		if old == nil || created["cron"] != old["cron"] || created["log_label"] != old["log_label"] || asObject(created["payload"])["task_id"] != ref || asObject(created["payload"])["kind"] != asObject(old["payload"])["kind"] {
+			t.Fatalf("%s was created again as %v, first as %v", ref, created, old)
+		}
+	}
+	if _, kept := host.jobs["game.panel.zzz.OLD"]; !kept || len(host.deleted) != 0 || len(host.sent) != 0 || len(accounts.executed) != 0 || news != 0 {
+		t.Fatalf("the old job did work: deleted %v, sent %v", host.deleted, host.sent)
+	}
+	operations := []string{"zzz.note", "zzz.deadly", "zzz.sign", "zzz.monthly", "zzz.community_run", "zzz.cloud_sign", "zzz.gacha", "zzz.challenge", ""}
+	for i, job := range jobs {
+		runJob(t, a, host, accounts, &news, job.ref, operations[i])
 	}
 }

@@ -124,7 +124,7 @@ func (a *App) manageReminder(ctx context.Context, event *rayleabot.EventContext,
 		if err == nil {
 			task.DelegationRef = grant.Delegation.Ref
 			task.ExpiresAtMS = grant.Delegation.ExpiresAtMS
-			_, err = event.Actions().SchedulerCreate(ctx, rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "*/10 * * * *", LogLabel: a.Game.Name + "体力提醒", Payload: taskPayload("stamina_reminder", task.Ref)})
+			_, err = event.Actions().SchedulerCreate(ctx, a.reminderJob(task))
 		}
 		if err == nil {
 			task.Enabled = true
