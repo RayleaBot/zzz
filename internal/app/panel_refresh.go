@@ -13,33 +13,41 @@ import (
 // character's details in a request of its own, roleInterval apart. The
 // panels are kept once all are read and answered as 面板列表 marking them;
 // a failed read ends the refresh without keeping any, as upstream. A UID is
-// refreshed once at a time.
+// refreshed once at a time, and free again before the chat is answered.
 func (a *App) refreshAccountPanels(ctx context.Context, event *rayleabot.EventContext, owner panelOwner) error {
 	key := "panel:" + owner.UID
 	if !a.flows.begin(key) {
 		return event.SendText(a.panelReply("running", nil))
 	}
-	defer a.flows.end(key)
-	if detached, err := detachChat(ctx, event); !detached {
-		return err
+	answer := a.refreshPanels(ctx, event, owner)
+	a.flows.end(key)
+	return answer()
+}
+
+// refreshPanels reads and keeps the panels in the background and returns
+// the answer.
+func (a *App) refreshPanels(ctx context.Context, event *rayleabot.EventContext, owner panelOwner) func() error {
+	if _, err := event.Detach(ctx, nil); err != nil {
+		return reply(event, detachFailure(err).Message)
 	}
 	notice(ctx, event, a.panelReply("account_start", nil))
 	panels, err := a.readAccountPanels(ctx, a.accountClient(event), owner.Choice, settings(event).roleInterval())
 	if err != nil {
-		return event.SendText(a.panelFailure(err))
+		return reply(event, a.panelFailure(err))
 	}
 	saved, err := a.Profiles.Keep(owner.UID, panels, "米游社", &ShowcaseProfile{Nickname: owner.Role.Nickname, Level: owner.Role.Level})
 	if err != nil {
-		return event.SendText(friendlyError(err))
+		return reply(event, friendlyError(err))
 	}
 	if len(panels) == 0 {
-		return event.SendText(a.panelReply("none", map[string]string{"uid": owner.UID, "service": "米游社"}))
+		return reply(event, a.panelReply("none", map[string]string{"uid": owner.UID, "service": "米游社"}))
 	}
 	updated := map[string]bool{}
 	for _, panel := range panels {
 		updated[panel.ID] = true
 	}
-	return a.sendView(ctx, event, a.panelListView(ctx, saved, updated, "米游社"))
+	view := a.panelListView(ctx, saved, updated, "米游社")
+	return func() error { return a.sendView(ctx, event, view) }
 }
 
 // readAccountPanels reads the role's character list, then each character's

@@ -26,6 +26,11 @@ func detachFailure(err error) *rayleabot.ActionError {
 	return PublicError(err)
 }
 
+// reply is an answer to send once a flow has let go of what it held.
+func reply(event *rayleabot.EventContext, text string) func() error {
+	return func() error { return event.SendText(text) }
+}
+
 // detachChat moves a chat event to the background; false once the chat has
 // been told why it could not.
 func detachChat(ctx context.Context, event *rayleabot.EventContext) (bool, error) {

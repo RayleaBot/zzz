@@ -121,14 +121,21 @@ type ArtworkGroupsBuilder func(ImageContext) []ArtworkGroup
 // fetched, as ZZZ-Plugin fetches every agent, W-Engine, drive disc and
 // Bangboo picture. The command's event moves to the background and answers
 // the counts once every file is fetched; one download runs at a time, as
-// upstream's.
+// upstream's, and another may start before the counts are answered.
 func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) error {
 	if !a.flows.begin("artwork") {
 		return event.SendText("下载任务正在进行中，请稍后再试")
 	}
-	defer a.flows.end("artwork")
-	if detached, err := detachChat(ctx, event); !detached {
-		return err
+	answer := a.downloadAll(ctx, event)
+	a.flows.end("artwork")
+	return answer()
+}
+
+// downloadAll updates the repositories and fetches every on-demand file in
+// the background, and returns the answer.
+func (a *App) downloadAll(ctx context.Context, event *rayleabot.EventContext) func() error {
+	if _, err := event.Detach(ctx, nil); err != nil {
+		return reply(event, detachFailure(err).Message)
 	}
 	started := []string{}
 	for _, source := range a.Artwork.Sources {
@@ -153,9 +160,9 @@ func (a *App) artworkAll(ctx context.Context, event *rayleabot.EventContext) err
 	}
 	success, failed := a.fetchArtwork(ctx, groups)
 	if err := ctx.Err(); err != nil {
-		return err
+		return func() error { return err }
 	}
-	return event.SendText(artworkSummary(groups, success, failed))
+	return reply(event, artworkSummary(groups, success, failed))
 }
 
 // fetchArtwork fetches every file of groups, eight at a time, and counts by

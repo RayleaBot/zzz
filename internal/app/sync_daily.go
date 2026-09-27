@@ -149,45 +149,44 @@ func (s *DailySyncStore) pauseArchive(uid, region string) error {
 // trigger to the background, since reading every page takes longer than the
 // event; a trigger the host keeps in the foreground reads within its
 // deadline, and what it cannot read is tried again. A trigger whose task is
-// not stored deletes its job.
+// not stored deletes its job. A task edited or removed meanwhile keeps what
+// the page did.
 func (a *App) runDailySync(ctx context.Context, event *rayleabot.EventContext) error {
 	if event.Event.SourceProtocol != "scheduler" || event.Event.SourceAdapter != "scheduler.internal" {
 		return event.Fail("plugin.game_source_invalid", "任务来源无效。")
 	}
+	checked, err := a.checkDailySync(ctx, event)
+	if err != nil && !errors.Is(err, errTaskChanged) {
+		return manageFailure(event, err)
+	}
+	return event.Result(map[string]any{"checked": checked})
+}
+
+// checkDailySync holds the triggered task while it checks and reads it, and
+// lets go of it before the trigger ends, so the next trigger finds it free.
+func (a *App) checkDailySync(ctx context.Context, event *rayleabot.EventContext) (bool, error) {
 	ref := event.Event.TaskID()
 	task, claimed, err := a.DailySyncs.claim(ref)
 	switch {
 	case errors.Is(err, errTaskMissing):
 		_, _ = event.Actions().SchedulerDelete(ctx, ref)
-		return event.Result(map[string]any{"checked": false})
-	case err != nil:
-		return manageFailure(event, err)
-	case !claimed:
-		// Another trigger is reading it.
-		return event.Result(map[string]any{"checked": false})
+		return false, nil
+	case err != nil || !claimed:
+		// Unclaimed: another trigger is reading it.
+		return false, err
 	}
 	defer a.DailySyncs.release(ref)
-	now := a.now().UnixMilli()
-	round, changed := task.due(now)
+	round, changed := task.due(a.now().UnixMilli())
 	if changed {
 		if err = a.DailySyncs.save(task); err != nil {
-			return a.dailyResult(event, err)
+			return true, err
 		}
 	}
 	if !round {
-		return event.Result(map[string]any{"checked": true})
+		return true, nil
 	}
 	_, _ = event.Detach(ctx, nil)
-	return a.dailyResult(event, a.readDailySync(ctx, event, task))
-}
-
-// dailyResult ends a trigger; a task edited or removed meanwhile keeps what
-// the page did.
-func (a *App) dailyResult(event *rayleabot.EventContext, err error) error {
-	if err != nil && !errors.Is(err, errTaskChanged) {
-		return manageFailure(event, err)
-	}
-	return event.Result(map[string]any{"checked": true})
+	return true, a.readDailySync(ctx, event, task)
 }
 
 // readDailySync reads a due round of task and saves how it ended. A
