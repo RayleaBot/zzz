@@ -2,15 +2,22 @@ package app
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )
 
-// panelTask prefixes the scheduled tasks that finish an account 更新面板. A
-// role has one, so the account delegation its reads use is renewed rather
-// than added to.
+// panelTask prefixes the scheduled tasks that finish an account 更新面板.
 const panelTask = "game.panel."
+
+// panelTaskID is the scheduled task of a user's refreshes of a role. Its
+// reads use a delegation, which the account plugin lets only the user who
+// created it renew, so each user has a task per role and renews, rather than
+// adds to, its delegation.
+func panelTaskID(game, provider string, user Subject, choice Selection) string {
+	return roleTaskID(panelTask, game, strings.Join([]string{provider, user.SourceProtocol, user.SourceAdapter, user.BotID, user.ActorID}, "\x00"), choice)
+}
 
 // panelRefresh is an account 更新面板 of a role, read as ZZZ-Plugin's
 // getAvatarInfoList reads it: each character's details in a request of its
@@ -41,7 +48,7 @@ func (a *App) refreshAccountPanels(ctx context.Context, event *rayleabot.EventCo
 	client := a.accountClient(event)
 	config := settings(event)
 	refresh := &panelRefresh{uid: owner.UID, choice: owner.Choice, provider: client.Provider, player: ShowcaseProfile{Nickname: owner.Role.Nickname, Level: owner.Role.Level}, interval: config.roleInterval(), images: config.ImageReplies}
-	task := a.beginChatTask(event, roleTaskID(panelTask, a.Game.ID, client.Provider, owner.Choice), a.Game.Name+"更新面板", "panel_refresh", time.Hour, refresh)
+	task := a.beginChatTask(event, panelTaskID(a.Game.ID, client.Provider, syncOwner(event), owner.Choice), a.Game.Name+"更新面板", "panel_refresh", time.Hour, refresh)
 	if task == nil {
 		return event.SendText(a.panelReply("running", nil))
 	}

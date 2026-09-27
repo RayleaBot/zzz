@@ -75,7 +75,10 @@ func TestPanelRefreshReadsOneCharacterAtATimeAndContinuesOnItsTask(t *testing.T)
 	host, reads, delegations := characterHost(t, clock, "")
 	ids := characterIDs(30)
 	refresh := &panelRefresh{uid: "10000001", choice: Selection{AccountRef: "account", RoleRef: "role"}, provider: "p", player: ShowcaseProfile{Nickname: "绳匠", Level: 50}, ids: ids, interval: 3 * time.Second}
-	ref := roleTaskID(panelTask, "zzz", "p", refresh.choice)
+	ref := panelTaskID("zzz", "p", syncOwner(chatEvent()), refresh.choice)
+	if other := (Subject{SourceProtocol: "onebot11", SourceAdapter: "a", BotID: "bot", ActorID: "v"}); panelTaskID("zzz", "p", other, refresh.choice) == ref || len(ref) > 128 {
+		t.Fatal("users share a refresh task, or its ID is too long for a delegation")
+	}
 	task := a.beginChatTask(chatEvent(), ref, "绝区零更新面板", "panel_refresh", time.Hour, refresh)
 	if task == nil || a.beginChatTask(chatEvent(), ref, "绝区零更新面板", "panel_refresh", time.Hour, &panelRefresh{}) != nil {
 		t.Fatal("a role's refresh started while another was reading")
