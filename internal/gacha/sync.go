@@ -34,8 +34,14 @@ type SyncChoice struct {
 	AccountRef, RoleRef string
 	Link                bool
 }
+
+// syncJob is a sync's state, which mu guards. mu is held only while the
+// state is read or changed, never while a page is fetched, so starting,
+// reading or canceling syncs does not wait for a page. step lets one step of
+// the job at a time fetch its page; only Step changes the pages to read.
 type syncJob struct {
 	mu      sync.Mutex
+	step    sync.Mutex
 	view    SyncInfo
 	choice  SyncChoice
 	archive Archive
@@ -172,24 +178,38 @@ func (s *Syncs) Step(ctx context.Context, store *Store, ref string, sequence int
 	if err != nil {
 		return SyncInfo{}, err
 	}
+	job.step.Lock()
+	defer job.step.Unlock()
 	job.mu.Lock()
-	defer job.mu.Unlock()
 	if time.Now().After(job.expires) || job.view.State == "canceled" {
+		job.mu.Unlock()
 		return SyncInfo{}, ErrSync
 	}
 	if sequence == job.view.Sequence-1 {
-		return job.view, nil
+		view := job.view
+		job.mu.Unlock()
+		return view, nil
 	}
 	if sequence != job.view.Sequence || job.view.State != "running" {
+		job.mu.Unlock()
 		return SyncInfo{}, ErrSync
 	}
+	pool, endID, number := job.pools[job.pool], job.endID, job.page
+	job.mu.Unlock()
 	if err := ctx.Err(); err != nil {
 		return SyncInfo{}, err
 	}
 	// Fetch owns only this event's caller; never retain it after this step.
-	page, err := fetch(ctx, job.pools[job.pool], job.endID, job.page)
+	page, err := fetch(ctx, pool, endID, number)
 	if err != nil {
 		return SyncInfo{}, err
+	}
+	job.mu.Lock()
+	defer job.mu.Unlock()
+	// The sync may have been canceled, forgotten or expired meanwhile; no
+	// other step moved its pages.
+	if time.Now().After(job.expires) || job.view.State != "running" {
+		return SyncInfo{}, ErrSync
 	}
 	if page.Timezone < -12 || page.Timezone > 14 || page.Language != "zh-cn" || len(page.Records) > 20 || page.More && (len(page.Records) == 0 || page.NextID == job.endID || page.NextID == "0") {
 		return SyncInfo{}, ErrInvalid

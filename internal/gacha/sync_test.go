@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 )
 
 func syncRecord() Record {
@@ -140,5 +141,50 @@ func TestSyncKeepsOfficialUTCAndDistinctZZZReturnPools(t *testing.T) {
 	archive, err := store.Read("100000001", "prod_gf_cn")
 	if err != nil || archive.Timezone != 0 || done.Result.Total != 2 || len(Summarize(archive)) != 2 {
 		t.Fatal("UTC or independent pools lost")
+	}
+}
+
+// While a sync waits for a page, starting another sync, reading its progress
+// and canceling it answer at once; the page that arrives after the cancel is
+// not merged.
+func TestSyncsDoNotWaitForAPageBeingRead(t *testing.T) {
+	store, jobs, info := testSync(t)
+	reading, release := make(chan struct{}), make(chan struct{})
+	stepped := make(chan error, 1)
+	go func() {
+		_, err := jobs.Step(context.Background(), store, info.Ref, 0, func(ctx context.Context, pool, end string, page int) (RemotePage, error) {
+			close(reading)
+			<-release
+			return pageOnce(ctx, pool, end, page)
+		})
+		stepped <- err
+	}()
+	<-reading
+	answered := make(chan error, 1)
+	go func() {
+		_, err := jobs.Start(store, SyncChoice{AccountRef: "account", RoleRef: "other"}, "100000002", "prod_gf_cn", false)
+		if err == nil {
+			_, err = jobs.Info(info.Ref)
+		}
+		if err == nil {
+			err = jobs.Cancel(info.Ref)
+		}
+		answered <- err
+	}()
+	select {
+	case err := <-answered:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(2 * time.Second):
+		close(release)
+		t.Fatal("Start, Info or Cancel waited for the page being read")
+	}
+	close(release)
+	if err := <-stepped; !errors.Is(err, ErrSync) {
+		t.Fatalf("the step canceled while reading ended with %v", err)
+	}
+	if _, err := store.Read("100000001", "prod_gf_cn"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("a canceled sync wrote the archive")
 	}
 }
