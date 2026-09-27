@@ -38,11 +38,12 @@ type sdkHost struct {
 	// triggers.
 	types    map[string]string
 	triggers map[string]bool
-	// detached are the events moved to the background, in order; refuse
-	// makes event.detach fail as the host does at its limit of background
-	// events.
-	detached []string
-	refuse   bool
+	// detached are the events moved to the background, in order, and
+	// delivered the results their delivery ended with; refuse makes
+	// event.detach fail as the host does at its limit of background events.
+	detached  []string
+	delivered map[string]map[string]any
+	refuse    bool
 }
 
 // hostCall is a plugin.call the host routes: the request and the state of
@@ -79,7 +80,7 @@ func newSDKHost(t *testing.T, a *App, service func(hostCall) (map[string]any, st
 		finished <- rayleabot.Run(context.Background(), rayleabot.Options{Stdin: inReader, Stdout: outWriter, Stderr: io.Discard}, a)
 		outWriter.Close()
 	}()
-	h := &sdkHost{t: t, writer: hostWriter, lines: make(chan []byte, 64), service: service, jobs: map[string]map[string]any{}, types: map[string]string{}, triggers: map[string]bool{}}
+	h := &sdkHost{t: t, writer: hostWriter, lines: make(chan []byte, 64), service: service, jobs: map[string]map[string]any{}, types: map[string]string{}, triggers: map[string]bool{}, delivered: map[string]map[string]any{}}
 	t.Cleanup(func() {
 		hostWriter.Close()
 		select {
@@ -214,6 +215,7 @@ func (h *sdkHost) detach(parent string, data map[string]any) (map[string]any, st
 		return nil, "platform.rate_limited"
 	}
 	h.detached = append(h.detached, parent)
+	h.delivered[parent] = asObject(data["result"])
 	return map[string]any{"deadline_at_ms": time.Now().Add(hostDetachedTimeout).UnixMilli()}, ""
 }
 

@@ -91,8 +91,7 @@ type createdJob struct {
 
 // createJobs creates a job of each kind: through the management page the
 // stamina and challenge reminders, sign-in, monthly collection, community
-// and cloud game tasks and a background sync, and in chat 开启挑战提醒 and a
-// group push.
+// and cloud game tasks, and in chat 开启挑战提醒 and a group push.
 func createJobs(t *testing.T, host *sdkHost) []createdJob {
 	t.Helper()
 	role := func(input map[string]any) map[string]any {
@@ -120,7 +119,6 @@ func createJobs(t *testing.T, host *sdkHost) []createdJob {
 		{"monthly.task.create", "monthly.task.remove", role(map[string]any{"hour": 0})},
 		{"community.task.create", "community.task.remove", role(map[string]any{"once": true, "read": true})},
 		{"cloudgame.task.create", "cloudgame.task.remove", role(map[string]any{"once": true})},
-		{"gacha.task.create", "gacha.task.remove", role(map[string]any{"kind": "once", "hour": 8})},
 	} {
 		end, _ := host.manage(job.action, job.input)
 		created(job.remove, "", end)
@@ -145,7 +143,7 @@ func TestRemovingATaskDeletesItsJob(t *testing.T) {
 	a := pluginApp(t)
 	host := newSDKHost(t, a, (&taskAccounts{t: t}).answer)
 	jobs := createJobs(t, host)
-	if len(jobs) != 9 {
+	if len(jobs) != 8 {
 		t.Fatalf("created %d jobs", len(jobs))
 	}
 	for _, job := range jobs {
@@ -174,9 +172,6 @@ func TestATriggerWhoseTaskIsGoneDeletesItsJob(t *testing.T) {
 	host := newSDKHost(t, a, accounts.answer)
 	jobs := createJobs(t, host)
 	if err := a.Reminders.edit("", func(items *[]Reminder, _ int) error { *items = nil; return nil }); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SyncTasks.edit("", func(items *[]SyncTask, _ int) error { *items = nil; return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.Subscriptions.edit("", func(items *[]ContentSubscription, _ int) error { *items = nil; return nil }); err != nil {
@@ -244,7 +239,7 @@ func TestTriggersRunTheirTasks(t *testing.T) {
 			t.Fatalf("%s has payload %v", job.ref, host.jobs[job.ref])
 		}
 	}
-	operations := []string{"zzz.note", "zzz.deadly", "zzz.sign", "zzz.monthly", "zzz.community_run", "zzz.cloud_sign", "zzz.gacha", "zzz.challenge", ""}
+	operations := []string{"zzz.note", "zzz.deadly", "zzz.sign", "zzz.monthly", "zzz.community_run", "zzz.cloud_sign", "zzz.challenge", ""}
 	for i, job := range jobs {
 		runJob(t, a, host, accounts, &news, job.ref, operations[i])
 	}

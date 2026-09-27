@@ -157,7 +157,7 @@ func (t *chatTasks) endLocked(task *chatTask) {
 // task with the ID is still running.
 func (a *App) beginChatTask(event *rayleabot.EventContext, ref, label, kind string, lifetime time.Duration, work chatWork) *chatTask {
 	now := a.now()
-	task := &chatTask{ref: ref, work: work, owner: syncOwner(event), target: event.Event.Target, expires: now.Add(lifetime), label: label, kind: kind}
+	task := &chatTask{ref: ref, work: work, owner: Subject{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter}, target: event.Event.Target, expires: now.Add(lifetime), label: label, kind: kind}
 	if !a.ChatTasks.begin(task, now) {
 		return nil
 	}

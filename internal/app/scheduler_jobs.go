@@ -24,11 +24,6 @@ func (a *App) reminderJob(task Reminder) rayleabot.SchedulerCreateRequest {
 	return rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: cron, LogLabel: a.Game.Name + label, Payload: map[string]any{"kind": kind}}
 }
 
-// syncJob is the scheduler job of a background gacha sync.
-func (a *App) syncJob(task SyncTask) rayleabot.SchedulerCreateRequest {
-	return rayleabot.SchedulerCreateRequest{TaskID: task.Ref, Cron: "* * * * *", LogLabel: a.Game.Name + "抽卡后台同步", Payload: map[string]any{"kind": "gacha_sync"}}
-}
-
 // contentJob is the scheduler job of a group's 米游社 pushes.
 func (a *App) contentJob(ref string) rayleabot.SchedulerCreateRequest {
 	return rayleabot.SchedulerCreateRequest{TaskID: ref, Cron: "*/5 * * * *", LogLabel: a.Game.Name + "米游社推送", Payload: map[string]any{"kind": "public_content"}}

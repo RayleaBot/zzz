@@ -135,7 +135,6 @@ type App struct {
 	LinkHTTP  *http.Client
 	// flows are the long flows running now.
 	flows        flows
-	SyncTasks    *SyncTaskStore
 	Showcase     ShowcaseClient
 	Profiles     *PanelStore
 	Reminders    *ReminderStore
@@ -203,7 +202,7 @@ func New(assets Assets, directory string) (*App, error) {
 	if directory == "" {
 		return nil, fmt.Errorf("plugin data directory is required")
 	}
-	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, SyncTasks: syncTaskStore(directory), Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
+	return &App{commands: commands, images: assets.Images, queries: assets.Queries, panel: assets.Panel, damage: assets.Damage, gacha: assets.Gacha, helpImage: assets.Help, monthlyStats: assets.MonthlyStats, calendarImage: assets.Calendar, entryPage: assets.Entry, queryRankImage: assets.QueryRank, showcase: assets.Showcase, panelList: assets.PanelList, uidListImage: assets.UIDList, banners: assets.Banners, downloads: assets.Downloads, Profiles: &PanelStore{Directory: filepath.Join(directory, "profiles")}, QueryRanks: &QueryRankStore{Directory: filepath.Join(directory, "query-ranks")}, Manifest: manifest, Artwork: &artwork.Store{Root: filepath.Join(directory, "assets"), Sources: game.Artwork}, Interactions: &InteractionStore{Path: filepath.Join(directory, "interactions.json")}, GuideSettings: &GuideSettings{Path: filepath.Join(directory, "guides.json")}, Subscriptions: &ContentSubscriptions{Path: filepath.Join(directory, "content-subscriptions.json")}, Monthly: &MonthlyStore{Directory: filepath.Join(directory, "monthly")}, Game: game, Catalog: catalog, BuildPresets: &BuildPresetStore{Path: buildPresetPath(directory)}, Gacha: &gacha.Store{Directory: filepath.Join(directory, "gacha"), Game: game.ID}, Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory), PanelImages: &PanelImages{Directory: filepath.Join(directory, panelImagesDir)}, PanelHistory: &PanelHistoryStore{Directory: filepath.Join(directory, "panels")}, Groups: &GroupStore{Directory: filepath.Join(directory, "groups")}}, nil
 }
 func settings(event *rayleabot.EventContext) Settings {
 	value := Settings{AccountProvider: "raylea.mihoyo-accounts", ImageReplies: true, CustomAliases: map[string]string{}, ChallengeRemind: true, ChallengeRemindTime: "每日20时", ChallengeAbyssLevel: 5, ChallengeDeadlyStars: 6, GroupRank: true, PanelInterval: 60, PanelRoleInterval: 3000, DeviceURL: defaultDeviceURL}
@@ -274,8 +273,6 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		switch {
 		case strings.HasPrefix(task, "game.content."):
 			return a.runContentSubscription(ctx, event)
-		case strings.HasPrefix(task, "game.sync."):
-			return a.runSyncTask(ctx, event)
 		case strings.HasPrefix(task, artworkTask):
 			return a.runChatTask(ctx, event)
 		}
@@ -285,10 +282,13 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if event.Event.SourceProtocol != "management" || event.Event.SourceAdapter != "management.ui" {
 			return event.Fail("plugin.game_source_invalid", "管理动作来源无效。")
 		}
-		result, err := a.Manage(ctx, event, asText(event.Event.Payload["action"]), asObject(event.Event.Payload["payload"]))
+		action, input := asText(event.Event.Payload["action"]), asObject(event.Event.Payload["payload"])
+		if action == "gacha.sync.background" {
+			return a.backgroundSync(ctx, event, input)
+		}
+		result, err := a.Manage(ctx, event, action, input)
 		if err != nil {
-			failure := PublicError(err)
-			return event.FailDetails(failure.Code, failure.Message, failure.Details)
+			return manageFailure(event, err)
 		}
 		return event.Result(result)
 	}
@@ -367,7 +367,7 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 	case "challenge-enable", "challenge-check", "challenge-threshold", "challenge-time", "challenge-time-reset", "challenge-time-status", "challenge-global-switch", "challenge-global-threshold", "challenge-global-time", "challenge-global-time-status":
 		return a.challengePairCommand(ctx, event, command, args)
 	case "gacha-background":
-		return a.syncTaskCommand(ctx, event, args)
+		return a.gachaRefresh(ctx, event, args)
 	case "community-progress":
 		return a.communityProgress(ctx, event)
 	case "community-task", "community-stop", "cloud-game-task", "cloud-game-stop":
@@ -724,9 +724,6 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 		if strings.HasPrefix(action, "gacha.sync.") {
 			return a.manageSync(ctx, event, action, input)
 		}
-		if strings.HasPrefix(action, "gacha.task.") {
-			return a.syncTaskAction(ctx, event, action, input)
-		}
 		if strings.HasPrefix(action, "gacha.") {
 			return a.manageGacha(action, input)
 		}
@@ -776,12 +773,7 @@ func (a *App) manageGacha(action string, input map[string]any) (map[string]any, 
 		}
 		return versionDraws(a.bannerGame(), archive), nil
 	case "gacha.remove":
-		var err error
-		if a.SyncTasks != nil {
-			err = a.SyncTasks.RemoveArchive(&a.Syncs, a.Gacha, uid, region)
-		} else {
-			err = a.Gacha.Remove(uid, region)
-		}
+		err := a.Gacha.Remove(uid, region)
 		return map[string]any{"removed": err == nil}, err
 	case "gacha.import.start":
 		var archive gacha.Archive
@@ -836,6 +828,12 @@ func (a *App) manageGacha(action string, input map[string]any) (map[string]any, 
 		return map[string]any{"records": records, "more": more}, err
 	}
 	return nil, gameError("operation_denied", "抽卡操作不存在。")
+}
+
+// manageFailure ends a management action with its failure.
+func manageFailure(event *rayleabot.EventContext, err error) error {
+	failure := PublicError(err)
+	return event.FailDetails(failure.Code, failure.Message, failure.Details)
 }
 
 func friendlyError(err error) string {
