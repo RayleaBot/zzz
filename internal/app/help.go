@@ -10,7 +10,8 @@ import (
 )
 
 // help lists the commands the requester may use, and the same list grouped
-// for a plugin help image.
+// for a plugin help image; query, the management page's search, keeps the
+// commands whose name, description or usage holds it.
 func (a *App) help(event *rayleabot.EventContext, query string) (map[string]any, HelpImage, error) {
 	m := a.Manifest
 	disabled := false
@@ -81,10 +82,15 @@ func (a *App) help(event *rayleabot.EventContext, query string) (map[string]any,
 	return map[string]any{"plugin": m, "commands": commands, "catalog_version": a.Catalog.Version, "resource_version": resourceVersion(a.Game), "group_enabled": !disabled, "view": view}, image, nil
 }
 func (a *App) helpCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
+	// Upstream's rules end at the word: with more after it, as in the help
+	// another bot answers in the chat, the message is not the command.
+	if len(args) > 0 {
+		return event.Result(map[string]any{"handled": false})
+	}
 	if command == "version" {
 		return a.sendView(ctx, event, View{Title: a.Game.Name + "版本", Rows: []Row{{"插件", a.Manifest.Version}, {"最低宿主", a.Manifest.MinCoreVersion}, {"图鉴", a.Catalog.Version}, {"材料与卡池", resourceVersion(a.Game)}, {"许可", a.Manifest.License}}, Note: "插件通过宿主的安装/更新入口替换正式安装包。公开资料查询获取最新官方结果，本地固定资料随插件版本更新。"})
 	}
-	out, image, err := a.help(event, strings.Join(args, " "))
+	out, image, err := a.help(event, "")
 	if err != nil {
 		return event.SendText(friendlyError(err))
 	}

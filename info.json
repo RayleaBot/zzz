@@ -1018,8 +1018,8 @@
     {
       "id": "help",
       "name": "帮助",
-      "description": "查看全部命令，可按关键词筛选",
-      "usage": "#帮助 [关键词]",
+      "description": "查看全部命令",
+      "usage": "#帮助",
       "permission": "everyone",
       "trigger": {
         "type": "exact",
