@@ -78,7 +78,7 @@ func artworkStatusText(statuses []artwork.Status) string {
 			line += "未下载"
 		}
 		if status.Error != "" {
-			line += "\n  上次下载失败：" + status.Error
+			line += "\n  上次下载失败，请在插件管理页查看详情。"
 		}
 		lines = append(lines, line)
 	}

@@ -45,7 +45,10 @@ func (a *App) poolCommand(ctx context.Context, event *rayleabot.EventContext, co
 	}
 	records, _, err := a.banners(ctx)
 	if err != nil {
-		return event.SendText("卡池历史记录数据获取失败: " + err.Error())
+		_, _ = event.Actions().LoggerWrite(ctx, rayleabot.LoggerWriteRequest{
+			Level: "warn", Message: "卡池历史记录数据获取失败", Fields: map[string]any{"error": err.Error()},
+		})
+		return event.SendText("卡池历史记录数据获取失败，请稍后重试。")
 	}
 	send := func(segments []rayleabot.Segment) error {
 		return event.Send(event.Event.Target.Type, event.Event.Target.ID, segments...)
