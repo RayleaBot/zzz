@@ -248,7 +248,7 @@ func (a *App) refreshMonthly(ctx context.Context, client AccountsClient, choice 
 	if err != nil {
 		return err
 	}
-	now := time.Now()
+	now := a.now()
 	if err := a.Monthly.Keep(client.Provider, choice, current.Data, now); err != nil {
 		return err
 	}

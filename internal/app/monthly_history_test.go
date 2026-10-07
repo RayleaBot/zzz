@@ -125,7 +125,8 @@ func TestRefreshMonthlyKeepsOfferedMonthsNotYetFinal(t *testing.T) {
 	caller := &monthsCaller{role: role, months: map[string]map[string]any{"": month(202609), "202607": month(202607), "202608": month(202608)}}
 	client := AccountsClient{Caller: caller, Provider: "p", Game: "zzz"}
 	choice := Selection{"account", "role"}
-	a := App{Game: Game{ID: "zzz"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}}
+	// The refresh runs in September, the month the report reads by default.
+	a := App{Game: Game{ID: "zzz"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}, clock: &fakeClock{at: time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)}}
 	// July was saved after it ended, August while it ran.
 	august := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
 	if err := a.Monthly.Keep("p", choice, month(202607), august); err != nil {
