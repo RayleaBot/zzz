@@ -3,7 +3,7 @@ package images
 import (
 	"strings"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // helpIcons gives each group, by id, the attribute icon of ZZZ-Plugin's help

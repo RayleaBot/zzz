@@ -10,7 +10,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 // A 每日同步 is a role's periodic background sync the management page

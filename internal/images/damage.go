@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // damageArea is one column of the damage area table: upstream's label, the

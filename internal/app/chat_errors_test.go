@@ -14,7 +14,7 @@ import (
 
 	"context"
 	"errors"
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/artwork"
 	"net"
 )
 

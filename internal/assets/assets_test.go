@@ -3,7 +3,7 @@ package assets
 import (
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // The plugin starts exactly this way; a manifest or data change that the shared

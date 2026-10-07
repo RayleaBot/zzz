@@ -1,6 +1,6 @@
 package images
 
-import "github.com/RayleaBot/plugin-zzz/internal/app"
+import "github.com/RayleaBot/zzz/internal/app"
 
 // Card draws 卡片 and 角色, one command upstream, the way ZZZ-Plugin's card
 // page does: the player card with the world level as its label, days active,

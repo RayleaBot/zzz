@@ -9,8 +9,8 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 const timeLayout = "2006-01-02 15:04:05"

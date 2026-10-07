@@ -5,12 +5,12 @@ import (
 	"embed"
 	"io/fs"
 
-	plugin "github.com/RayleaBot/plugin-zzz"
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/banners"
-	"github.com/RayleaBot/plugin-zzz/internal/images"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
-	"github.com/RayleaBot/plugin-zzz/internal/showcase"
+	plugin "github.com/RayleaBot/zzz"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/banners"
+	"github.com/RayleaBot/zzz/internal/images"
+	"github.com/RayleaBot/zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/showcase"
 )
 
 //go:embed catalog.json

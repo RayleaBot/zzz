@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // monthlyArtwork is what monthly adds.

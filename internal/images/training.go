@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // trainingArtwork is what proficiency adds.

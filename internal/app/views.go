@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 type Row struct {

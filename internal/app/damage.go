@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 )
 
 // DamageResult is ZZZ-Plugin's damage calculation of one panel, as the

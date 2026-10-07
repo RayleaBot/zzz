@@ -16,7 +16,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 type MonthlySnapshot struct {

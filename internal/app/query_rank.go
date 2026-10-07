@@ -13,7 +13,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 // Query ranks follow ZZZ-Plugin's group rankings: a member who queries one of

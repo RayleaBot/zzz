@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // zenkovArtwork maps the images the zenkov pages name to ZZZ-Plugin's paths.

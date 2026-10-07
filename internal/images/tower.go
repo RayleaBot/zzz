@@ -1,6 +1,6 @@
 package images
 
-import "github.com/RayleaBot/plugin-zzz/internal/app"
+import "github.com/RayleaBot/zzz/internal/app"
 
 // Tower draws the Simulated Battle Trial the way ZZZ-Plugin's climbingTower
 // page does: the player card and each season played with its medal, floor,

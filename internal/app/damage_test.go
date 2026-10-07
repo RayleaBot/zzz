@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 )
 
 // damagePanel is a fixture agent's official entry as a kept panel.

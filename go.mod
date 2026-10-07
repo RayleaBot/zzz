@@ -1,4 +1,4 @@
-module github.com/RayleaBot/plugin-zzz
+module github.com/RayleaBot/zzz
 
 go 1.26.6
 

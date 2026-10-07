@@ -1,6 +1,6 @@
 package images
 
-import "github.com/RayleaBot/plugin-zzz/internal/app"
+import "github.com/RayleaBot/zzz/internal/app"
 
 // Exploration draws 区域收集 the way ZZZ-Plugin's explorationDetail page
 // does: the player card, then each area's completion with its sub-areas, each

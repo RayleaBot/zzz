@@ -13,7 +13,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 // ZZZ-Plugin's remind app: 开启挑战提醒 checks 式舆防卫战 by the floors rated

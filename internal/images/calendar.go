@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 var calendarPicture = regexp.MustCompile(`<img.*?src="(.*?)".*?>`)

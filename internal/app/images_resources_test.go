@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/artwork"
 )
 
 func TestImageResourcesAddEachFileOnce(t *testing.T) {

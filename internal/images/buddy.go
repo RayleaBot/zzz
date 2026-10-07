@@ -3,7 +3,7 @@ package images
 import (
 	"strconv"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // buddyArtwork are the number font and pictures the converted Yunzai buddy

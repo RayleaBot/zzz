@@ -8,7 +8,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/artwork"
 )
 
 // artworkCommand starts downloads or reports their progress. A download runs

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 func TestCardFollowsZZZPlugin(t *testing.T) {

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 // A signal search link sent in a private chat is read as ZZZ-Plugin's

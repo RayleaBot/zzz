@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 )
 
 func TestConditionScopeAndPresetRevision(t *testing.T) {

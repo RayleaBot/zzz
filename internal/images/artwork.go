@@ -2,7 +2,7 @@ package images
 
 import (
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // The tables below map the images named in each stylesheet, converted from

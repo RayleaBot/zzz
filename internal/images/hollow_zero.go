@@ -3,7 +3,7 @@ package images
 import (
 	"fmt"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // talentIcon is the official image ZZZ-Plugin shows for the combat talents.

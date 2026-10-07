@@ -13,7 +13,7 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 // Yunzai's 米游社推送 (mysNews): a group administrator turns on 公告 and 资讯

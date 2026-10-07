@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/artwork"
 )
 
 // artworkMirror serves every file of an on-demand source but those named

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/pluginmeta"
+	"github.com/RayleaBot/zzz/internal/pluginmeta"
 )
 
 // help lists the commands the requester may use, and the same list grouped

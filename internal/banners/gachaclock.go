@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // dataURL is ZZZ-Plugin's DATA_URL.

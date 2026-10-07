@@ -3,7 +3,7 @@ package images
 import (
 	"fmt"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // holoBossArtwork is what holoBoss adds.

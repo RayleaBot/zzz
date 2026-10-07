@@ -9,8 +9,8 @@ import (
 	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 // Image is a reply drawn with one of the game plugin's own templates, laid out

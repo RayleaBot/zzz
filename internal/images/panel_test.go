@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/images"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/images"
 )
 
 func TestPanelFollowsZZZPluginRules(t *testing.T) {

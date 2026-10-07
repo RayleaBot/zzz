@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 func TestGachaFilesRoundTripAndFillRecords(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // Downloads lists the pictures the templates fetch on demand, for every

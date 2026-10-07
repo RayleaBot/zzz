@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/pluginmeta"
+	"github.com/RayleaBot/zzz/internal/pluginmeta"
 )
 
 func TestCommandSetFollowsHostMatchingOrder(t *testing.T) {

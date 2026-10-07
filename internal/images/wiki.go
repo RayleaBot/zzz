@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // nanoka reads ZZZ-Plugin's wiki data source: static.nanoka.cc publishes each

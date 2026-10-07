@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // propertyClasses are ZZZ-Plugin's icon classes by the first three digits of

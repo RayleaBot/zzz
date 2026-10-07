@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/assets"
-	"github.com/RayleaBot/plugin-zzz/internal/showcase"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/assets"
+	"github.com/RayleaBot/zzz/internal/showcase"
 )
 
 // The fixture follows an Enka answer's shape with one drive disc; its values

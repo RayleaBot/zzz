@@ -3,7 +3,7 @@ package assets
 import (
 	"context"
 	"encoding/json"
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 	"math"
 	"os"
 	"testing"

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 type GuideSource struct {

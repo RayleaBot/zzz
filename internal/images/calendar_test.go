@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/artwork"
 )
 
 func TestCalendarShowsTheOfficialCalendarPicture(t *testing.T) {

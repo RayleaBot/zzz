@@ -1,6 +1,6 @@
 package images
 
-import "github.com/RayleaBot/plugin-zzz/internal/app"
+import "github.com/RayleaBot/zzz/internal/app"
 
 // deadlyArtwork is what deadly adds.
 var deadlyArtwork = [][2]string{

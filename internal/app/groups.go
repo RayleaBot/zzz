@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 	"os"
 	"path/filepath"
 	"slices"

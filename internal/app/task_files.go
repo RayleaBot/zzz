@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 // storedTask is a scheduled task kept in its own file.

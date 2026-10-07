@@ -1,6 +1,6 @@
 package images
 
-import "github.com/RayleaBot/plugin-zzz/internal/app"
+import "github.com/RayleaBot/zzz/internal/app"
 
 // voidFrontArtwork is what voidFrontBattle adds.
 var voidFrontArtwork = [][2]string{

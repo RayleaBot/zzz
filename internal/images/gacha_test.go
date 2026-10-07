@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 func TestGachaFollowsZZZPlugin(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/reference"
+	"github.com/RayleaBot/zzz/internal/reference"
 )
 
 // pluginFile reads a file of this plugin, for tests that need the shipped

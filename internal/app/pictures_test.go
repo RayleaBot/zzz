@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/RayleaBot/plugin-zzz/internal/artwork"
+	"github.com/RayleaBot/zzz/internal/artwork"
 )
 
 func writeArtwork(t *testing.T, root, name, content string) {

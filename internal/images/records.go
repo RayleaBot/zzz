@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // recordResources collects a record image's resources: ZZZ-Plugin art and the

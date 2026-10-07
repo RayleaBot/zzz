@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/gacha"
+	"github.com/RayleaBot/zzz/internal/gacha"
 )
 
 type BannerAppearance struct {

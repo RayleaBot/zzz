@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/RayleaBot/plugin-zzz/internal/localdata"
+	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 type BuildConditions struct {

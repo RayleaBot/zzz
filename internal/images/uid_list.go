@@ -1,7 +1,7 @@
 package images
 
 import (
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // uidListArtwork maps the images named in the converted stylesheets (miao's

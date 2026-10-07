@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RayleaBot/plugin-zzz/internal/app"
+	"github.com/RayleaBot/zzz/internal/app"
 )
 
 // rankPage is one of ZZZ-Plugin's rank pages: what it keeps of a record and
