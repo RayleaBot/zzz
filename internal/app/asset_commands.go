@@ -11,7 +11,7 @@ func (a *App) assetCommand(ctx context.Context, event *rayleabot.EventContext, c
 		if err != nil {
 			return event.SendText(friendlyError(err))
 		}
-		return a.sendView(ctx, event, a.codesView(data))
+		return event.SendText(a.codesView(data).Text())
 	}
 	if len(args) < 1 || len(args) > 2 {
 		return event.SendText("使用“" + a.Game.Prefix + "兑换 代码 [UID]”确认兑换。")
