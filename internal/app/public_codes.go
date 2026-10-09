@@ -100,11 +100,21 @@ func extractPublicActs(value any) []string {
 }
 func (c PublicContentClient) codes(ctx context.Context) (map[string]any, error) {
 	gid, author := "8", "152039148"
-	nav, err := c.get(ctx, "https://bbs-api.miyoushe.com/apihub/api/home/new?gids="+gid+"&parts=1%2C3%2C4", nil)
+	params := url.Values{"gids": {gid}, "parts": {"1,3,4"}, "device": {"OnePlus IN2025"}, "cpu": {"placeholder"}, "version": {"3"}}
+	nav, err := c.get(ctx, "https://bbs-api.mihoyo.com/apihub/api/home/new?"+params.Encode(), nil)
 	if err != nil {
 		return nil, err
 	}
-	acts := extractPublicActs(nav["navigator"])
+	livePaths := []any{}
+	navigator, _ := nav["navigator"].([]any)
+	for _, item := range navigator {
+		entry := asObject(item)
+		name := asText(entry["name"])
+		if strings.Contains(name, "前瞻") || strings.Contains(name, "直播") || strings.Contains(name, "兑换码") {
+			livePaths = append(livePaths, entry["app_path"])
+		}
+	}
+	acts := extractPublicActs(livePaths)
 	if len(acts) == 0 {
 		posts, err := c.get(ctx, "https://bbs-api.mihoyo.com/painter/api/user_instant/list?offset=0&size=20&uid="+author, nil)
 		if err != nil {

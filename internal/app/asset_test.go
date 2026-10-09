@@ -22,15 +22,23 @@ func TestPublicCodesFixedSourcesEstimatedExpiryAndNoCredentials(t *testing.T) {
 		data := ""
 		switch r.URL.Path {
 		case "/apihub/api/home/new":
-			data = `{"navigator":[{"url":"https://act.mihoyo.com/?act_id=ABC123"}]}`
+			if r.URL.Host != "bbs-api.mihoyo.com" {
+				return nil, io.ErrUnexpectedEOF
+			}
+			for key, want := range map[string]string{"gids": "8", "parts": "1,3,4", "device": "OnePlus IN2025", "cpu": "placeholder", "version": "3"} {
+				if got := r.URL.Query().Get(key); got != want {
+					t.Errorf("navigation query %s = %q, want %q", key, got, want)
+				}
+			}
+			data = `{"navigator":[{"name":"签到福利","app_path":"https://act.mihoyo.com/?act_id=SIGN123"},{"name":"3.3前瞻","app_path":"https://webstatic.mihoyo.com/bbs/event/live/index.html?act_id=ABC123&game_biz=nap"}]}`
 		case "/event/miyolive/index":
 			if r.Header.Get("x-rpc-act_id") != "ABC123" {
 				t.Fatal("wrong act")
 			}
 			data = `{"live":{"code_ver":"v1","title":"前瞻"}}`
 		case "/event/miyolive/refreshCode":
-			if r.URL.Query().Get("time") == "" {
-				t.Fatal("missing time")
+			if r.URL.Query().Get("time") == "" || r.URL.Query().Get("version") != "v1" || r.Header.Get("x-rpc-act_id") != "ABC123" {
+				t.Fatal("incorrect code request")
 			}
 			data = `{"code_list":[{"code":"TEST1234","title":"奖励","to_get_time":1720000000},{"code":"TEST1234"},{"code":"<script>"}]}`
 		default:
