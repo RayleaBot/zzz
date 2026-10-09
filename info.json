@@ -10,6 +10,13 @@
     "description": "绝区零独立查询、离线图鉴、公开展柜与抽卡档案",
     "author": "raylea"
   },
+  "dependencies": [
+    {
+      "id": "raylea.mihoyo-accounts",
+      "requirement": "recommended",
+      "reason": "绑定 UID、便笺、签到与抽卡同步等账号功能需要米游社账号"
+    }
+  ],
   "concurrency": 4,
   "command_prefixes": {
     "dedicated": [
