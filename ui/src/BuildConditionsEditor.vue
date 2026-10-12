@@ -24,7 +24,7 @@ async function remove(){const p=selected.value;if(!p)return;busy.value=true;erro
 <template>
  <section class="build-conditions">
   <label class="check"><input type="checkbox" :checked="modelValue!==null" :disabled="disabled||busy" @change="enabled">建立自定义队伍与条件候选</label>
-  <div class="plan-picker"><label>本角色已保存方案（全局）<select v-model="preset" :disabled="disabled||busy"><option value="">选择方案</option><option v-for="p in available" :key="p.ref" :value="p.ref">{{p.name}}</option></select></label><button type="button" :disabled="!selected||disabled||busy" @click="loadPreset">载入方案</button></div>
+  <div class="plan-picker"><label>本角色已保存方案<select v-model="preset" :disabled="disabled||busy"><option value="">选择方案</option><option v-for="p in available" :key="p.ref" :value="p.ref">{{p.name}}</option></select></label><button type="button" :disabled="!selected||disabled||busy" @click="loadPreset">载入方案</button></div>
   <fieldset v-if="modelValue" :disabled="disabled||busy"><legend class="sr-only">自定义候选条件</legend>
    <p class="hint">基准保留原参考情境。候选应用下列数值；队友只标记增益来源，请按实际技能与装备填写，未填写的增益不会自动补满。静态面板和装备主副属性保留。</p>
    <div class="condition-flags"><label class="check"><input type="checkbox" :checked="modelValue.disable_character" @change="update(c=>c.disable_character=($event.target as HTMLInputElement).checked)">关闭角色局内参考增益</label><label class="check"><input type="checkbox" :checked="modelValue.disable_weapon" @change="update(c=>c.disable_weapon=($event.target as HTMLInputElement).checked)">关闭武器局内参考增益</label><label class="check"><input type="checkbox" :checked="modelValue.disable_equipment" @change="update(c=>c.disable_equipment=($event.target as HTMLInputElement).checked)">关闭套装局内参考增益</label></div>
