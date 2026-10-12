@@ -13,7 +13,7 @@ func TestQueryRankKeepsRecordsAndMembersChoices(t *testing.T) {
 		{ID: "DEADLY", Page: "deadly", Operation: "zzz.deadly", Words: "危局"},
 		{ID: "ABYSS", Page: "abyss", Operation: "zzz.challenge", Words: "式舆|深渊"},
 	}}, Groups: &GroupStore{Directory: directory + "/groups"}, QueryRanks: &QueryRankStore{Directory: directory + "/ranks"}}
-	event := &rayleabot.EventContext{Event: rayleabot.Event{EventType: "message.group", SourceProtocol: "onebot11", SourceAdapter: "a", Actor: rayleabot.Actor{ID: "10001"}, Target: rayleabot.Target{Type: "group", ID: "g"}}, Bot: rayleabot.Bot{ID: "bot"}}
+	event := &rayleabot.EventContext{Event: rayleabot.Event{EventType: "message.group", SourceProtocol: "onebot11", SourceAdapter: "a", BotID: "bot", Actor: rayleabot.Actor{ID: "10001"}, Target: rayleabot.Target{Type: "group", ID: "g"}}, Bot: rayleabot.Bot{ID: "bot"}}
 	result := QueryResult{Role: Role{UID: "10000001", Nickname: "绳匠"}, Data: map[string]any{"has_data": true}}
 	a.recordQueryRank(event, "zzz.deadly", result)
 	scope := groupScope(event)

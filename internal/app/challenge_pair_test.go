@@ -69,7 +69,7 @@ func TestChallengePairTicksAndFollowsSettings(t *testing.T) {
 	a := &App{Reminders: reminderStore(directory), ChallengePrefs: challengePreferences(directory)}
 	china := time.FixedZone("UTC+8", 8*3600)
 	now := time.Date(2026, 9, 21, 20, 0, 0, 0, china).UnixMilli()
-	owner, other := Subject{"onebot11", "a", "bot", "1"}, Subject{"onebot11", "a", "bot", "2"}
+	owner, other := Subject{"onebot11", "", "bot", "1"}, Subject{"onebot11", "", "bot", "2"}
 	expires := now + int64(7*24*time.Hour/time.Millisecond)
 	tasks := []Reminder{
 		{Ref: "pair", Kind: "challenge", ChallengeKind: "challenge", Metric: "s_layers", Threshold: 5, DeadlyThreshold: 9, Pair: true, Owner: owner, Enabled: true, Hour: 20, ExpiresAtMS: expires},
@@ -159,7 +159,7 @@ func (c *pairCaller) CallService(_ context.Context, req rayleabot.ServiceCallReq
 	case "roles":
 		return decodeObject(map[string]any{"roles": []Role{role}}, out)
 	case "list":
-		return decodeObject(Accounts{Items: []Account{{Ref: "account", Owner: Subject{"onebot11", "a", "bot", "1"}, Roles: []Role{role}}}}, out)
+		return decodeObject(Accounts{Items: []Account{{Ref: "account", Owner: Subject{"onebot11", "", "bot", "1"}, Roles: []Role{role}}}}, out)
 	case "delegation.create":
 		operation := asText(req.Params["operation"])
 		if operation == c.failOperation {

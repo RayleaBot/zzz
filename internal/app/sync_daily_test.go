@@ -48,7 +48,9 @@ func TestDailySyncReadsEveryPageInADetachedTrigger(t *testing.T) {
 	if len(accounts.grants) != 1 || grant["operation"] != "zzz.gacha" || grant["task_id"] != ref || grant["days"] != float64(7) || host.created[0]["cron"] != "*/5 * * * *" {
 		t.Fatalf("granted %v, created %v", accounts.grants, host.created)
 	}
-	if end, _ := host.trigger(ref); end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2"}) {
+	end, actions := host.trigger(ref)
+	assertAccountMessages(t, actions)
+	if end["type"] != "result" || !slices.Equal(host.detached, []string{"scheduler-2"}) {
 		t.Fatalf("the trigger ended with %v, detached %v", end, host.detached)
 	}
 	checkSyncReads(t, a, accounts, "scheduler-2")

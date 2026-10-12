@@ -258,7 +258,7 @@ func (h *sdkHost) chat(target map[string]any, text, command string, args ...stri
 	h.t.Helper()
 	h.next++
 	id := fmt.Sprintf("chat-%d", h.next)
-	event := map[string]any{"event_id": id, "event_type": "message." + asText(target["type"]), "source_protocol": "onebot11", "source_adapter": "a", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u", "role": "admin"}, "target": target, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}}
+	event := map[string]any{"event_id": id, "event_type": "message." + asText(target["type"]), "source_protocol": "onebot11", "source_adapter": "a", "bot_id": "bot", "timestamp": time.Now().Unix(), "actor": map[string]any{"id": "u", "role": "admin"}, "target": target, "message": map[string]any{"plain_text": text, "segments": []any{map[string]any{"type": "text", "data": map[string]any{"text": text}}}}}
 	if command != "" {
 		event["payload"] = map[string]any{"command": command, "args": args}
 	}

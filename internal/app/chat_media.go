@@ -147,7 +147,7 @@ func (a *App) sendForward(ctx context.Context, event *rayleabot.EventContext, pa
 				}
 				messages = append(messages, rayleabot.ForwardMessage{"type": "node", "data": map[string]any{"user_id": event.Bot.ID, "nickname": a.Game.Name, "content": content}})
 			}
-			if _, err := event.Actions().MessageForwardSend(ctx, rayleabot.MessageForwardSendRequest{TargetType: rayleabot.ConversationType(event.Event.Target.Type), TargetID: event.Event.Target.ID, Messages: messages}); err == nil {
+			if _, err := event.Actions().ForOneBotAccount(event.Event.BotID).MessageForwardSend(ctx, rayleabot.MessageForwardSendRequest{TargetType: rayleabot.ConversationType(event.Event.Target.Type), TargetID: event.Event.Target.ID, Messages: messages}); err == nil {
 				continue
 			}
 		}
@@ -158,7 +158,9 @@ func (a *App) sendForward(ctx context.Context, event *rayleabot.EventContext, pa
 			}
 			segments = append(segments, part...)
 		}
-		_, _ = event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, TargetType: event.Event.Target.Type, TargetID: event.Event.Target.ID, Message: rayleabot.MessageOut{Segments: segments}})
+		if address, ok := event.Address(); ok {
+			_, _ = event.Actions().SendTo(ctx, address, segments...)
+		}
 	}
 	return event.Result(map[string]any{"handled": true})
 }

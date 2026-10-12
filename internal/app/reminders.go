@@ -160,7 +160,7 @@ func (a *App) removeDelegatedTask(ctx context.Context, event *rayleabot.EventCon
 			return gameError("reminder_missing", "提醒不存在或已移除。")
 		}
 		task = (*items)[i]
-		if event.Event.EventType != "management.action" && task.Owner != (Subject{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, BotID: event.Bot.ID, ActorID: event.Event.Actor.ID}) {
+		if event.Event.EventType != "management.action" && task.Owner.identity() != chatOwner(event) {
 			return gameError("source_invalid", "只能移除自己的提醒。")
 		}
 		*items = slices.Delete(*items, i, i+1)
@@ -327,17 +327,10 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 		err := client.call(ctx, "execute", params, &result)
 		return result, err
 	}, func(task Reminder, text string) error {
-		found := false
-		for _, bot := range event.Bots {
-			if bot.ID == task.Owner.BotID && bot.SourceProtocol == task.Owner.SourceProtocol && bot.SourceAdapter == task.Owner.SourceAdapter {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !accountOnline(task.Owner.SourceProtocol, task.Owner.BotID, event.Bots) {
 			return gameError("bot_missing", "提醒所属机器人当前不可用。")
 		}
-		_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: task.Owner.SourceProtocol, SourceAdapter: task.Owner.SourceAdapter, TargetType: "private", TargetID: task.Owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+		_, err := event.Actions().SendTo(ctx, rayleabot.Address{SourceProtocol: task.Owner.SourceProtocol, BotID: task.Owner.BotID, TargetType: "private", TargetID: task.Owner.ActorID}, rayleabot.Text(text))
 		return err
 	}, a.Game)
 	if errors.Is(err, errTaskMissing) {

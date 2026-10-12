@@ -274,7 +274,7 @@ func (s *ReminderStore) tickChallenge(task *Reminder, now int64, query func(Remi
 	return s.save(*task)
 }
 func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
-	owner := Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
+	owner := chatOwner(event)
 	if command == "challenge-stop" || command == "challenge-status" {
 		if len(args) > 1 {
 			return event.SendText("格式：" + a.Game.Prefix + map[string]string{"challenge-stop": "关闭挑战提醒", "challenge-status": "挑战提醒状态"}[command] + " [UID]。")
@@ -285,7 +285,7 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 		}
 		lines := []string{}
 		for _, task := range items {
-			if task.Kind != "challenge" || task.Owner != owner || len(args) == 1 && args[0] != task.Role.UID {
+			if task.Kind != "challenge" || task.Owner.identity() != owner.identity() || len(args) == 1 && args[0] != task.Role.UID {
 				continue
 			}
 			if command == "challenge-status" {

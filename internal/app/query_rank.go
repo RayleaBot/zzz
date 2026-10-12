@@ -251,7 +251,7 @@ func (a *App) groupMembers(ctx context.Context, event *rayleabot.EventContext, s
 	if scope.Protocol != "onebot11" {
 		return nil, false
 	}
-	result, err := event.Actions().GroupMemberList(ctx, scope.GroupID)
+	result, err := event.Actions().ForOneBotAccount(scope.BotID).GroupMemberList(ctx, scope.GroupID)
 	if err != nil {
 		return nil, false
 	}

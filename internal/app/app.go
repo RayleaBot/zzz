@@ -170,6 +170,7 @@ type App struct {
 	banners        BannerSource
 	downloads      ArtworkGroupsBuilder
 	usageOnce      sync.Once
+	addresses      addressMigration
 	// clock is nil for the wall clock.
 	clock clock
 }
@@ -260,6 +261,10 @@ func (a *App) routedQuery(operation Operation, query string) (string, Operation)
 }
 
 func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
+	if err := a.migrateAddresses(ctx, event); err != nil {
+		_, _ = event.Actions().LoggerWrite(ctx, rayleabot.LoggerWriteRequest{Level: "error", Message: "机器人账号迁移失败，本次操作已停止；请检查插件数据目录和调度服务后重试。", Fields: map[string]any{"error": err.Error()}})
+		return event.Fail("plugin.game_address_migration_failed", "机器人账号迁移失败，请检查日志后重试。")
+	}
 	// Replies name commands with the first prefix the host gives this plugin;
 	// the list is fixed for the process session.
 	a.usageOnce.Do(func() {

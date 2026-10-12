@@ -16,13 +16,13 @@ import (
 
 type GroupScope struct {
 	Protocol string `json:"source_protocol"`
-	Adapter  string `json:"source_adapter"`
+	Adapter  string `json:"source_adapter,omitempty"`
 	BotID    string `json:"bot_id"`
 	GroupID  string `json:"group_id"`
 }
 
 func (s GroupScope) valid() bool {
-	for _, v := range []string{s.Protocol, s.Adapter, s.BotID, s.GroupID} {
+	for _, v := range []string{s.Protocol, s.BotID, s.GroupID} {
 		if v == "" || len(v) > 256 {
 			return false
 		}
@@ -30,7 +30,7 @@ func (s GroupScope) valid() bool {
 	return true
 }
 func groupScope(event *rayleabot.EventContext) GroupScope {
-	return GroupScope{Protocol: event.Event.SourceProtocol, Adapter: event.Event.SourceAdapter, BotID: event.Bot.ID, GroupID: event.Event.Target.ID}
+	return GroupScope{Protocol: event.Event.SourceProtocol, BotID: event.Event.BotID, GroupID: event.Event.Target.ID}
 }
 
 type GroupConfig struct {
@@ -57,7 +57,7 @@ type GroupStore struct {
 }
 
 func (s *GroupStore) file(scope GroupScope) string {
-	raw, _ := json.Marshal(scope)
+	raw, _ := json.Marshal(scope.identity())
 	sum := sha256.Sum256(raw)
 	return filepath.Join(s.Directory, hex.EncodeToString(sum[:])+".json")
 }
@@ -67,12 +67,13 @@ func (s *GroupStore) read(scope GroupScope) (GroupData, error) {
 	}
 	data := GroupData{Scope: scope, Config: GroupConfig{Aliases: map[string]string{}}, Rank: []RankEntry{}}
 	err := localdata.Read(s.file(scope), &data)
-	if data.Scope != scope {
+	if data.Scope.identity() != scope.identity() {
 		return GroupData{}, gameError("source_invalid", "群记录身份不一致。")
 	}
 	return data, err
 }
 func (s *GroupStore) Read(scope GroupScope) (GroupData, error) {
+	scope = scope.identity()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.read(scope)
@@ -80,6 +81,7 @@ func (s *GroupStore) Read(scope GroupScope) (GroupData, error) {
 
 // Config is a group's settings.
 func (s *GroupStore) Config(scope GroupScope) (GroupConfig, error) {
+	scope = scope.identity()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if config, ok := s.configs[scope]; ok {
@@ -101,6 +103,7 @@ func (s *GroupStore) remember(scope GroupScope, config GroupConfig) {
 }
 
 func (s *GroupStore) Update(scope GroupScope, fn func(*GroupData) error) error {
+	scope = scope.identity()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	data, err := s.read(scope)

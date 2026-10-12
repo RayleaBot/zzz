@@ -70,7 +70,7 @@ func (f *fileImports) done(key string) {
 }
 
 func senderKey(event *rayleabot.EventContext) string {
-	return strings.Join([]string{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Target.Type, event.Event.Target.ID, event.Event.Actor.ID}, "\x00")
+	return strings.Join([]string{event.Event.SourceProtocol, event.Event.BotID, event.Event.Target.Type, event.Event.Target.ID, event.Event.Actor.ID}, "\x00")
 }
 
 func (a *App) gachaFileCommand(ctx context.Context, event *rayleabot.EventContext, command string, args []string) error {
@@ -193,9 +193,9 @@ func messageFile(ctx context.Context, event *rayleabot.EventContext) (file, name
 			var result rayleabot.ActionResult
 			var err error
 			if event.Event.Target.Type == "group" {
-				result, err = event.Actions().FileGroupURLGet(ctx, event.Event.Target.ID, id)
+				result, err = event.Actions().ForOneBotAccount(event.Event.BotID).FileGroupURLGet(ctx, event.Event.Target.ID, id)
 			} else {
-				result, err = event.Actions().FilePrivateURLGet(ctx, event.Event.Actor.ID, id)
+				result, err = event.Actions().ForOneBotAccount(event.Event.BotID).FilePrivateURLGet(ctx, event.Event.Actor.ID, id)
 			}
 			if err == nil {
 				file = asText(result["url"])

@@ -172,8 +172,9 @@ func notice(ctx context.Context, event *rayleabot.EventContext, text string) {
 	if text == "" {
 		return
 	}
-	_, _ = event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, TargetType: event.Event.Target.Type, TargetID: event.Event.Target.ID,
-		Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+	if address, ok := event.Address(); ok {
+		_, _ = event.Actions().SendTo(ctx, address, rayleabot.Text(text))
+	}
 }
 
 // mentionedUser is the first user a message mentions other than the bot.

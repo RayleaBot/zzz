@@ -196,10 +196,10 @@ func (a *App) signinTaskCommand(ctx context.Context, event *rayleabot.EventConte
 		if err != nil {
 			return event.SendText(friendlyError(err))
 		}
-		owner := Subject{SourceProtocol: event.Event.SourceProtocol, SourceAdapter: event.Event.SourceAdapter, BotID: event.Bot.ID, ActorID: event.Event.Actor.ID}
+		owner := chatOwner(event)
 		count := 0
 		for _, task := range items {
-			if task.Kind == "signin" && task.Owner == owner && (uid == "" || uid == task.Role.UID) {
+			if task.Kind == "signin" && task.Owner.identity() == owner.identity() && (uid == "" || uid == task.Role.UID) {
 				if _, err = a.signinTask(ctx, event, "signin.task.remove", map[string]any{"ref": task.Ref}); err != nil {
 					return event.SendText(friendlyError(err))
 				}

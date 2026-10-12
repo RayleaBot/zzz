@@ -2,8 +2,6 @@ package app
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"net/url"
 	"regexp"
 	"slices"
@@ -43,11 +41,17 @@ type ContentSubscription struct {
 	// keys.
 	Sent     map[string]int64 `json:"sent"`
 	LastCode string           `json:"last_code,omitempty"`
+	// RetiredRefs survives a restart between saving the account key and
+	// removing the scheduler jobs that used adapter-based keys.
+	RetiredRefs []string `json:"retired_refs,omitempty"`
 }
 
 type ContentSubscriptions struct {
 	mu   sync.Mutex
 	Path string
+	// A migration must not merge a subscription while its last send is
+	// still being recorded. Manual and scheduled checks share this lock.
+	pushMu sync.Mutex
 }
 
 func (s *ContentSubscriptions) read() ([]ContentSubscription, error) {
@@ -189,6 +193,8 @@ func (a *App) pushPost(ctx context.Context, event *rayleabot.EventContext, id, t
 // checkPushes runs the checks of the given subscriptions, or of all when ref
 // is empty, sending to each group through its own bot.
 func (a *App) checkPushes(ctx context.Context, event *rayleabot.EventContext, ref string) error {
+	a.Subscriptions.pushMu.Lock()
+	defer a.Subscriptions.pushMu.Unlock()
 	items, err := a.Subscriptions.List()
 	if err != nil {
 		return err
@@ -197,17 +203,14 @@ func (a *App) checkPushes(ctx context.Context, event *rayleabot.EventContext, re
 		if ref != "" && item.Ref != ref {
 			continue
 		}
-		code, online := "checked", false
-		for _, bot := range event.Bots {
-			online = online || bot.ID == item.Owner.BotID && bot.SourceAdapter == item.Owner.SourceAdapter && bot.SourceProtocol == item.Owner.SourceProtocol
-		}
-		if !online {
+		code := "checked"
+		if !accountOnline(item.Owner.SourceProtocol, item.Owner.BotID, event.Bots) {
 			code = "bot_missing"
-		} else if config, err := a.Groups.Config(GroupScope{item.Owner.SourceProtocol, item.Owner.SourceAdapter, item.Owner.BotID, item.GroupID}); err != nil || config.Enabled != nil && !*config.Enabled {
+		} else if config, err := a.Groups.Config(GroupScope{Protocol: item.Owner.SourceProtocol, BotID: item.Owner.BotID, GroupID: item.GroupID}); err != nil || config.Enabled != nil && !*config.Enabled {
 			code = "group_disabled"
 		} else {
 			send := func(segments ...rayleabot.Segment) error {
-				_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: item.Owner.SourceProtocol, SourceAdapter: item.Owner.SourceAdapter, TargetType: "group", TargetID: item.GroupID, Message: rayleabot.MessageOut{Segments: segments}})
+				_, err := event.Actions().SendTo(ctx, rayleabot.Address{SourceProtocol: item.Owner.SourceProtocol, BotID: item.Owner.BotID, TargetType: "group", TargetID: item.GroupID}, segments...)
 				return err
 			}
 			if err := a.pushGroup(ctx, event, &item, time.Now(), send); err != nil {
@@ -274,10 +277,8 @@ func (a *App) subscriptionCommand(ctx context.Context, event *rayleabot.EventCon
 		kind = pushKinds[1]
 	}
 	on := command == "subscribe"
-	owner := Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
-	identity := strings.Join([]string{owner.SourceProtocol, owner.SourceAdapter, owner.BotID, event.Event.Target.ID}, "\x00")
-	sum := sha256.Sum256([]byte(identity))
-	ref := "game.content." + a.Game.ID + "." + hex.EncodeToString(sum[:16])
+	owner := chatOwner(event)
+	ref := contentRef(a.Game.ID, owner, event.Event.Target.ID)
 	created, emptied := false, false
 	err := a.Subscriptions.edit(ref, func(items *[]ContentSubscription, i int) error {
 		if i < 0 {

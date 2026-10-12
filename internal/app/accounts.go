@@ -10,7 +10,7 @@ import (
 
 type Subject struct {
 	SourceProtocol string `json:"source_protocol"`
-	SourceAdapter  string `json:"source_adapter"`
+	SourceAdapter  string `json:"source_adapter,omitempty"`
 	BotID          string `json:"bot_id"`
 	ActorID        string `json:"actor_id"`
 }

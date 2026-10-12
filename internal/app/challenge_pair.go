@@ -91,7 +91,7 @@ func (s *ChallengePreferences) Get(owner Subject) (ChallengePreference, bool, er
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	items, err := s.read()
-	if index := slices.IndexFunc(items, func(p ChallengePreference) bool { return p.Owner == owner }); err == nil && index >= 0 {
+	if index := slices.IndexFunc(items, func(p ChallengePreference) bool { return p.Owner.identity() == owner.identity() }); err == nil && index >= 0 {
 		return items[index], true, nil
 	}
 	return ChallengePreference{Owner: owner}, false, err
@@ -104,7 +104,7 @@ func (s *ChallengePreferences) List() (map[Subject]ChallengePreference, error) {
 	items, err := s.read()
 	out := map[Subject]ChallengePreference{}
 	for _, item := range items {
-		out[item.Owner] = item
+		out[item.Owner.identity()] = item
 	}
 	return out, err
 }
@@ -117,7 +117,7 @@ func (s *ChallengePreferences) Edit(owner Subject, edit func(*ChallengePreferenc
 	if err != nil {
 		return ChallengePreference{}, err
 	}
-	index := slices.IndexFunc(items, func(p ChallengePreference) bool { return p.Owner == owner })
+	index := slices.IndexFunc(items, func(p ChallengePreference) bool { return p.Owner.identity() == owner.identity() })
 	value := ChallengePreference{Owner: owner}
 	if index >= 0 {
 		value = items[index]
@@ -264,7 +264,9 @@ func challengePairDescription(abyss, deadly int) string {
 // challengePairTasks are the user's 开启挑战提醒 tasks.
 func (a *App) challengePairTasks(owner Subject) ([]Reminder, error) {
 	items, err := a.Reminders.List()
-	return slices.DeleteFunc(items, func(task Reminder) bool { return !task.Pair || task.Kind != "challenge" || task.Owner != owner }), err
+	return slices.DeleteFunc(items, func(task Reminder) bool {
+		return !task.Pair || task.Kind != "challenge" || task.Owner.identity() != owner.identity()
+	}), err
 }
 
 // syncChallengePairs gives the pair tasks of owner, or of every user when
@@ -280,10 +282,10 @@ func (a *App) syncChallengePairs(global challengeGlobals, owner *Subject) error 
 	}
 	now := time.Now().UnixMilli()
 	for _, task := range items {
-		if !task.Pair || task.Kind != "challenge" || owner != nil && task.Owner != *owner {
+		if !task.Pair || task.Kind != "challenge" || owner != nil && task.Owner.identity() != owner.identity() {
 			continue
 		}
-		preference := preferences[task.Owner]
+		preference := preferences[task.Owner.identity()]
 		abyss, deadly, remindTime := preference.targets(global)
 		hour, minute, weekday, _ := parseChallengeTime(remindTime)
 		if task.Threshold == float64(abyss) && task.DeadlyThreshold == float64(deadly) && task.Hour == hour && task.Minute == minute && task.Weekday == weekday {

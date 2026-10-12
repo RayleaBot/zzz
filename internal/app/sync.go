@@ -389,12 +389,10 @@ func (a *App) readBackgroundSync(ctx context.Context, item BackgroundSync, info 
 // belongs to, what a completed background sync added.
 func (a *App) notifySync(ctx context.Context, event *rayleabot.EventContext, item BackgroundSync, result gacha.ImportResult) error {
 	owner := item.Owner
-	if !slices.ContainsFunc(event.Bots, func(bot rayleabot.Bot) bool {
-		return bot.ID == owner.BotID && bot.SourceProtocol == owner.SourceProtocol && bot.SourceAdapter == owner.SourceAdapter
-	}) {
+	if !accountOnline(owner.SourceProtocol, owner.BotID, event.Bots) {
 		return gameError("bot_missing", "所属机器人暂不可用。")
 	}
 	text := fmt.Sprintf("抽卡后台同步完成\n%s · %s\n新增 %d 条，档案共 %d 条。", item.Role.Nickname, item.Role.UID, result.Added, result.Total)
-	_, err := event.Actions().MessageSend(ctx, rayleabot.MessageSendRequest{SourceProtocol: owner.SourceProtocol, SourceAdapter: owner.SourceAdapter, TargetType: "private", TargetID: owner.ActorID, Message: rayleabot.MessageOut{Segments: []rayleabot.Segment{rayleabot.Text(text)}}})
+	_, err := event.Actions().SendTo(ctx, rayleabot.Address{SourceProtocol: owner.SourceProtocol, BotID: owner.BotID, TargetType: "private", TargetID: owner.ActorID}, rayleabot.Text(text))
 	return err
 }

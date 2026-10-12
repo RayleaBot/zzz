@@ -24,10 +24,10 @@ func (a *App) communityProgress(ctx context.Context, event *rayleabot.EventConte
 			labels[account.Ref] = account.AccountLabel
 		}
 	}
-	owner := Subject{event.Event.SourceProtocol, event.Event.SourceAdapter, event.Bot.ID, event.Event.Actor.ID}
+	owner := chatOwner(event)
 	lines := []string{}
 	for _, task := range items {
-		if task.Owner != owner || task.Kind != "community" && task.Kind != "cloudgame" {
+		if task.Owner.identity() != owner.identity() || task.Kind != "community" && task.Kind != "cloudgame" {
 			continue
 		}
 		lines = append(lines, communityTaskLine(task, cmp.Or(labels[task.AccountRef], "已不可用")))

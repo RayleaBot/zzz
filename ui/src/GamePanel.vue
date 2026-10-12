@@ -6,6 +6,7 @@ import PanelDetails, { type Panel } from './PanelDetails.vue'
 import BuildCalculator from './BuildCalculator.vue'
 import GachaHistory from './GachaHistory.vue'
 import Reminders from './Reminders.vue'
+import type { BotAccount } from './bots'
 import ChallengeReminders from './ChallengeReminders.vue'
 import PanelHistory from './PanelHistory.vue'
 import ResourceLibrary from './ResourceLibrary.vue'
@@ -34,7 +35,7 @@ interface Transfer { ref: string; uid: string; region: string; timezone: number;
 const host = usePluginHost()
 const page = host.client.pageId || 'overview'
 const game = ref<Game | null>(null)
-const bots = ref<{source_protocol:string;source_adapter:string;id:string}[]>([])
+const bots = ref<BotAccount[]>([])
 const catalogVersion = ref('')
 const busy = ref(false), error = ref(''), notice = ref('')
 const accountIssue = ref('')
@@ -86,7 +87,7 @@ async function loadAccounts(page = 0) {
 async function loadCatalog() { const result = await invoke<{ entries: CatalogEntry[] }>('catalog.search', { query: search.value, kind: kind.value }); entries.value = result.entries }
 async function loadArchives() { archives.value = (await invoke<{ items: SavedArchive[] }>('gacha.list')).items }
 async function load() {
-  const result = await invoke<{ game: Game; bots?:{source_protocol:string;source_adapter:string;id:string}[]; catalog_version: string; settings: { account_provider: string; image_replies: boolean; custom_aliases: Record<string, string> } }>('status')
+  const result = await invoke<{ game: Game; bots?:BotAccount[]; catalog_version: string; settings: { account_provider: string; image_replies: boolean; custom_aliases: Record<string, string> } }>('status')
   bots.value = result.bots ?? []
   game.value = result.game; catalogVersion.value = result.catalog_version
   operationName.value ||= game.value.operations[0]?.name ?? ''
@@ -241,7 +242,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
         <details class="settings"><summary>查询设置</summary><form @submit.prevent="saveSettings()"><label>账号服务插件 ID<input v-model="provider" required :disabled="busy"></label><label class="check"><input v-model="imageReplies" type="checkbox" :disabled="busy">聊天查询优先发送图片</label><button :disabled="busy" type="submit">保存设置</button></form></details>
       </template>
 
-      <template v-else-if="page === 'content'"><PublicContent :prefix="game.prefix" :invoke="invoke"/></template>
+      <template v-else-if="page === 'content'"><PublicContent :bots="bots" :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/></template>
       <template v-else-if="page === 'media'"><ArtworkPanel :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'guides'"><GuidesPanel :invoke="invoke"/></template>
@@ -265,7 +266,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
       </template>
       <template v-else-if="page === 'reminders'">
         <p v-if="accountIssue" role="alert" class="feedback attention">{{ accountIssue }}</p>
-        <Reminders :choices="roleOptions" :invoke="invoke" />
+        <Reminders :bots="bots" :choices="roleOptions" :invoke="invoke" />
         <ChallengeReminders :choices="roleOptions" :invoke="invoke" />
         <MonthlyCollection :choices="roleOptions" :invoke="invoke" />
         <button v-if="nextAccountPage !== null" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button>

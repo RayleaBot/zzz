@@ -44,7 +44,7 @@ func (s *gachaAccounts) answer(call hostCall) (map[string]any, string) {
 	case "roles":
 		return map[string]any{"account_ref": "account", "roles": []any{role}}, ""
 	case "list":
-		owner := map[string]any{"source_protocol": "onebot11", "source_adapter": "a", "bot_id": "bot", "actor_id": "u"}
+		owner := map[string]any{"source_protocol": "onebot11", "source_adapter": "removed", "bot_id": "bot", "actor_id": "u"}
 		return map[string]any{"items": []any{map[string]any{"ref": "account", "owner": owner, "roles": []any{role}, "status": "valid"}}, "default_roles": map[string]any{}, "uid_bindings": map[string]any{}}, ""
 	case "delegation.create":
 		s.grants = append(s.grants, call.Params)
@@ -150,7 +150,8 @@ func listedSyncs(t *testing.T, host *sdkHost) []BackgroundSync {
 // result and tells the account's owner in private chat.
 func TestBackgroundSyncAnswersThePageAndFinishesInTheBackground(t *testing.T) {
 	a, _, accounts, host := syncHost(t)
-	end, _ := host.manage("gacha.task.start", map[string]any{"account_ref": "account", "role_ref": "role", "notify": true, "confirm": true})
+	end, actions := host.manage("gacha.task.start", map[string]any{"account_ref": "account", "role_ref": "role", "notify": true, "confirm": true})
+	assertAccountMessages(t, actions)
 	if end["type"] != "result" || !slices.Equal(host.detached, []string{"manage-1"}) || asObject(host.delivered["manage-1"]["task"])["state"] != "running" {
 		t.Fatalf("the action ended with %v, delivered %v", end, host.delivered)
 	}
