@@ -6,8 +6,6 @@ import PanelDetails, { type Panel } from './PanelDetails.vue'
 import BuildCalculator from './BuildCalculator.vue'
 import GachaHistory from './GachaHistory.vue'
 import Reminders from './Reminders.vue'
-import HistoricalData from './HistoricalData.vue'
-import { botLabel } from './bots'
 import ChallengeReminders from './ChallengeReminders.vue'
 import PanelHistory from './PanelHistory.vue'
 import ResourceLibrary from './ResourceLibrary.vue'
@@ -217,7 +215,6 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
     <p v-if="notice" class="feedback" role="status">{{ notice }}</p>
     <p v-if="!game" class="empty">正在读取插件资料… <button :disabled="busy" @click="run(load)">重新连接</button></p>
     <template v-else>
-      <p v-if="host.bot.value" class="hint">当前机器人：{{ botLabel(host.bot.value) }}</p>
       <p v-if="accountIssue" role="alert" class="feedback attention">{{ accountIssue }} 可在米游社账号管理页检查授权。</p>
       <template v-if="page === 'overview'">
         <section aria-labelledby="query-heading"><div class="section-heading"><h2 id="query-heading">游戏查询</h2><button :disabled="busy" @click="run(() => loadAccounts())">刷新账号</button></div>
@@ -243,7 +240,7 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
       </template>
 
       <template v-else-if="page === 'content'"><PublicContent :prefix="game.prefix" :invoke="invoke"/></template>
-      <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/>        <details class="settings"><summary>全局查询设置</summary><form @submit.prevent="saveSettings()"><label>账号服务插件 ID<input v-model="provider" required :disabled="busy"></label><label class="check"><input v-model="imageReplies" type="checkbox" :disabled="busy">聊天查询优先发送图片</label><button :disabled="busy" type="submit">保存设置</button></form></details><HistoricalData :client="host.client" :invoke="invoke"/></template>
+      <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/><details class="settings"><summary>全局查询设置</summary><form @submit.prevent="saveSettings()"><label>账号服务插件 ID<input v-model="provider" required :disabled="busy"></label><label class="check"><input v-model="imageReplies" type="checkbox" :disabled="busy">聊天查询优先发送图片</label><button :disabled="busy" type="submit">保存设置</button></form></details></template>
       <template v-else-if="page === 'media'"><ArtworkPanel :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'guides'"><GuidesPanel :invoke="invoke"/></template>
       <template v-else-if="page === 'assets'"><CodesPanel mode="public" :roles="[]" :invoke="invoke"/></template>

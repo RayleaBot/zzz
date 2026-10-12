@@ -285,7 +285,7 @@ func (a *App) challengeReminderCommand(ctx context.Context, event *rayleabot.Eve
 		}
 		lines := []string{}
 		for _, task := range items {
-			if task.Kind != "challenge" || task.Owner.identity() != owner.identity() || len(args) == 1 && args[0] != task.Role.UID {
+			if task.Kind != "challenge" || task.Owner != owner || len(args) == 1 && args[0] != task.Role.UID {
 				continue
 			}
 			if command == "challenge-status" {

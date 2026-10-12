@@ -14,8 +14,7 @@ func accountAction(action string) bool {
 		"catalog.search", "catalog.get", "calendar.query", "banners.query", "codes.query",
 		"content.start", "content.poll", "content.cancel",
 		"guides.schema", "guides.settings", "guides.configure", "challenge.schema",
-		"build.conditions", "build.presets.list", "build.presets.save", "build.presets.remove",
-		"history.list", "history.get", "history.remove":
+		"build.conditions", "build.presets.list", "build.presets.save", "build.presets.remove":
 		return false
 	}
 	if strings.HasPrefix(action, "artwork.") {

@@ -8,7 +8,7 @@ import (
 
 func TestGroupSettingsDoNotChangeGlobalOrOtherBots(t *testing.T) {
 	store := &GroupStore{Directory: t.TempDir()}
-	scope := GroupScope{Protocol: "onebot11", Adapter: "adapter", BotID: "bot", GroupID: "group"}
+	scope := GroupScope{Protocol: "onebot11", BotID: "bot", GroupID: "group"}
 	off := false
 	if err := store.Update(scope, func(d *GroupData) error {
 		d.Config.ImageReplies = &off
@@ -46,7 +46,7 @@ func TestGroupAdministratorMatchesHostRoles(t *testing.T) {
 
 func TestGroupManagementRejectsStaleRevision(t *testing.T) {
 	store := &GroupStore{Directory: t.TempDir()}
-	scope := GroupScope{Protocol: "onebot11", Adapter: "a", BotID: "b", GroupID: "g"}
+	scope := GroupScope{Protocol: "onebot11", BotID: "b", GroupID: "g"}
 	app := &App{Groups: store}
 	input := map[string]any{"scope": scope, "revision": 0, "config": map[string]any{"enabled": false}}
 	if _, err := app.manageAccountGroups(managementEvent("onebot11", "b"), "groups.set", input); err != nil {
@@ -63,7 +63,7 @@ func TestGroupManagementRejectsStaleRevision(t *testing.T) {
 
 func TestGroupConfigFollowsEveryWrite(t *testing.T) {
 	s := &GroupStore{Directory: t.TempDir()}
-	scope := GroupScope{"onebot11", "adapter", "bot", "group"}
+	scope := GroupScope{"onebot11", "bot", "group"}
 	if config, err := s.Config(scope); err != nil || config.Enabled != nil {
 		t.Fatal(config, err)
 	}

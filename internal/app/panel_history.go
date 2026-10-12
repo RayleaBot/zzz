@@ -18,7 +18,6 @@ import (
 )
 
 type PanelSnapshot struct {
-	Owner     Subject        `json:"owner"`
 	Ref       string         `json:"ref"`
 	SavedAtMS int64          `json:"saved_at_ms"`
 	Version   string         `json:"version"`
@@ -49,21 +48,14 @@ func (s *PanelHistoryStore) Read(provider string, choice Selection, id string) (
 	err := localdata.Read(s.file(provider, choice, id), &items)
 	return items, err
 }
-func (s *PanelHistoryStore) Save(provider string, choice Selection, version string, panel CharacterPanel, owner Subject) (PanelSnapshot, error) {
+func (s *PanelHistoryStore) Save(provider string, choice Selection, version string, panel CharacterPanel) (PanelSnapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	item := PanelSnapshot{Ref: rand.Text(), SavedAtMS: time.Now().UnixMilli(), Version: version, Panel: panel, Owner: owner}
+	item := PanelSnapshot{Ref: rand.Text(), SavedAtMS: time.Now().UnixMilli(), Version: version, Panel: panel}
 	file := s.file(provider, choice, panel.ID)
 	items := []PanelSnapshot{}
 	if err := localdata.Read(file, &items); err != nil {
 		return item, err
-	}
-	// The account service has just authorized this account for the saving
-	// bot, so older snapshots without provenance belong to it as well.
-	for i := range items {
-		if items[i].Owner.BotID == "" {
-			items[i].Owner = owner
-		}
 	}
 	if len(items) >= 20 {
 		return item, gameError("history_limit", "此角色已保存 20 份历史，请先移除不再需要的记录。")
@@ -111,7 +103,7 @@ func (a *App) panelHistory(ctx context.Context, client AccountsClient, action st
 		if err != nil {
 			return nil, err
 		}
-		snapshot, err := a.PanelHistory.Save(client.Provider, choice, a.Catalog.Version, panel, client.owner)
+		snapshot, err := a.PanelHistory.Save(client.Provider, choice, a.Catalog.Version, panel)
 		return map[string]any{"snapshot": snapshot}, err
 	}
 	if action == "panel.history.remove" {

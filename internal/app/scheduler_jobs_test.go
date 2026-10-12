@@ -269,11 +269,6 @@ func TestGroupPushStaysInTheForeground(t *testing.T) {
 	host := newSDKHost(t, a, (&taskAccounts{t: t}).answer)
 	host.groupMessage("%开启公告推送", "开启公告推送")
 	ref := host.job("game.content.")
-	items, err := a.Subscriptions.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeAddressRecord(t, a.Subscriptions.Path, []any{legacyAddressRecord(t, items[0], "owner", "removed")})
 	end, actions := host.trigger(ref)
 	assertAccountMessages(t, actions)
 	if end["type"] != "result" || len(host.detached) != 0 || len(host.sent) != 1 || host.sent[0].TargetType != "group" || host.sent[0].TargetID != "g" || !strings.HasPrefix(sentText(host.sent[0].Message), "绝区零公告推送：公告1") {

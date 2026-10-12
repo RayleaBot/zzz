@@ -165,7 +165,7 @@ func (a *App) removeDelegatedTask(ctx context.Context, event *rayleabot.EventCon
 				return err
 			}
 		}
-		if event.Event.EventType != "management.action" && task.Owner.identity() != chatOwner(event) {
+		if event.Event.EventType != "management.action" && task.Owner != chatOwner(event) {
 			return gameError("source_invalid", "只能移除自己的提醒。")
 		}
 		*items = slices.Delete(*items, i, i+1)
@@ -326,7 +326,7 @@ func (a *App) runReminder(ctx context.Context, event *rayleabot.EventContext) er
 			if err = client.call(ctx, "execute", params, &result); err != nil {
 				return result, err
 			}
-			_, err = a.Monthly.Save(task.Provider, task.Selection, archive.Revision, result.Data, time.Now(), task.Owner)
+			_, err = a.Monthly.Save(task.Provider, task.Selection, archive.Revision, result.Data, time.Now())
 			return result, err
 		}
 		err := client.call(ctx, "execute", params, &result)

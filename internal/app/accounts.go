@@ -10,7 +10,6 @@ import (
 
 type Subject struct {
 	SourceProtocol string `json:"source_protocol"`
-	SourceAdapter  string `json:"source_adapter,omitempty"`
 	BotID          string `json:"bot_id"`
 	ActorID        string `json:"actor_id"`
 }
@@ -55,7 +54,7 @@ type AccountsClient struct {
 	Caller   ServiceCaller
 	Provider string
 	Game     string
-	owner    Subject // Local archive provenance; never included in plugin.call params.
+	owner    Subject // Sync reference ownership; never included in plugin.call params.
 }
 
 func (c AccountsClient) call(ctx context.Context, method string, params map[string]any, out any) error {

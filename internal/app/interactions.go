@@ -27,7 +27,7 @@ type InteractionStore struct {
 }
 
 func interactionRef(owner Subject) string {
-	raw, _ := json.Marshal(owner.identity())
+	raw, _ := json.Marshal(owner)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
 }
@@ -44,7 +44,7 @@ func (s *InteractionStore) Get(owner Subject) (InteractionProfile, error) {
 		return InteractionProfile{}, err
 	}
 	for _, v := range items {
-		if v.Owner.identity() == owner.identity() {
+		if v.Owner == owner {
 			return v, nil
 		}
 	}
@@ -57,7 +57,7 @@ func (s *InteractionStore) edit(owner Subject, fn func(*InteractionProfile) erro
 	if err != nil {
 		return err
 	}
-	i := slices.IndexFunc(items, func(v InteractionProfile) bool { return v.Owner.identity() == owner.identity() })
+	i := slices.IndexFunc(items, func(v InteractionProfile) bool { return v.Owner == owner })
 	if i < 0 {
 		if len(items) >= 2000 {
 			return gameError("interaction_limit", "互动偏好超过2000个主体，请先清理。")

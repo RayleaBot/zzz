@@ -2,15 +2,11 @@ package app
 
 import (
 	"fmt"
-	"path/filepath"
-	"slices"
 	"sync"
 	"testing"
-	"time"
 
 	rayleabot "github.com/RayleaBot/RayleaBot/sdk/go"
 	"github.com/RayleaBot/zzz/internal/gacha"
-	"github.com/RayleaBot/zzz/internal/localdata"
 )
 
 func managementEvent(protocol, id string) *rayleabot.EventContext {
@@ -19,7 +15,7 @@ func managementEvent(protocol, id string) *rayleabot.EventContext {
 
 func TestAccountManagementRequiresHostAccount(t *testing.T) {
 	a := &App{}
-	for _, action := range []string{"accounts.list", "accounts.select", "query", "groups.list", "groups.set", "groups.clear", "reminder.list", "reminder.create", "reminder.remove", "signin.status", "signin.run", "signin.task.list", "monthly.list", "monthly.task.list", "challenge.reminder.list", "challenge.reminder.check", "panel.history.list", "panel.score", "build.prepare", "community.status", "community.task.list", "cloudgame.task.list", "redeem.run", "content.subscription.list", "content.subscription.remove", "gacha.sync.start", "gacha.sync.step", "gacha.sync.cancel", "gacha.task.list", "gacha.task.run", "gacha.task.cancel", "history.assign"} {
+	for _, action := range []string{"accounts.list", "accounts.select", "query", "groups.list", "groups.set", "groups.clear", "reminder.list", "reminder.create", "reminder.remove", "signin.status", "signin.run", "signin.task.list", "monthly.list", "monthly.task.list", "challenge.reminder.list", "challenge.reminder.check", "panel.history.list", "panel.score", "build.prepare", "community.status", "community.task.list", "cloudgame.task.list", "redeem.run", "content.subscription.list", "content.subscription.remove", "gacha.sync.start", "gacha.sync.step", "gacha.sync.cancel", "gacha.task.list", "gacha.task.run", "gacha.task.cancel"} {
 		t.Run(action, func(t *testing.T) {
 			event := managementEvent("onebot11", "bot")
 			delete(event.Event.Payload, "bot")
@@ -168,74 +164,6 @@ func TestAccountCannotUseAnotherPagesSyncReference(t *testing.T) {
 	}
 }
 
-func TestHistoricalGroupsOnlyAssignMissingOneBot(t *testing.T) {
-	a := pluginApp(t)
-	global := &rayleabot.EventContext{Event: rayleabot.Event{EventType: "management.action", SourceProtocol: "management"}}
-	for n, scope := range []GroupScope{{Protocol: "onebot11", Adapter: "gone", GroupID: "legacy"}, {Protocol: "qqofficial", Adapter: "gone", GroupID: "openid"}, {Protocol: "onebot11", BotID: "removed", GroupID: "kept"}} {
-		path := filepath.Join(a.Groups.Directory, fmt.Sprintf("old-%d.json", n))
-		if err := localdata.Write(path, GroupData{Scope: scope, Config: GroupConfig{Aliases: map[string]string{}}, Revision: 2}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	out, err := a.Manage(t.Context(), global, "history.list", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows := out["items"].([]historyRecord)
-	if len(rows) != 3 || out["total"] != 3 {
-		t.Fatal(out)
-	}
-	for _, row := range rows {
-		input := map[string]any{"kind": row.Kind, "ref": row.Ref, "revision": row.Revision, "confirm": true}
-		_, err := a.Manage(t.Context(), managementEvent("onebot11", "target"), "history.assign", input)
-		if row.Owner.SourceProtocol == "onebot11" && row.Owner.BotID == "" {
-			if err != nil {
-				t.Fatal(err)
-			}
-			data, err := a.Groups.Read(GroupScope{Protocol: "onebot11", BotID: "target", GroupID: "legacy"})
-			if err != nil || data.Revision != 3 {
-				t.Fatal(data, err)
-			}
-		} else {
-			if err == nil {
-				t.Fatal("reassigned complete or QQ official owner")
-			}
-			if _, err := a.Manage(t.Context(), global, "history.get", input); err != nil {
-				t.Fatal(err)
-			}
-			if _, err := a.Manage(t.Context(), global, "history.remove", input); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	out, err = a.Manage(t.Context(), global, "history.list", nil)
-	if err != nil || len(out["items"].([]historyRecord)) != 1 {
-		t.Fatal(out, err)
-	}
-}
-
-func TestHistoricalTaskMergeAndStaleGuard(t *testing.T) {
-	a := pluginApp(t)
-	tasks := []Reminder{{Ref: "legacy", Owner: Subject{SourceProtocol: "onebot11", ActorID: "u"}}, {Ref: "other", Owner: Subject{SourceProtocol: "onebot11", BotID: "b", ActorID: "u"}}}
-	if err := a.Reminders.edit("", func(items *[]Reminder, _ int) error { *items = tasks; return nil }); err != nil {
-		t.Fatal(err)
-	}
-	input := map[string]any{"kind": "reminders", "ref": "legacy", "revision": historyRevision(tasks[0]), "confirm": true}
-	if _, err := a.Manage(t.Context(), managementEvent("qqofficial", "opaque"), "history.assign", input); err == nil {
-		t.Fatal("assigned OneBot record to QQ official")
-	}
-	if _, err := a.Manage(t.Context(), managementEvent("onebot11", "a"), "history.assign", input); err != nil {
-		t.Fatal(err)
-	}
-	items, _ := a.Reminders.List()
-	if len(items) != 2 || !slices.ContainsFunc(items, func(t Reminder) bool { return t.Ref == "other" && t.Owner.BotID == "b" }) {
-		t.Fatal(items)
-	}
-	if _, err := a.Manage(t.Context(), managementEvent("onebot11", "c"), "history.assign", input); err == nil {
-		t.Fatal("stale assignment accepted")
-	}
-}
-
 func TestAccountServiceUsesManagementOriginAndPropagatesDenials(t *testing.T) {
 	a := pluginApp(t)
 	const denial = "plugin.account_subject_denied"
@@ -287,29 +215,5 @@ func TestBackgroundSyncKeepsAccountServiceOriginAfterDetach(t *testing.T) {
 	out, _ := host.manage("gacha.task.start", map[string]any{"account_ref": "account", "role_ref": "role", "confirm": true})
 	if out["type"] != "result" || detached == 0 {
 		t.Fatal(out, detached)
-	}
-}
-
-func TestArchivesRecordProvenanceForHistory(t *testing.T) {
-	a := pluginApp(t)
-	choice := Selection{AccountRef: "account", RoleRef: "role"}
-	owner := Subject{SourceProtocol: "onebot11", BotID: "a"}
-	for _, saver := range []Subject{{}, owner} {
-		if _, err := a.PanelHistory.Save("p", choice, "v1", CharacterPanel{ID: "1001", Name: "角色"}, saver); err != nil {
-			t.Fatal(err)
-		}
-	}
-	panels, _ := a.PanelHistory.Read("p", choice, "1001")
-	if len(panels) != 2 || panels[0].Owner != owner || panels[1].Owner != owner {
-		t.Fatalf("legacy snapshot kept no provenance: %+v", panels)
-	}
-	month := map[string]any{"data_month": 202609, "month_data": map[string]any{}}
-	for _, saver := range []Subject{owner, {}} {
-		if err := a.Monthly.Keep("p", choice, month, time.Now(), saver); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if monthly, _ := a.Monthly.Read("p", choice); monthly.Owner != owner {
-		t.Fatalf("scheduled read dropped provenance: %+v", monthly.Owner)
 	}
 }

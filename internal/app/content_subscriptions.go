@@ -41,17 +41,11 @@ type ContentSubscription struct {
 	// keys.
 	Sent     map[string]int64 `json:"sent"`
 	LastCode string           `json:"last_code,omitempty"`
-	// RetiredRefs survives a restart between saving the account key and
-	// removing the scheduler jobs that used adapter-based keys.
-	RetiredRefs []string `json:"retired_refs,omitempty"`
 }
 
 type ContentSubscriptions struct {
 	mu   sync.Mutex
 	Path string
-	// A migration must not merge a subscription while its last send is
-	// still being recorded. Manual and scheduled checks share this lock.
-	pushMu sync.Mutex
 }
 
 func (s *ContentSubscriptions) read() ([]ContentSubscription, error) {
@@ -193,8 +187,6 @@ func (a *App) pushPost(ctx context.Context, event *rayleabot.EventContext, id, t
 // checkPushes runs the checks of the given subscriptions, or of all when ref
 // is empty, sending to each group through its own bot.
 func (a *App) checkPushes(ctx context.Context, event *rayleabot.EventContext, ref string) error {
-	a.Subscriptions.pushMu.Lock()
-	defer a.Subscriptions.pushMu.Unlock()
 	items, err := a.Subscriptions.List()
 	if err != nil {
 		return err

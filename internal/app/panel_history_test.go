@@ -11,7 +11,7 @@ func TestPanelHistoryScopesRetentionAndRestart(t *testing.T) {
 	store := &PanelHistoryStore{Directory: t.TempDir()}
 	choice := Selection{AccountRef: "account", RoleRef: "role"}
 	panel := CharacterPanel{ID: "1001", Name: "测试", Level: 80}
-	first, err := store.Save("provider", choice, "v1", panel, Subject{})
+	first, err := store.Save("provider", choice, "v1", panel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestPanelHistoryScopesRetentionAndRestart(t *testing.T) {
 	var added atomic.Int32
 	for range 24 {
 		wg.Go(func() {
-			if _, err := store.Save("provider", choice, "v1", panel, Subject{}); err == nil {
+			if _, err := store.Save("provider", choice, "v1", panel); err == nil {
 				added.Add(1)
 			}
 		})
@@ -49,7 +49,7 @@ func TestPanelHistoryScopesRetentionAndRestart(t *testing.T) {
 	if err = restarted.Remove("provider", choice, "1001", first.Ref); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = restarted.Save("provider", choice, "v2", panel, Subject{}); err != nil {
+	if _, err = restarted.Save("provider", choice, "v2", panel); err != nil {
 		t.Fatal(err)
 	}
 }
