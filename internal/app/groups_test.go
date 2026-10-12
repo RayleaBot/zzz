@@ -46,13 +46,13 @@ func TestGroupAdministratorMatchesHostRoles(t *testing.T) {
 
 func TestGroupManagementRejectsStaleRevision(t *testing.T) {
 	store := &GroupStore{Directory: t.TempDir()}
-	scope := GroupScope{Protocol: "p", Adapter: "a", BotID: "b", GroupID: "g"}
+	scope := GroupScope{Protocol: "onebot11", Adapter: "a", BotID: "b", GroupID: "g"}
 	app := &App{Groups: store}
 	input := map[string]any{"scope": scope, "revision": 0, "config": map[string]any{"enabled": false}}
-	if _, err := app.manageGroups("groups.set", input); err != nil {
+	if _, err := app.manageAccountGroups(managementEvent("onebot11", "b"), "groups.set", input); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := app.manageGroups("groups.clear", input); err == nil || PublicError(err).Code != "plugin.game_group_changed" {
+	if _, err := app.manageAccountGroups(managementEvent("onebot11", "b"), "groups.clear", input); err == nil || PublicError(err).Code != "plugin.game_group_changed" {
 		t.Fatal("stale clear changed group", err)
 	}
 	data, _ := store.Read(scope)

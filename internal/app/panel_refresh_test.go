@@ -31,7 +31,7 @@ func TestRoleIntervalFollowsZZZPlugin(t *testing.T) {
 func TestManagementCharacterQueryAsksOneAgent(t *testing.T) {
 	a := pluginApp(t)
 	for _, input := range []map[string]any{{}, {"id_list": []any{"1011", "1021"}}} {
-		_, err := a.Manage(t.Context(), &rayleabot.EventContext{}, "query", map[string]any{"operation": "zzz.character", "account_ref": "account", "role_ref": "role", "input": input})
+		_, err := a.Manage(t.Context(), managementEvent("onebot11", "bot"), "query", map[string]any{"operation": "zzz.character", "account_ref": "account", "role_ref": "role", "input": input})
 		if PublicError(err).Code != "plugin.game_input_invalid" {
 			t.Fatalf("%v: %v", input, err)
 		}

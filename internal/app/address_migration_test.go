@@ -110,8 +110,11 @@ func TestGroupMigrationMergesAndRetainsSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, err := s.Read(GroupScope{Protocol: "qqofficial", BotID: "official", GroupID: "unknown"})
-	if err != nil || recovered.Config.Enabled == nil || *recovered.Config.Enabled {
-		t.Fatal(recovered, err)
+	if err != nil || recovered.Config.Enabled != nil {
+		t.Fatal("QQ official openids were reassigned through a reused connection", recovered, err)
+	}
+	if _, err := os.Stat(filepath.Join(s.Directory, "unknown.json")); err != nil {
+		t.Fatal("unassigned QQ official record was lost", err)
 	}
 }
 

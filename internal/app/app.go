@@ -236,7 +236,11 @@ func (s Settings) roleInterval() time.Duration {
 }
 
 func (a *App) accountClient(event *rayleabot.EventContext) AccountsClient {
-	return AccountsClient{Caller: event.Actions(), Provider: settings(event).AccountProvider, Game: a.Game.ID}
+	owner := chatOwner(event)
+	if bot, ok := event.Event.ManagementBot(); ok {
+		owner = Subject{SourceProtocol: bot.SourceProtocol, BotID: bot.BotID}
+	}
+	return AccountsClient{Caller: event.Actions(), Provider: settings(event).AccountProvider, Game: a.Game.ID, owner: owner}
 }
 func (a *App) operation(name string) (Operation, bool) {
 	for _, item := range a.Game.Operations {
@@ -557,7 +561,8 @@ func (a *App) Handle(ctx context.Context, event *rayleabot.EventContext) error {
 		if query == a.Game.ID+".monthly" {
 			// Upstream keeps every month it reads; a month that cannot be kept
 			// still answers.
-			_ = a.Monthly.Keep(a.accountClient(event).Provider, choice, result.Data, time.Now())
+			client := a.accountClient(event)
+			_ = a.Monthly.Keep(client.Provider, choice, result.Data, time.Now(), client.owner)
 		}
 		view = BusinessView(a.Game, textOperation, result, a.Catalog)
 		view.Image = a.featureImage(ctx, a.accountClient(event), choice, operation.Name, event.Event.Command(), input, result, shown)
@@ -603,6 +608,18 @@ func commandInput(operation Operation, word string, args []string) (map[string]a
 }
 
 func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
+	if accountAction(action) {
+		bot, err := managementBot(event)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkManagementInput(bot, input); err != nil {
+			return nil, err
+		}
+	}
+	if strings.HasPrefix(action, "history.") {
+		return a.manageHistory(ctx, event, action, input)
+	}
 	switch action {
 	case "public.query":
 		result, err := a.accountClient(event).PublicProfile(ctx, asText(input["uid"]), asText(input["region"]))
@@ -636,7 +653,7 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 	case "challenge.schema":
 		return map[string]any{"kinds": challengeKinds()}, nil
 	case "groups.list", "groups.clear", "groups.set":
-		return a.manageGroups(action, input)
+		return a.manageAccountGroups(event, action, input)
 	case "calendar.query":
 		return a.calendarQuery(input)
 	case "banners.query":
@@ -646,7 +663,7 @@ func (a *App) Manage(ctx context.Context, event *rayleabot.EventContext, action 
 	case "build.conditions", "build.presets.list", "build.presets.save", "build.presets.remove":
 		return a.buildPresetAction(action, input)
 	case "status":
-		return map[string]any{"game": a.Game, "catalog_version": a.Catalog.Version, "catalog_entries": len(a.Catalog.Entries), "settings": settings(event), "bots": event.Bots}, nil
+		return map[string]any{"game": a.Game, "catalog_version": a.Catalog.Version, "catalog_entries": len(a.Catalog.Entries), "settings": settings(event)}, nil
 	case "accounts.list":
 		result, err := a.accountClient(event).List(ctx, number(input["page"]))
 		return map[string]any{"accounts": result}, err

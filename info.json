@@ -1621,59 +1621,73 @@
     "pages": [
       {
         "id": "overview",
-        "label": "游戏查询"
+        "label": "游戏查询",
+        "scope": "bot_account"
       },
       {
         "id": "catalog",
-        "label": "资料图鉴"
+        "label": "资料图鉴",
+        "scope": "global"
       },
       {
         "id": "gacha",
-        "label": "抽卡档案"
+        "label": "抽卡档案",
+        "scope": "global"
       },
       {
         "id": "reminders",
-        "label": "提醒与收集"
+        "label": "提醒与收集",
+        "scope": "bot_account"
       },
       {
         "id": "history",
-        "label": "面板历史"
+        "label": "面板历史",
+        "scope": "bot_account"
       },
       {
         "id": "groups",
-        "label": "群设置与排行"
+        "label": "群设置与排行",
+        "scope": "bot_account"
       },
       {
         "id": "signin",
-        "label": "游戏签到"
+        "label": "游戏签到",
+        "scope": "bot_account"
       },
       {
         "id": "resources",
-        "label": "卡池历史"
+        "label": "卡池历史",
+        "scope": "global"
       },
       {
         "id": "community",
-        "label": "社区与云游戏"
+        "label": "社区与云游戏",
+        "scope": "bot_account"
       },
       {
         "id": "assets",
-        "label": "兑换码"
+        "label": "兑换码",
+        "scope": "global"
       },
       {
         "id": "content",
-        "label": "公告与活动"
+        "label": "公告与活动",
+        "scope": "bot_account"
       },
       {
         "id": "guides",
-        "label": "攻略与工具"
+        "label": "攻略与工具",
+        "scope": "global"
       },
       {
         "id": "media",
-        "label": "图片素材"
+        "label": "图片素材",
+        "scope": "global"
       },
       {
         "id": "help",
-        "label": "帮助与版本"
+        "label": "帮助与版本",
+        "scope": "global"
       }
     ]
   }

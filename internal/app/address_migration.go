@@ -29,7 +29,7 @@ func (a *App) migrateAddresses(ctx context.Context, event *rayleabot.EventContex
 		return nil
 	}
 	warn := func(ref string) {
-		_, _ = event.Actions().LoggerWrite(ctx, rayleabot.LoggerWriteRequest{Level: "warn", Message: "旧记录缺少机器人账号，原记录已保留；请恢复原连接或重新选择机器人账号。", Fields: map[string]any{"record": ref}})
+		_, _ = event.Actions().LoggerWrite(ctx, rayleabot.LoggerWriteRequest{Level: "warn", Message: "旧记录缺少机器人账号，原记录已保留；请在全局“历史数据与归属”入口处理。", Fields: map[string]any{"record": ref}})
 	}
 	if err := a.Groups.migrate(event.Bots, warn); err != nil {
 		return err

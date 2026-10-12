@@ -12,6 +12,15 @@ import (
 )
 
 func (a *App) manageSync(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
+	if action != "gacha.sync.start" {
+		choice, err := a.Syncs.Choice(asText(input["ref"]))
+		if err != nil {
+			return nil, syncError(err)
+		}
+		if err := checkManagementOwner(event, Subject{SourceProtocol: choice.SourceProtocol, BotID: choice.BotID}); err != nil {
+			return nil, err
+		}
+	}
 	return a.syncAction(ctx, a.accountClient(event), action, input)
 }
 func (a *App) syncAction(ctx context.Context, client AccountsClient, action string, input map[string]any) (result map[string]any, err error) {
@@ -43,7 +52,8 @@ func (a *App) syncAction(ctx context.Context, client AccountsClient, action stri
 		if input["full"] != nil && !ok {
 			return nil, gameError("input_invalid", "同步模式无效。")
 		}
-		info, err := a.Syncs.Start(a.Gacha, gacha.SyncChoice{AccountRef: choice.AccountRef, RoleRef: choice.RoleRef}, role.UID, role.Region, full)
+		syncChoice := gacha.SyncChoice{AccountRef: choice.AccountRef, RoleRef: choice.RoleRef, SourceProtocol: client.owner.SourceProtocol, BotID: client.owner.BotID}
+		info, err := a.Syncs.Start(a.Gacha, syncChoice, role.UID, role.Region, full)
 		return map[string]any{"sync": info}, err
 	case "gacha.sync.step":
 		var payload struct {
@@ -293,10 +303,22 @@ func (a *App) backgroundSyncAction(ctx context.Context, event *rayleabot.EventCo
 	switch action {
 	case "gacha.task.list":
 		daily, err := a.DailySyncs.List()
-		return map[string]any{"items": a.BackgroundSyncs.list(), "daily": daily}, err
+		daily = slices.DeleteFunc(daily, func(item DailySync) bool { return !visibleOwner(event, item.Owner) })
+		items := slices.DeleteFunc(a.BackgroundSyncs.list(), func(item BackgroundSync) bool { return !visibleOwner(event, item.Owner) })
+		return map[string]any{"items": items, "daily": daily}, err
 	case "gacha.task.cancel":
 		ref := asText(input["ref"])
-		if !a.BackgroundSyncs.cancel(func(item BackgroundSync) bool { return item.Ref == ref }, "sync_canceled") {
+		var denied error
+		if !a.BackgroundSyncs.cancel(func(item BackgroundSync) bool {
+			if item.Ref != ref {
+				return false
+			}
+			denied = checkManagementOwner(event, item.Owner)
+			return denied == nil
+		}, "sync_canceled") {
+			if denied != nil {
+				return nil, denied
+			}
 			return nil, gameError("sync_task_missing", "没有正在进行的这项后台同步。")
 		}
 		return map[string]any{"canceled": true}, nil

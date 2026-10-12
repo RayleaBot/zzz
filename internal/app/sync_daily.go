@@ -321,6 +321,9 @@ func (a *App) runDailySyncNow(ctx context.Context, event *rayleabot.EventContext
 	if i < 0 {
 		return nil, gameError("sync_task_missing", "每日同步不存在。")
 	}
+	if err := checkManagementOwner(event, items[i].Owner); err != nil {
+		return nil, err
+	}
 	// The account check runs before the task is edited, outside the store's
 	// lock.
 	client := AccountsClient{Caller: event.Actions(), Provider: items[i].Provider, Game: a.Game.ID}
@@ -334,6 +337,9 @@ func (a *App) runDailySyncNow(ctx context.Context, event *rayleabot.EventContext
 			return gameError("sync_task_missing", "每日同步不存在。")
 		}
 		t := &(*items)[i]
+		if err := checkManagementOwner(event, t.Owner); err != nil {
+			return err
+		}
 		switch {
 		case t.State == "running" || t.State == "creating":
 			return gameError("sync_task_running", "此任务正在处理，请查看进度。")
@@ -359,6 +365,9 @@ func (a *App) removeDailySync(ctx context.Context, event *rayleabot.EventContext
 			return gameError("sync_task_missing", "每日同步不存在。")
 		}
 		task = (*items)[i]
+		if err := checkManagementOwner(event, task.Owner); err != nil {
+			return err
+		}
 		*items = slices.Delete(*items, i, i+1)
 		return nil
 	})

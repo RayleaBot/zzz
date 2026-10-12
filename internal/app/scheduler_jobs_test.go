@@ -251,6 +251,9 @@ func TestTriggersRunTheirTasks(t *testing.T) {
 // checks every group in the background.
 func TestGroupPushStaysInTheForeground(t *testing.T) {
 	a := pluginApp(t)
+	// This checks scheduler and delivery behavior; image downloads must not
+	// depend on the live CDN before the mock renderer answers.
+	a.Artwork.Sources = nil
 	post := 1
 	a.Content = PublicContentClient{HTTP: httpDoer(func(r *http.Request) (*http.Response, error) {
 		id := fmt.Sprint(900 + post)

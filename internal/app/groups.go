@@ -121,7 +121,7 @@ func (s *GroupStore) Update(scope GroupScope, fn func(*GroupData) error) error {
 	s.remember(scope, data.Config)
 	return nil
 }
-func (s *GroupStore) List(page int) ([]map[string]any, *int, error) {
+func (s *GroupStore) List(page int, bot rayleabot.BotAccount) ([]map[string]any, *int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	files, err := os.ReadDir(s.Directory)
@@ -137,6 +137,13 @@ func (s *GroupStore) List(page int) ([]map[string]any, *int, error) {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".json") {
 			continue
 		}
+		var data GroupData
+		if err := localdata.Read(filepath.Join(s.Directory, f.Name()), &data); err != nil {
+			return nil, nil, err
+		}
+		if data.Scope.Protocol != bot.SourceProtocol || data.Scope.BotID != bot.BotID {
+			continue
+		}
 		matched++
 		if matched <= page*50 {
 			continue
@@ -144,10 +151,6 @@ func (s *GroupStore) List(page int) ([]map[string]any, *int, error) {
 		if len(out) == 50 {
 			next := page + 1
 			return out, &next, nil
-		}
-		var data GroupData
-		if err := localdata.Read(filepath.Join(s.Directory, f.Name()), &data); err != nil {
-			return nil, nil, err
 		}
 		out = append(out, map[string]any{"scope": data.Scope, "config": data.Config, "rank_entries": len(data.Rank), "revision": data.Revision})
 	}
@@ -243,7 +246,11 @@ func (a *App) groupSettings(event *rayleabot.EventContext) error {
 	}
 	return event.SendText("本群" + a.Game.Name + "设置已保存。")
 }
-func (a *App) manageGroups(action string, input map[string]any) (map[string]any, error) {
+func (a *App) manageAccountGroups(event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
+	bot, err := managementBot(event)
+	if err != nil {
+		return nil, err
+	}
 	if action == "groups.list" {
 		var q struct {
 			Page int `json:"page"`
@@ -251,7 +258,7 @@ func (a *App) manageGroups(action string, input map[string]any) (map[string]any,
 		if decodeObject(input, &q) != nil || q.Page < 0 || q.Page > 100000 {
 			return nil, gameError("input_invalid", "群列表页码无效。")
 		}
-		items, next, err := a.Groups.List(q.Page)
+		items, next, err := a.Groups.List(q.Page, bot)
 		return map[string]any{"items": items, "next_page": next}, err
 	}
 	if action == "groups.clear" || action == "groups.set" {
@@ -260,7 +267,11 @@ func (a *App) manageGroups(action string, input map[string]any) (map[string]any,
 			Revision uint64      `json:"revision"`
 			Config   GroupConfig `json:"config"`
 		}
-		if decodeObject(input, &value) != nil || !value.Scope.valid() {
+		if decodeObject(input, &value) != nil {
+			return nil, gameError("input_invalid", "请提供完整群身份。")
+		}
+		value.Scope.Protocol, value.Scope.BotID = bot.SourceProtocol, bot.BotID
+		if !value.Scope.valid() {
 			return nil, gameError("input_invalid", "请提供完整群身份。")
 		}
 		if len(value.Config.Aliases) > 64 {

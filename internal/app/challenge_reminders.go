@@ -59,7 +59,7 @@ func challengeTarget(kind ChallengeKind, metric string, threshold float64, data 
 func (a *App) challengeReminder(ctx context.Context, event *rayleabot.EventContext, action string, input map[string]any) (map[string]any, error) {
 	if action == "challenge.reminder.list" {
 		items, err := a.Reminders.List()
-		items = slices.DeleteFunc(items, func(r Reminder) bool { return r.Kind != "challenge" })
+		items = slices.DeleteFunc(items, func(r Reminder) bool { return r.Kind != "challenge" || !visibleOwner(event, r.Owner) })
 		return map[string]any{"items": items}, err
 	}
 	if action == "challenge.reminder.remove" {

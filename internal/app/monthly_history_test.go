@@ -129,10 +129,10 @@ func TestRefreshMonthlyKeepsOfferedMonthsNotYetFinal(t *testing.T) {
 	a := App{Game: Game{ID: "zzz"}, Monthly: &MonthlyStore{Directory: filepath.Join(t.TempDir(), "monthly")}, clock: &fakeClock{at: time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)}}
 	// July was saved after it ended, August while it ran.
 	august := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
-	if err := a.Monthly.Keep("p", choice, month(202607), august); err != nil {
+	if err := a.Monthly.Keep("p", choice, month(202607), august, Subject{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := a.Monthly.Keep("p", choice, month(202608), august); err != nil {
+	if err := a.Monthly.Keep("p", choice, month(202608), august, Subject{}); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.refreshMonthly(t.Context(), client, choice); err != nil {

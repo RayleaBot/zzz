@@ -6,7 +6,8 @@ import PanelDetails, { type Panel } from './PanelDetails.vue'
 import BuildCalculator from './BuildCalculator.vue'
 import GachaHistory from './GachaHistory.vue'
 import Reminders from './Reminders.vue'
-import type { BotAccount } from './bots'
+import HistoricalData from './HistoricalData.vue'
+import { botLabel } from './bots'
 import ChallengeReminders from './ChallengeReminders.vue'
 import PanelHistory from './PanelHistory.vue'
 import ResourceLibrary from './ResourceLibrary.vue'
@@ -35,7 +36,6 @@ interface Transfer { ref: string; uid: string; region: string; timezone: number;
 const host = usePluginHost()
 const page = host.client.pageId || 'overview'
 const game = ref<Game | null>(null)
-const bots = ref<BotAccount[]>([])
 const catalogVersion = ref('')
 const busy = ref(false), error = ref(''), notice = ref('')
 const accountIssue = ref('')
@@ -82,22 +82,20 @@ async function loadAccounts(page = 0) {
     nextAccountPage.value = result.accounts.next_page
     if (!roleOptions.value.some(item => item.key === selection.value)) selection.value = roleOptions.value[0]?.key ?? ''
     accountIssue.value = ''
-  } catch (cause) { accountIssue.value = cause instanceof Error ? cause.message : '账号服务暂不可用。' }
+  } catch (cause) { accounts.value = []; selection.value = ''; nextAccountPage.value = null; accountIssue.value = cause instanceof Error ? cause.message : '账号服务暂不可用。' }
 }
 async function loadCatalog() { const result = await invoke<{ entries: CatalogEntry[] }>('catalog.search', { query: search.value, kind: kind.value }); entries.value = result.entries }
 async function loadArchives() { archives.value = (await invoke<{ items: SavedArchive[] }>('gacha.list')).items }
 async function load() {
-  const result = await invoke<{ game: Game; bots?:BotAccount[]; catalog_version: string; settings: { account_provider: string; image_replies: boolean; custom_aliases: Record<string, string> } }>('status')
-  bots.value = result.bots ?? []
+  const result = await invoke<{ game: Game; catalog_version: string; settings: { account_provider: string; image_replies: boolean; custom_aliases: Record<string, string> } }>('status')
   game.value = result.game; catalogVersion.value = result.catalog_version
   operationName.value ||= game.value.operations[0]?.name ?? ''
   importRegion.value ||= game.value.region
   publicProfileRegion.value ||= game.value.region
   provider.value = result.settings.account_provider; imageReplies.value = result.settings.image_replies; aliases.value = result.settings.custom_aliases || {}
-  if (page === 'help' || page === 'media' || page === 'content' || page === 'resources' || page === 'groups' || page === 'guides') return
   if (page === 'catalog') await loadCatalog()
-  else if (page === 'gacha') await Promise.all([loadArchives(), loadAccounts()])
-  else await loadAccounts()
+  else if (page === 'gacha') await loadArchives()
+  else if (host.page.value?.scope === 'bot_account' && page !== 'groups' && page !== 'content') await loadAccounts()
 }
 void host.ready.then(() => run(load)).catch(cause => { error.value = cause instanceof Error ? cause.message : '页面连接失败。' })
 
@@ -133,9 +131,10 @@ async function scorePanel() {
 async function setDefault() { await run(async () => { await invoke('accounts.select', chosen()) }, '默认角色已保存到账号服务') }
 async function showcase() { await run(async () => { panels.value=[];view.value = (await invoke<{ view: View }>('showcase', { uid: publicUID.value.trim() })).view }) }
 async function showEntry(entry: CatalogEntry) { await run(async () => { view.value = (await invoke<{ view: View }>('catalog.get', { id: entry.id })).view; aliasTarget.value = entry.id }) }
-async function saveSettings(nextAliases:Record<string,string>=aliases.value) { await run(async () => { const checked=await invoke<{aliases:Record<string,string>;conflicts:typeof aliasConflicts.value}>('aliases.validate',{aliases:nextAliases});await host.client.saveSettings({ account_provider: provider.value.trim(), image_replies: imageReplies.value, custom_aliases: checked.aliases });aliases.value=checked.aliases;aliasConflicts.value=checked.conflicts }, '设置已保存') }
-async function addAlias() { if (!aliasName.value.trim() || !aliasTarget.value) return; const name = aliasName.value.trim().toLowerCase(); if (Object.hasOwn(aliases.value, name)) { error.value = '此别名已存在，请先移除再重新添加。'; return }; await saveSettings({ ...aliases.value, [name]: aliasTarget.value }); if(!error.value)aliasName.value = '' }
-async function removeAlias(name: string) { const copy = { ...aliases.value }; delete copy[name]; await saveSettings(copy) }
+async function saveSettings() { await run(async () => { await host.client.saveSettings({ account_provider: provider.value.trim(), image_replies: imageReplies.value }) }, '设置已保存') }
+async function saveAliases(nextAliases:Record<string,string>) { await run(async () => { const checked=await invoke<{aliases:Record<string,string>;conflicts:typeof aliasConflicts.value}>('aliases.validate',{aliases:nextAliases});await host.client.saveSettings({ custom_aliases: checked.aliases });aliases.value=checked.aliases;aliasConflicts.value=checked.conflicts }, '设置已保存') }
+async function addAlias() { if (!aliasName.value.trim() || !aliasTarget.value) return; const name = aliasName.value.trim().toLowerCase(); if (Object.hasOwn(aliases.value, name)) { error.value = '此别名已存在，请先移除再重新添加。'; return }; await saveAliases({ ...aliases.value, [name]: aliasTarget.value }); if(!error.value)aliasName.value = '' }
+async function removeAlias(name: string) { const copy = { ...aliases.value }; delete copy[name]; await saveAliases(copy) }
 
 async function synchronize(resume = false) {
   await run(async () => {
@@ -145,7 +144,6 @@ async function synchronize(resume = false) {
     const completed = await driveSync(invoke, syncInfo.value!, syncController.signal, value => { syncInfo.value = value })
     if (completed.state === 'completed' && completed.result) {
       notice.value = `同步完成，新增 ${completed.result.added} 条，档案共 ${completed.result.total} 条。`
-      await loadArchives()
     } else notice.value = '同步已取消，原有档案保持不变。'
   })
   syncController = undefined
@@ -219,10 +217,11 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
     <p v-if="notice" class="feedback" role="status">{{ notice }}</p>
     <p v-if="!game" class="empty">正在读取插件资料… <button :disabled="busy" @click="run(load)">重新连接</button></p>
     <template v-else>
+      <p v-if="host.bot.value" class="hint">当前机器人：{{ botLabel(host.bot.value) }}</p>
+      <p v-if="accountIssue" role="alert" class="feedback attention">{{ accountIssue }} 可在米游社账号管理页检查授权。</p>
       <template v-if="page === 'overview'">
         <section aria-labelledby="query-heading"><div class="section-heading"><h2 id="query-heading">游戏查询</h2><button :disabled="busy" @click="run(() => loadAccounts())">刷新账号</button></div>
-          <p v-if="accountIssue" class="feedback attention">{{ accountIssue }} 可在米游社账号管理页扫码或调整授权。</p>
-          <p v-else-if="!roleOptions.length" class="empty">没有已授权角色。请先向机器人发送“扫码登录”，并授权{{ game.name }}。</p>
+          <p v-if="!roleOptions.length" class="empty">没有已授权角色。请先向机器人发送“扫码登录”，并授权{{ game.name }}。</p>
           <form v-else class="query-form" @submit.prevent="query">
             <label class="wide">游戏角色<select v-model="selection" :disabled="busy"><option v-for="item in roleOptions" :key="item.key" :value="item.key">{{ item.label }}</option></select></label>
             <label>查询内容<select v-model="operationName" :disabled="busy"><option v-for="item in game.operations" :key="item.name" :value="item.name">{{ item.label }}</option></select></label>
@@ -232,43 +231,54 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
             <div class="actions wide"><button class="primary" type="submit" :disabled="busy">{{ busy ? '正在查询…' : '查询' }}</button><button type="button" :disabled="busy" @click="setDefault">设为此用户的默认角色</button><button v-if="nextAccountPage !== null" type="button" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button></div>
           </form>
         </section>
-        <section class="separated" aria-labelledby="public-heading"><h2 id="public-heading">公开展柜</h2><p class="muted">读取游戏内角色展柜并保存为该 UID 的面板，无需绑定账号。</p><form class="inline-form" @submit.prevent="showcase"><label><span class="sr-only">公开 UID</span><input v-model="publicUID" required inputmode="numeric" pattern="[0-9]{6,12}" placeholder="输入游戏 UID" :disabled="busy"></label><button type="submit" :disabled="busy">读取展柜</button></form></section>
-        <details class="settings"><summary>通过公共查询池查看基础资料</summary><p class="hint">仅使用账号所有者主动开启的公共查询用途。没有可用账号或额度时会明确提示，不会借用其他私人账号。</p><form class="inline-form" @submit.prevent="queryPublicProfile"><label>公开资料 UID<input v-model="publicProfileUID" inputmode="numeric" pattern="[0-9]{6,12}" required :disabled="busy"></label><label>公开资料区服<select v-model="publicProfileRegion" :disabled="busy"><option v-for="region in regions.filter(r=>r.id.endsWith('_cn'))" :key="region.id" :value="region.id">{{region.name}}</option></select></label><button type="submit" :disabled="busy">查询公开基础资料</button></form></details>
+        <section class="separated" aria-labelledby="public-heading"><h2 id="public-heading">公开展柜（全局）</h2><p class="muted">读取游戏内角色展柜并保存为该 UID 的面板，无需绑定账号。</p><form class="inline-form" @submit.prevent="showcase"><label><span class="sr-only">公开 UID</span><input v-model="publicUID" required inputmode="numeric" pattern="[0-9]{6,12}" placeholder="输入游戏 UID" :disabled="busy"></label><button type="submit" :disabled="busy">读取展柜</button></form></section>
+        <details class="settings"><summary>公开基础资料（全局）</summary><p class="hint">仅使用账号所有者主动开启的公共查询用途。没有可用账号或额度时会明确提示，不会借用其他私人账号。</p><form class="inline-form" @submit.prevent="queryPublicProfile"><label>公开资料 UID<input v-model="publicProfileUID" inputmode="numeric" pattern="[0-9]{6,12}" required :disabled="busy"></label><label>公开资料区服<select v-model="publicProfileRegion" :disabled="busy"><option v-for="region in regions.filter(r=>r.id.endsWith('_cn'))" :key="region.id" :value="region.id">{{region.name}}</option></select></label><button type="submit" :disabled="busy">查询公开基础资料</button></form></details>
         <section v-if="panels.length" class="separated" aria-labelledby="score-heading"><h2 id="score-heading">装备评分</h2><p class="hint">按角色专属权重比较装备词条，权重随当前属性、影画与配装自动选择；评分不代表实际伤害。</p><form class="query-form" @submit.prevent="scorePanel"><label>评分角色<select v-model="scoreCharacter" :disabled="busy"><option v-for="panel in panels" :key="panel.id" :value="panel.id">{{ panel.name }}</option></select></label><div class="actions wide"><button :disabled="busy || !scoreCharacter" type="submit">计算装备评分</button></div></form></section>
+        <CodesPanel mode="redeem" :roles="roleOptions" :invoke="invoke"/>
         <BusinessView v-if="view" :value="view" />
         <MonthlyHistory v-if="operationName.endsWith('.monthly') && selectedRole" :key="selection" :account-ref="selectedRole.account.ref" :role-ref="selectedRole.role.ref" :invoke="invoke" />
         <PanelDetails v-if="detailPanel" :panel="detailPanel" />
         <BuildCalculator v-if="detailPanel && selectedRole" :key="`build:${selection}:${detailPanel.id}`" :character-id="detailPanel.id" :character-name="detailPanel.name" :account-ref="selectedRole.account.ref" :role-ref="selectedRole.role.ref" :invoke="invoke" />
-        <details class="settings"><summary>查询设置</summary><form @submit.prevent="saveSettings()"><label>账号服务插件 ID<input v-model="provider" required :disabled="busy"></label><label class="check"><input v-model="imageReplies" type="checkbox" :disabled="busy">聊天查询优先发送图片</label><button :disabled="busy" type="submit">保存设置</button></form></details>
+
       </template>
 
-      <template v-else-if="page === 'content'"><PublicContent :bots="bots" :prefix="game.prefix" :invoke="invoke"/></template>
-      <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/></template>
+      <template v-else-if="page === 'content'"><PublicContent :prefix="game.prefix" :invoke="invoke"/></template>
+      <template v-else-if="page === 'help'"><HelpPanel :invoke="invoke"/>        <details class="settings"><summary>全局查询设置</summary><form @submit.prevent="saveSettings()"><label>账号服务插件 ID<input v-model="provider" required :disabled="busy"></label><label class="check"><input v-model="imageReplies" type="checkbox" :disabled="busy">聊天查询优先发送图片</label><button :disabled="busy" type="submit">保存设置</button></form></details><HistoricalData :client="host.client" :invoke="invoke"/></template>
       <template v-else-if="page === 'media'"><ArtworkPanel :prefix="game.prefix" :invoke="invoke"/></template>
       <template v-else-if="page === 'guides'"><GuidesPanel :invoke="invoke"/></template>
-      <template v-else-if="page === 'assets'"><CodesPanel :roles="roleOptions" :invoke="invoke"/><button v-if="nextAccountPage!==null" :disabled="busy" @click="run(()=>loadAccounts(nextAccountPage!))">更多账号</button></template>
+      <template v-else-if="page === 'assets'"><CodesPanel mode="public" :roles="[]" :invoke="invoke"/></template>
       <template v-else-if="page === 'community'"><CommunityPanel :accounts="accounts" :invoke="invoke"/><button v-if="nextAccountPage!==null" :disabled="busy" @click="run(()=>loadAccounts(nextAccountPage!))">更多社区账号</button></template>
       <template v-else-if="page === 'signin'">
-        <p v-if="accountIssue" role="alert" class="feedback attention">{{accountIssue}}</p>
         <GameSignin :choices="roleOptions" :invoke="invoke" />
         <button v-if="nextAccountPage !== null" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button>
       </template>
       <template v-else-if="page === 'groups'">
-        <GroupSettings :bots="bots" :invoke="invoke" />
+        <GroupSettings :invoke="invoke" />
       </template>
       <template v-else-if="page === 'resources'">
         <ResourceLibrary :invoke="invoke" />
       </template>
       <template v-else-if="page === 'history'">
-        <p v-if="accountIssue" role="alert" class="feedback attention">{{ accountIssue }}</p>
         <PanelHistory :choices="roleOptions" :invoke="invoke" />
         <button v-if="nextAccountPage !== null" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button>
       </template>
       <template v-else-if="page === 'reminders'">
-        <p v-if="accountIssue" role="alert" class="feedback attention">{{ accountIssue }}</p>
-        <Reminders :bots="bots" :choices="roleOptions" :invoke="invoke" />
+        <Reminders :choices="roleOptions" :invoke="invoke" />
         <ChallengeReminders :choices="roleOptions" :invoke="invoke" />
         <MonthlyCollection :choices="roleOptions" :invoke="invoke" />
+        <section aria-labelledby="sync-heading" class="separated"><div class="section-heading"><h3 id="sync-heading">官方同步</h3><button :disabled="busy" @click="run(() => loadAccounts())">刷新账号</button></div>
+          <p class="hint">复用已绑定账号的授权。只能获取官方仍保留的历史；读完全部频段后合并保存。</p>
+          <p v-if="!roleOptions.length" class="empty">请先扫码登录并授权此游戏。已有记录可在“抽卡档案”中导入。</p>
+          <form v-else class="query-form" @submit.prevent="synchronize()">
+            <label class="wide">同步角色<select v-model="selection" :disabled="busy || syncInfo?.state === 'running'"><option v-for="item in roleOptions" :key="item.key" :value="item.key">{{ item.label }}</option></select></label>
+            <label class="check wide"><input v-model="fullSync" type="checkbox" :disabled="busy || syncInfo?.state === 'running'">全量读取官方历史（默认只同步新增记录）</label>
+            <div class="actions wide"><button v-if="syncInfo?.state !== 'running'" class="primary" type="submit" :disabled="busy">同步记录</button><button v-else-if="!busy" class="primary" type="button" @click="synchronize(true)">继续同步</button><button v-if="syncInfo?.state === 'running'" type="button" @click="cancelSync">取消同步</button><button v-if="nextAccountPage !== null" type="button" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button></div>
+          </form>
+          <p v-if="syncInfo" class="hint" role="status">{{ syncInfo.state === 'running' ? (busy ? '正在同步' : '同步已暂停，可继续或取消') : (syncInfo.state === 'completed' ? '已完成' : '已取消') }} · 已读取 {{ syncInfo.pages }} 页，{{ syncInfo.fetched }} 条记录</p>
+          <p class="hint">上方即时同步需要保持页面打开；需要离开页面时，可使用下方后台同步。</p>
+        </section>
+        <GachaTasks :choices="roleOptions" :invoke="invoke" />
+
         <button v-if="nextAccountPage !== null" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button>
       </template>
       <template v-else-if="page === 'catalog'">
@@ -279,20 +289,8 @@ onUnmounted(() => { disposed = true; syncController?.abort() })
       </template>
 
       <template v-else-if="page === 'gacha'">
-        <div class="section-heading"><div><h2>抽卡档案</h2><p class="muted">导入、分析与导出自己的抽卡记录。</p></div><button :disabled="busy" @click="run(loadArchives)">刷新列表</button></div>
-        <section aria-labelledby="sync-heading" class="separated"><div class="section-heading"><h3 id="sync-heading">官方同步</h3><button :disabled="busy" @click="run(() => loadAccounts())">刷新账号</button></div>
-          <p class="hint">复用已绑定账号的授权。只能获取官方仍保留的历史；读完全部频段后合并保存。</p>
-          <p v-if="accountIssue" class="feedback attention">{{ accountIssue }}</p>
-          <p v-else-if="!roleOptions.length" class="empty">请先扫码登录并授权此游戏，也可以在下方导入已有记录。</p>
-          <form v-else class="query-form" @submit.prevent="synchronize()">
-            <label class="wide">同步角色<select v-model="selection" :disabled="busy || syncInfo?.state === 'running'"><option v-for="item in roleOptions" :key="item.key" :value="item.key">{{ item.label }}</option></select></label>
-            <label class="check wide"><input v-model="fullSync" type="checkbox" :disabled="busy || syncInfo?.state === 'running'">全量读取官方历史（默认只同步新增记录）</label>
-            <div class="actions wide"><button v-if="syncInfo?.state !== 'running'" class="primary" type="submit" :disabled="busy">同步记录</button><button v-else-if="!busy" class="primary" type="button" @click="synchronize(true)">继续同步</button><button v-if="syncInfo?.state === 'running'" type="button" @click="cancelSync">取消同步</button><button v-if="nextAccountPage !== null" type="button" :disabled="busy" @click="run(() => loadAccounts(nextAccountPage!))">更多账号</button></div>
-          </form>
-          <p v-if="syncInfo" class="hint" role="status">{{ syncInfo.state === 'running' ? (busy ? '正在同步' : '同步已暂停，可继续或取消') : (syncInfo.state === 'completed' ? '已完成' : '已取消') }} · 已读取 {{ syncInfo.pages }} 页，{{ syncInfo.fetched }} 条记录</p>
-          <p class="hint">上方即时同步需要保持页面打开；需要离开页面时，可使用下方后台同步。</p>
-        </section>
-        <GachaTasks :choices="roleOptions" :invoke="invoke" />
+        <div class="section-heading"><div><h2>抽卡档案</h2><p class="muted">按 UID 和区服导入、分析与导出抽卡记录。</p></div><button :disabled="busy" @click="run(loadArchives)">刷新列表</button></div>
+        <p class="hint">全局档案按 UID 和区服共享。官方同步请前往“提醒与收集”。</p>
         <details class="import-panel"><summary>导入记录</summary><p class="hint">支持 <a href="https://uigf.org/en/standards/uigf.html" target="_blank" rel="noreferrer">UIGF</a> v4 和本插件导出的完整档案。不接收抽卡链接。</p><div class="import-fields"><label>选择 JSON 文件<input ref="importFile" type="file" accept=".json,application/json" :disabled="busy" @change="readImport"></label></div>
           <form v-if="imported.length" class="import-fields" @submit.prevent="importArchive"><label>文件中的账号<select v-model="importIndex" :disabled="busy"><option v-for="(archive, index) in imported" :key="`${archive.uid}:${index}`" :value="index">{{ archive.uid }} · {{ archive.list.length }} 条 · UTC{{ archive.timezone >= 0 ? '+' : '' }}{{ archive.timezone }}</option></select></label><label>游戏区服<select v-model="importRegion" :disabled="busy"><option v-for="region in regions" :key="region.id" :value="region.id">{{ region.name }}</option></select></label><button class="primary" type="submit" :disabled="busy">{{ busy ? '正在导入…' : '导入所选账号' }}</button></form>
         </details>

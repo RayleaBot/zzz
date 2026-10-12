@@ -25,7 +25,7 @@ func (a *App) signinTask(ctx context.Context, event *rayleabot.EventContext, act
 	label := timedTaskLabels[kind]
 	if action == root+"list" {
 		items, err := a.Reminders.List()
-		items = slices.DeleteFunc(items, func(task Reminder) bool { return task.Kind != kind })
+		items = slices.DeleteFunc(items, func(task Reminder) bool { return task.Kind != kind || !visibleOwner(event, task.Owner) })
 		return map[string]any{"items": items}, err
 	}
 	if action == root+"remove" {

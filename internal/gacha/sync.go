@@ -31,8 +31,9 @@ type SyncInfo struct {
 // SyncChoice is the account role a sync reads, or Link for a gacha link
 // pasted in chat, whose authkey the caller keeps.
 type SyncChoice struct {
-	AccountRef, RoleRef string
-	Link                bool
+	AccountRef, RoleRef   string
+	SourceProtocol, BotID string
+	Link                  bool
 }
 
 // syncJob is a sync's state, which mu guards. mu is held only while the

@@ -39,8 +39,9 @@ type sdkHost struct {
 	onSend func(rayleabot.MessageSendRequest)
 	// types are the event types by request ID; triggers mark scheduler
 	// triggers.
-	types    map[string]string
-	triggers map[string]bool
+	types       map[string]string
+	triggers    map[string]bool
+	botAccounts map[string]rayleabot.BotAccount
 	// detached are the events moved to the background, in order, and
 	// delivered the results their delivery ended with; refuse makes
 	// event.detach fail as the host does at its limit of background events.
@@ -57,6 +58,7 @@ type hostCall struct {
 	// trigger and Detached an event already in the background.
 	Parent              string
 	Scheduled, Detached bool
+	Bot                 rayleabot.BotAccount
 }
 
 // fakeClock is a clock tests move by hand; sleeping moves it on. Events the
@@ -110,7 +112,7 @@ func newSDKHost(t *testing.T, a *App, service func(hostCall) (map[string]any, st
 		finished <- rayleabot.Run(context.Background(), rayleabot.Options{Stdin: inReader, Stdout: outWriter, Stderr: io.Discard}, a)
 		outWriter.Close()
 	}()
-	h := &sdkHost{t: t, writer: hostWriter, lines: make(chan []byte, 64), service: service, jobs: map[string]map[string]any{}, types: map[string]string{}, triggers: map[string]bool{}, delivered: map[string]map[string]any{}}
+	h := &sdkHost{t: t, writer: hostWriter, lines: make(chan []byte, 64), service: service, jobs: map[string]map[string]any{}, types: map[string]string{}, triggers: map[string]bool{}, botAccounts: map[string]rayleabot.BotAccount{}, delivered: map[string]map[string]any{}}
 	t.Cleanup(func() {
 		hostWriter.Close()
 		select {
@@ -151,6 +153,13 @@ func (h *sdkHost) exchange(id string, frame map[string]any) (map[string]any, []h
 	if frame["type"] == "event" {
 		frame["deadline_at_ms"] = time.Now().Add(hostEventTimeout).UnixMilli()
 		h.types[id] = asText(asObject(frame["event"])["event_type"])
+		var bot rayleabot.BotAccount
+		if raw := asObject(asObject(frame["event"])["payload"])["bot"]; raw != nil {
+			if err := decodeObject(raw, &bot); err != nil {
+				h.t.Fatal(err)
+			}
+		}
+		h.botAccounts[id] = bot
 	}
 	h.write(frame)
 	var actions []hostAction
@@ -200,7 +209,7 @@ func (h *sdkHost) answer(action, parent string, data map[string]any) (map[string
 		if decodeObject(data, &request) != nil {
 			h.t.Fatal("invalid plugin.call")
 		}
-		return h.service(hostCall{ServiceCallRequest: request, Parent: parent, Scheduled: h.triggers[parent], Detached: slices.Contains(h.detached, parent)})
+		return h.service(hostCall{ServiceCallRequest: request, Parent: parent, Scheduled: h.triggers[parent], Detached: slices.Contains(h.detached, parent), Bot: h.botAccounts[parent]})
 	case "scheduler.create":
 		h.jobs[asText(data["task_id"])] = maps.Clone(asObject(data["payload"]))
 		h.created = append(h.created, data)
@@ -279,10 +288,22 @@ func (h *sdkHost) groupMessage(text, command string, args ...string) (map[string
 
 // manage runs an action of the management page.
 func (h *sdkHost) manage(action string, input map[string]any) (map[string]any, []hostAction) {
+	if !accountAction(action) {
+		return h.manageAccount(action, input, "", "")
+	}
+	return h.manageAccount(action, input, "onebot11", "bot")
+}
+
+func (h *sdkHost) manageAccount(action string, input map[string]any, protocol, botID string) (map[string]any, []hostAction) {
 	h.t.Helper()
 	h.next++
 	id := fmt.Sprintf("manage-%d", h.next)
-	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": map[string]any{"event_id": id, "event_type": "management.action", "source_protocol": "management", "source_adapter": "management.ui", "timestamp": time.Now().Unix(), "payload": map[string]any{"action": action, "payload": input}}})
+	payload := map[string]any{"action": action, "payload": input}
+	if botID != "" {
+		payload["page_id"] = "overview"
+		payload["bot"] = map[string]any{"source_protocol": protocol, "bot_id": botID}
+	}
+	return h.exchange(id, map[string]any{"type": "event", "request_id": id, "event": map[string]any{"event_id": id, "event_type": "management.action", "source_protocol": "management", "source_adapter": "management.ui", "timestamp": time.Now().Unix(), "payload": payload}})
 }
 
 // trigger runs a job the plugin created as the host's scheduler does: the

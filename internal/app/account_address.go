@@ -39,7 +39,9 @@ func (s GroupScope) MarshalJSON() ([]byte, error) {
 }
 
 func recoverBot(protocol, adapter, botID string, bots []rayleabot.Bot) string {
-	if botID == "" && adapter != "" {
+	// QQ official openids cannot be recovered from a connection that may now
+	// log in as another account.
+	if protocol == "onebot11" && botID == "" && adapter != "" {
 		for _, bot := range bots {
 			if bot.SourceProtocol == protocol && bot.SourceAdapter == adapter {
 				return bot.ID
